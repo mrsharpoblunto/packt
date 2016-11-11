@@ -10,6 +10,7 @@
   "license": "MIT",
   "dependencies": {
     "chalk": "^1.1.3",
-    "yargs": "^6.3.0"
+    "yargs": "^6.3.0",
+    "packt-core": "^1.0.0"
   }
 }

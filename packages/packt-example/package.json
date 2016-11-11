@@ -1,0 +1,22 @@
+{
+  "name": "packt-example",
+  "version": "1.0.0",
+  "description": "Example web app using packt",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Glenn Conner",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.14.0"
+  },
+  "devDependencies": {
+    "packt-cli": "^1.0.0",
+    "packt-handler-babel-js": "^1.0.0",
+    "packt-handler-post-css": "^1.0.0",
+    "packt-handler-raw": "^1.0.0",
+    "packt-handler-json": "^1.0.0",
+    "packt-handler-ignore": "^1.0.0"
+  }
+}
