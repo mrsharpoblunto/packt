@@ -1,0 +1,15 @@
+{
+  "name": "packt-cli",
+  "version": "1.0.0",
+  "description": "CLI interface to Packt Javascript packer",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Glenn Conner",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^1.1.3",
+    "yargs": "^6.3.0"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "packt-handler-raw",
+  "version": "1.0.0",
+  "description": "Packt handler for loading any file from disk unprocessed",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Glenn Conner",
+  "license": "MIT",
+  "devDependencies": {
+    "jest": "^17.0.0"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "packt-core",
+  "version": "1.0.0",
+  "description": "Super fast JS packer",
+  "main": "lib/packt.js",
+  "author": "Glenn Conner",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "jest": "^17.0.0"
+  }
+}

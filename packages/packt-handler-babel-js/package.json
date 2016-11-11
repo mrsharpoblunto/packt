@@ -1,0 +1,19 @@
+{
+  "name": "packt-handler-babel-js",
+  "version": "1.0.0",
+  "description": "Packt file handler to process js files using Babel",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Glenn Conner",
+  "license": "MIT",
+  "dependencies": {
+    "babel-core": "^6.18.2",
+    "babel-traverse": "^6.18.0",
+    "babylon": "^6.13.1"
+  },
+  "devDependencies": {
+    "jest": "^17.0.0"
+  }
+}

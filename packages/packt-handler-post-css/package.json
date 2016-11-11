@@ -1,0 +1,17 @@
+{
+  "name": "packt-handler-post-css",
+  "version": "1.0.0",
+  "description": "Packt handler for processing css files with postcss",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Glenn Conner",
+  "license": "MIT",
+  "dependencies": {
+    "postcss": "^5.2.5"
+  },
+  "devDependencies": {
+    "jest": "^17.0.0"
+  }
+}

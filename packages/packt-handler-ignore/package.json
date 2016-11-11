@@ -1,0 +1,14 @@
+{
+  "name": "packt-handler-ignore",
+  "version": "1.0.0",
+  "description": "Packt handler for ignoring file content",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Glenn Conner",
+  "license": "MIT",
+  "devDependencies": {
+    "jest": "^17.0.0"
+  }
+}
