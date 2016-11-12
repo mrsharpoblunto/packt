@@ -3,221 +3,185 @@
 const os = require('os');
 const path = require('path');
 
+/**
+ * NOTE: this entire object must be serializable as it gets
+ * passed around to worker processes - no stateful objects 
+ * allowed!
+ */
 module.exports = {
-  inputs: {
-    // admin endpoints
-    AdminChainingUsers: ['AdminChainingUsersEntrypoint'],
-    AdminEnqueueSRT: ['AdminEnqueueSRTEntrypoint'],
-    AdminEditTopic: ['AdminEditTopicEntryPoint'],
-    AdminEvents: ['AdminEventsEntrypoint'],
-    AdminEventEdit: ['AdminEventEditEntrypoint'],
-    AdminEventMonitorFeed: ['AdminEventMonitorFeedEntrypoint'],
-    AdminEventStage: ['AdminEventStageEntrypoint'],
-    AdminFBEvents: ['AdminFBEventsEntrypoint'],
-    AdminLookupTopicalUsers: ['AdminLookupTopicalUsersEntryPoint'],
-    AdminTrendingEvents: ['AdminTrendingEventsEntrypoint'],
-    AdminTopicPortal: ['AdminTopicPortalEntrypoint'],
-    AdminTopicRanking: ['AdminTopicRankingEntrypoint'],
-    AdminTopicOnlineFeatures: ['AdminTopicOnlineFeaturesEntrypoint'],
-    AdminTrendingEventRanking: ['AdminTrendingEventRankingEntrypoint'],
-    AdminCrossChannelRanking: ['AdminCrossChannelRankingEntrypoint'],
-    AdminExplorePhotos: ['AdminExplorePhotosEntrypoint'],
-    AdminExploreQE: ['AdminExploreQEEntrypoint'],
-    AdminHashtagLanding: ['AdminHashtagLandingEntrypoint'],
-    AdminFeedRanking: ['AdminFeedRankingEntrypoint'],
-    AdminKodachromeRanking: ['AdminKodachromeRankingEntrypoint'],
-    AdminIndex: ['AdminIndexEntrypoint'],
-    AdminNotificationSendTool: ['AdminNotificationSendToolEntrypoint'],
-    AdminNudityTagList: ['AdminNudityTagListEntrypoint'],
-    AdminOAuthClientHistory: ['AdminOAuthClientHistoryEntrypoint'],
-    AdminPivots: ['AdminPivotsEntrypoint'],
-    AdminMediaCovisitation: ['AdminMediaCovisitationEntrypoint'],
-    AdminSuggestedUsers: ['AdminSuggestedUsersEntrypoint'],
-    AdminSuggestedInvites: ['AdminSuggestedInvitesEntrypoint'],
-    AdminSuggestedTopics: ['AdminSuggestedTopicsEntrypoint'],
-    AdminTopicPage: ['AdminTopicPageEntrypoint'],
-    AdminUnmigrateFollower: ['AdminUnmigrateFollowerEntryPoint'],
-    AdminUserHistory: ['AdminUserHistoryEntrypoint'],
-    AdminUserLabelSearch: ['AdminUserLabelSearchEntrypoint'],
-    AdminViewCategory: ['AdminViewCategoryEntryPoint'],
-    AdminWeeklyDigest: ['AdminWeeklyDigestEntrypoint'],
-    BulkAddLabels: ['BulkAddLabelsEntrypoint'],
-    Gatelogic: ['GatelogicEntrypoint'],
-    GraphiQL: ['GraphiQLEntryPoint'],
-    Runtime: ['RuntimeEntrypoint'],
-    TestUser: ['TestUserEntrypoint'],
-    TrendingUsers: ['TrendingUsersEntrypoint'],
-    UsersProfilePics: ['UsersProfilePicsEntrypoint'],
-    ReelNux: ['ReelNuxEntryPoint'],
-    // core consumer endpoints
-    ActivityFeed: [
-      'ConsumerEntrypoint',
-      'ActivityFeedPage',
-    ],
-    DirectoryPage: [
-      'DirectoryPage',
-    ],
-    ExploreLandingPage: [
-      'ConsumerEntrypoint',
-      'ExploreLandingPageContainer',
-    ],
-    FeedPage: [
-      'ConsumerEntrypoint',
-      'FeedPageContainer',
-      'AppInstallInterstitial',
-    ],
-    LandingPage: [
-      'ConsumerEntrypoint',
-      'LandingPage',
-    ],
-    LocationsPage: [
-      'ConsumerEntrypoint',
-      'LocationPageContainer',
-    ],
-    LoginAndSignupPage: [
-      'ConsumerEntrypoint',
-      'FBSignupPage',
-      'LoginAndSignupPage',
-    ],
-    // TODO: REMOVE THIS, needs backend change first to use LoginAndSignupPage
-    // instead.
-    LoginPage: [
-      'ConsumerEntrypoint',
-      'LoginAndSignupPage',
-    ],
-    PostPage: [
-      'ConsumerEntrypoint',
-      'PostPageContainer',
-    ],
-    ProfilePage: [
-      'ConsumerEntrypoint',
-      'ProfilePageContainer',
-    ],
-    SettingsPages: [
-      'ChangePasswordPageContainer',
-      'CommentFilteringPageContainer',
-      'ConsumerEntrypoint',
-      'EmailPreferencesPageContainer',
-      'ManageApplicationsPageContainer',
-      'ProfileEditPageContainer',
-    ],
-    // TODO: REMOVE THIS, needs backend change first to use LoginAndSignupPage
-    // instead.
-    Signup: [
-      'ConsumerEntrypoint',
-      'FBSignupPage',
-    ],
-    TagPage: [
-      'ConsumerEntrypoint',
-      'TagPageContainer',
-    ],
-    // non-core consumer endpoints
-    Badges: ['BadgesEntrypoint'],
-    ConfirmFollowDialog: ['ConfirmFollowDialog'],
-    EmailUnsubscribePage: ['EmailUnsubscribePageEntrypoint'],
-    UsernameReclaimConfirmation: ['UsernameReclaimConfirmationEntrypoint'],
-    EmbedPrelude: ['EmbedPrelude'],   // In head of rewritten embeds.
-    EmbedPostlude: ['EmbedPostlude'], // At end of body of rewritten embeds.
-    ProfileEmbed: ['ProfileEmbedEntrypoint'],
-    EmbedsPlayground: ['EmbedsPlaygroundEntrypoint'],
-    ReactComponent: ['ReactComponentEntrypoint'],
-    Raters: ['RatersEntrypoint'],
-    Report: ['ReportEntrypoint'],
-    SupportInfo: ['SupportTicketEntrypoint'],
-    Community: [
-      'CommunityEntrypoint',
-      'Community',
-    ],
-    PressPage: [
-      'LegacyConsumerEntrypoint',
-      'DesktopPressPage',
-    ],
-    GenericSurvey: ['GenericSurveyEntrypoint'],
-  },
 
-  output: {
-    path: path.join(__dirname,'_build/packt'),
-  },
+  /**
+   * option which for performance or logical reasons cannot vary
+   * between build variants
+   */
+  invariantOptions: {
+    build: {
+      workers: os.cpus().length - 1,
 
+      outputPath: path.join(__dirname,'_build'),
+      outputFormat: '${options.lang}_${filename}${ext}/${hash}${ext}',
+      outputHash: 'md5',
+      outputHashLength: 12,
+
+      bundles: {
+        // entrypoint bundles are considered independent and will build thier
+        // own dependency tree. They will however use deps from any library chunks
+          // or matching common chunks. Any modules loaded dynamically in these entrypoints will create thier own chunk and will share any common/lib dependencies from thier parent.
+        'Index.js': {
+            type: 'entrypoint',
+            require: ['lib/entrypoint.js'],
+            depends: ['Vendor.js', 'Common.js', 'Common.css'],
+            bundler: 'js',
+        },
+        // library bundles pull in a set of specific modules which other entrypoint modules
+        // can then share
+        'Vendor.js': {
+            type: 'library',
+            require: ['react'],
+            bundler: 'js',
+        },
+        // pulls out matching modules that appear in multiple entrypoint chunks
+        'Common.js': {
+            type: 'common',
+            threshold: 0.5,
+            contentTypes: [
+              'application/json',
+              'text/javascript',
+            ],
+            bundler: 'js',
+        },
+        'Common.css': {
+            type: 'common',
+            threshold: 0,
+            contentTypes: [
+              'text/css',
+            ],
+            bundler: 'css',
+        },
+      },
+    }
+  }, 
+
+  /**
+   * shared options object available to all handlers & emitters.
+   * Handlers & emitters will receive a unique options object
+   * for each variant which is generated by merging
+   *  base + (variant) + invariants. in this way it is possible to
+   * override base values with variant values, but not possible to
+   * override invariant values.
+   */
   options: {
-    workers: os.cpus().length -1,
+    base: {
+    },
+    variants: {
+       // dictionary of values overriding base
+    }
   },
 
-  context: {
-  },
+  /**
+   * configures how resources get bundled together
+   */
+  bundlers: {
+    'css': {
+      require: 'packt-bundler-css',
+      invariantOptions: {
+          minify: true,
+      },
+    },
+    'raw': {
+      require: 'packt-bundler-raw',
+    }
+    'js': {
+      require: 'packt-bundler-js',
+      invariantOptions: {
+        minify: true,
+      },
+    },
+  }
 
+  /**
+   * resolvers are used to locate the full path to a module. Once resolved
+   * the path should match one of the handlers configured below.
+   * NOTE: For performance reasons resolvers are invariant.
+   */
   resolvers: {
     custom: [
       {
-        require: './build/packt/resolver',
-        options: {
-          modulePath: path.join(__dirname,'frontend/modules'),
-          isPrerelease: true,
-        }
-      },
-      {
-        require: './build/packt/sprites-resolver',
-        options: {
+        require: 'packt-resolver-haste',
+        invariantOptions: {
+          modulePath: path.join(__dirname,'lib'),
         }
       },
     ],
+    /**
+     * The default filesystem resolver
+     */
     default: {
-      options: {
+      invariantOptions: {
         searchPaths: [
-          path.join(__dirname, 'shared/conf'),
-          path.join(__dirname, 'node_modules/react/lib'),
-          path.join(__dirname, 'frontend/modules'),
-	        'node_modules',
+          path.join(__dirname, 'lib'),
+          'node_modules',
         ],
-        extensions: ['.js','.json','.gql','.scss','.css','.png','.jpg'],
+        extensions: ['.js','.json','.scss','.css','.png','.jpg'],
       },
     },
   },
 
+  /**
+   * Handlers are used to process a module once it has been resolved by a
+   * resolver. While processing, the handler should also notify when it
+   * locates any dependencies the current module has to other modules
+   */
   handlers: [
     {
-      pattern: '\\.js$',
-      require: './build/packt/js-handler',
+      pattern: /\\.js$/,
+      require: 'packt-handler-babel-js',
       options: {
-        ignore: [
-          '/node_modules/',
-        ],
+        base: {
+            ignore: [
+              '/node_modules/',
+            ],
+        },
+        variants: {
+        },
+      },
+      invariantOptions: {
       },
     },
     {
-      pattern: '\\.json$',
-      require: './build/packt/json-handler',
+      pattern: /\\.json$/,
+      require: 'packt-handler-json',
       options: {
+        base: {
+        },
+        variants: {
+        },
+      },
+      invariantOptions: {
       },
     },
     {
-      pattern: 'sprites/(.*)\\.css',
-      require: './build/packt/ignore-handler',
+      pattern: /\\.css$/,
+      require: 'packt-handler-post-css',
       options: {
+        base: {
+        },
+        variants: {
+        },
+      },
+      invariantOptions: {
       },
     },
     {
-      pattern: '\\.css$',
-      require: './build/packt/css-handler',
+      pattern: /\\.(jpg|png)$/,
+      require: 'packt-handler-ignore',
       options: {
+        base: {
+        },
+        variants: {
+        },
       },
-    },
-    {
-      pattern: '\\.scss$',
-      require: './build/packt/sass-handler',
-      options: {
-      },
-    },
-    {
-      pattern: '\\.(jpg|png)$',
-      require: './build/packt/ignore-handler',
-      options: {
-      },
-    },
-    {
-      pattern: '\\.gql$',
-      require: './build/packt/raw-handler',
-      options: {
+      invariantOptions: {
       },
     },
   ],
