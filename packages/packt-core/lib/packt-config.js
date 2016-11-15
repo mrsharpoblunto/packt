@@ -2,35 +2,51 @@
 
 const path = require('path');
 const DefaultResolver = require('./default-resolver');
+const PacktError = require('./packt-error');
 
 class PacktConfig {
   load(configFile) {
     this.configFile = configFile;
     this.workingDirectory = path.dirname(configFile);
 
-    // TODO validate the JSON & structure of the config
-    const resolver = new DefaultResolver(DefaultResolver.defaultOptions);
-    const json = require(configFile);
+    try {
+      const json = require(configFile);
+      return this._validate(json)
+        .then(() => this._resolveResolvers(json))
+        .then(() => this._resolveHandlers(json))
+        .then(() => this._resolveBundlers(json))
+        .then(() => this.buildVariants(json));
+    } catch (ex) {
+      return Promise.reject(new PacktError('Error parsing config file',ex));
+    }
+  }
 
+  _validate(json) {
+
+  }
+
+  _resolveResolvers(json) {
     return Promise.all((json.resolvers.custom || []).map(
       c => this._resolveRequire(c,resolver)
-    )).then((customResolvers) => {
-      this.resolvers = {
-        default: json.resolvers.default,
-        custom: customResolvers,
-      };
-      return Promise.all((json.handlers || []).map(
-        h => this._resolveRequire(h,resolver)
-      ));
-    }).then((customHandlers) => {
-      this.handlers = {};
-      for (let handler of customHandlers) {
-        this.handlers[handler.pattern] = handler;
-        delete handler.pattern;
-      }
-      this.options = json.options;
-      this.inputs = json.inputs;
-    });
+    )).catch((err) =>
+      return Promise.reject(new PacktError('Failed to resolve custom resolver',err))
+    );
+  }
+
+  _resolveHandlers(json) {
+    return Promise.all((json.handlers || []).map(
+      h => this._resolveRequire(h,resolver)
+    )).catch((err) =>
+      Promise.reject(new PacktError('Failed to resolve handler',err))
+    );
+  }
+
+  _resolveBundlers(json) {
+    return Promise.all((json.bundlers || []).map(
+      b => this._resolveRequire(b,resolver)
+    )).catch((err) =>
+      Promise.reject(new PacktError('Failed to resolve bundler',err))
+    );
   }
 
   _resolveRequire(entry,resolver) {
@@ -42,7 +58,7 @@ class PacktConfig {
           if (err) {
             reject(err);
           } else {
-            resolve(Object.assign({},entry,{
+            resolve(Object.assign(entry,{
               require: resolved,
             }));
           }

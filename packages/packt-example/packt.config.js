@@ -19,14 +19,15 @@ module.exports = {
       workers: os.cpus().length - 1,
 
       outputPath: path.join(__dirname,'_build'),
-      outputFormat: '${options.lang}_${filename}${ext}/${hash}${ext}',
+      outputFormat: '${options.lang}_${filename}.${ext}/${hash}.${ext}',
       outputHash: 'md5',
       outputHashLength: 12,
 
       bundles: {
         // entrypoint bundles are considered independent and will build thier
         // own dependency tree. They will however use deps from any library chunks
-          // or matching common chunks. Any modules loaded dynamically in these entrypoints will create thier own chunk and will share any common/lib dependencies from thier parent.
+          // or matching common chunks. Any modules loaded dynamically in these entrypoints will create thier own chunk and will share any common/lib dependencies from thier parent. Think of dynamic chunks as creating a duplicate of thier parent chunk with a different entrypoint require. NOTE: dynamic entrpoints are deduped, so that identical combinations of require/depends/bundler will result in a single asset output.
+          // Also NOTE: if multiple dynamic chunks with the same entrypoint are created but with different depends this should result in a warning as its probably not intended by the user.
         'Index.js': {
             type: 'entrypoint',
             require: ['lib/entrypoint.js'],
@@ -81,23 +82,26 @@ module.exports = {
   /**
    * configures how resources get bundled together
    */
-  bundlers: {
-    'css': {
+  bundlers: [
+    {
+      name: 'css',
       require: 'packt-bundler-css',
       invariantOptions: {
-          minify: true,
+        minify: true,
       },
     },
-    'raw': {
+    {
+      name: 'raw',
       require: 'packt-bundler-raw',
-    }
-    'js': {
+    },
+    {
+      name: 'js',
       require: 'packt-bundler-js',
       invariantOptions: {
         minify: true,
       },
     },
-  }
+  ],
 
   /**
    * resolvers are used to locate the full path to a module. Once resolved

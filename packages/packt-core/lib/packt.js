@@ -8,9 +8,10 @@ const Timer = require('./timer');
 const ContentMap = require('./content-map');
 
 class Packt {
-  constructor() {
+  constructor(reporter) {
     this._timer = new Timer();
     this._handlerTimer = new Timer();
+    this._reporter = reporter;
   }
 
   build(configFile) {
@@ -34,7 +35,7 @@ class Packt {
 
   _loadConfig(configFile) {
     this._config = new PacktConfig();
-    return this._config.load(configFile);
+    return this._config.load(configFile,resolver);
   }
 
   _loadBuildData() {
@@ -73,13 +74,12 @@ class Packt {
         } else {
           resolve(result);
         }
-        console.log(this._handlerTimer);
-        console.log(this._timer);
       };
 
 
       this._resolvers.on(messageTypes.RESOLVED,(m) => {
         this._timer.accumulate('resolvers',m.perfStats);
+        this._
         // TODO record dependency in content map as well
         if (!this._contentMap.contains(m.resolved)) {
           this._contentMap.addPending(m.resolved);
