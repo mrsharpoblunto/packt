@@ -15,52 +15,11 @@ module.exports = {
    * between build variants
    */
   invariantOptions: {
-    build: {
-      workers: os.cpus().length - 1,
-
-      outputPath: path.join(__dirname,'_build'),
-      outputFormat: '${options.lang}_${filename}.${ext}/${hash}.${ext}',
-      outputHash: 'md5',
-      outputHashLength: 12,
-
-      bundles: {
-        // entrypoint bundles are considered independent and will build thier
-        // own dependency tree. They will however use deps from any library chunks
-          // or matching common chunks. Any modules loaded dynamically in these entrypoints will create thier own chunk and will share any common/lib dependencies from thier parent. Think of dynamic chunks as creating a duplicate of thier parent chunk with a different entrypoint require. NOTE: dynamic entrpoints are deduped, so that identical combinations of require/depends/bundler will result in a single asset output.
-          // Also NOTE: if multiple dynamic chunks with the same entrypoint are created but with different depends this should result in a warning as its probably not intended by the user.
-        'Index.js': {
-            type: 'entrypoint',
-            require: ['lib/entrypoint.js'],
-            depends: ['Vendor.js', 'Common.js', 'Common.css'],
-            bundler: 'js',
-        },
-        // library bundles pull in a set of specific modules which other entrypoint modules
-        // can then share
-        'Vendor.js': {
-            type: 'library',
-            require: ['react'],
-            bundler: 'js',
-        },
-        // pulls out matching modules that appear in multiple entrypoint chunks
-        'Common.js': {
-            type: 'common',
-            threshold: 0.5,
-            contentTypes: [
-              'application/json',
-              'text/javascript',
-            ],
-            bundler: 'js',
-        },
-        'Common.css': {
-            type: 'common',
-            threshold: 0,
-            contentTypes: [
-              'text/css',
-            ],
-            bundler: 'css',
-        },
-      },
-    }
+    workers: os.cpus().length - 1,
+    outputPath: path.join(__dirname,'_build'),
+    outputFormat: '${options.lang}_${filename}.${ext}/${hash}.${ext}',
+    outputHash: 'md5',
+    outputHashLength: 12,
   }, 
 
   /**
@@ -79,29 +38,65 @@ module.exports = {
     }
   },
 
+  bundles: {
+    // entrypoint bundles are considered independent and will build thier
+    // own dependency tree. They will however use deps from any library chunks
+      // or matching common chunks. Any modules loaded dynamically in these entrypoints will create thier own chunk and will share any common/lib dependencies from thier parent. Think of dynamic chunks as creating a duplicate of thier parent chunk with a different entrypoint require. NOTE: dynamic entrpoints are deduped, so that identical combinations of require/depends/bundler will result in a single asset output.
+      // Also NOTE: if multiple dynamic chunks with the same entrypoint are created but with different depends this should result in a warning as its probably not intended by the user.
+    'Index.js': {
+      type: 'entrypoint',
+      requires: ['lib/entrypoint.js'],
+      depends: ['Vendor.js', 'Common.js', 'Common.css'],
+      bundler: 'js',
+    },
+    // library bundles pull in a set of specific modules which other entrypoint modules
+    // can then share
+    'Vendor.js': {
+      type: 'library',
+      requires: ['react'],
+      bundler: 'js',
+    },
+    // pulls out matching modules that appear in multiple entrypoint bundles
+    // but are not part of a library bundle
+    'Common.js': {
+      type: 'common',
+      threshold: 0.5,
+      contentTypes: [
+        'application/json',
+        'text/javascript',
+      ],
+      bundler: 'js',
+    },
+    'Common.css': {
+      type: 'common',
+      threshold: 0,
+      contentTypes: [
+        'text/css',
+      ],
+      bundler: 'css',
+    },
+  },
+
   /**
    * configures how resources get bundled together
    */
-  bundlers: [
-    {
-      name: 'css',
+  bundlers: {
+    'css': {
       require: 'packt-bundler-css',
       invariantOptions: {
         minify: true,
       },
     },
-    {
-      name: 'raw',
+    'raw': {
       require: 'packt-bundler-raw',
     },
-    {
-      name: 'js',
+    'js': {
       require: 'packt-bundler-js',
       invariantOptions: {
         minify: true,
       },
     },
-  ],
+},
 
   /**
    * resolvers are used to locate the full path to a module. Once resolved
@@ -138,7 +133,7 @@ module.exports = {
    */
   handlers: [
     {
-      pattern: /\\.js$/,
+      pattern: '\\.js$',
       require: 'packt-handler-babel-js',
       options: {
         base: {
@@ -153,7 +148,7 @@ module.exports = {
       },
     },
     {
-      pattern: /\\.json$/,
+      pattern: '\\.json$',
       require: 'packt-handler-json',
       options: {
         base: {
@@ -165,7 +160,7 @@ module.exports = {
       },
     },
     {
-      pattern: /\\.css$/,
+      pattern: '\\.css$',
       require: 'packt-handler-post-css',
       options: {
         base: {
@@ -177,7 +172,7 @@ module.exports = {
       },
     },
     {
-      pattern: /\\.(jpg|png)$/,
+      pattern: '\\.(jpg|png)$',
       require: 'packt-handler-ignore',
       options: {
         base: {

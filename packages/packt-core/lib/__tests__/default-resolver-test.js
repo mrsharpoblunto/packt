@@ -259,6 +259,12 @@ describe('default resolver',() => {
       resolver.resolve('foobar.js','/my-project/modules/foo.js',(err,resolved) => {
         try {
           expect(err).toBeTruthy();
+          expect(err.attempts).toEqual([
+            '/my-project/modules/node_modules/foobar.js',
+            '/my-project/node_modules/foobar.js',
+            '/my-project/node_modules/foobar.js/index.js',
+            '/my-project/node_modules/foobar.js/index.jsx' 
+          ])
           resolve();
         } catch (ex) {
           reject(ex);
@@ -279,6 +285,38 @@ describe('default resolver',() => {
       resolver.resolve('foobar.js','/my-project/modules/foo.js',(err,resolved) => {
         try {
           expect(err).toBeTruthy();
+          expect(err.attempts).toEqual([
+            '/my-project/modules/node_modules/foobar.js',
+            '/my-project/node_modules/foobar.js',
+          ])
+          resolve();
+        } catch (ex) {
+          reject(ex);
+        }
+      });
+
+    });
+
+  });
+
+  it('cannot resolve a relative path that looks like it has a file extension that does not exist',() => {
+    return new Promise((resolve,reject) => {
+
+      fs.stat.mockImplementation((path,callback) => {
+        callback(new Error('not found'));
+      });
+
+      resolver.resolve('foobar.react','/my-project/modules/foo.js',(err,resolved) => {
+        try {
+          expect(err).toBeTruthy();
+          expect(err.attempts).toEqual([
+            '/my-project/modules/node_modules/foobar.react',
+            '/my-project/modules/node_modules/foobar.react.js',
+            '/my-project/modules/node_modules/foobar.react.jsx',
+            '/my-project/node_modules/foobar.react',
+            '/my-project/node_modules/foobar.react.js',
+            '/my-project/node_modules/foobar.react.jsx',
+          ])
           resolve();
         } catch (ex) {
           reject(ex);

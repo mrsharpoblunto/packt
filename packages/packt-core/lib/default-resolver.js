@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const PacktResolverError = require('./packt-errors').PacktResolverError;
 
 class DefaultResolver {
   constructor(options) {
@@ -17,21 +18,15 @@ class DefaultResolver {
 
   resolve(moduleName,resolvedParentModule,cb) {
     const context = {
-      output: [],
+      attempts: [],
     };
 
     const callback = (err,resolved) => {
       if (err) {
-        console.log(context.output.join('\n'));
-        err.debug = context.output;
+        return cb(new PacktResolverError(moduleName, resolvedParentModule, context.attempts));
       }
-      cb(err,resolved);
+      cb(null,resolved);
     };
-
-    context.output.push(
-      'Resolving ' + moduleName +
-      ' (from ' + resolvedParentModule + ')'
-    );
 
     if (path.isAbsolute(moduleName)) {
       this._checkFileIndexOrPackage(moduleName,context,callback);
@@ -62,8 +57,6 @@ class DefaultResolver {
     const searchPath = this._options.searchPaths[searchIndex];
 
     if (path.isAbsolute(searchPath)) {
-      context.output.push('  ' + 'Trying search path ' + searchPath + '...');
-
       const checkResult = (err,result) => {
         if (err) {
           this._searchPaths(
@@ -108,8 +101,6 @@ class DefaultResolver {
         currentDir,
         this._options.searchPaths[searchIndex]
       );
-      context.output.push('  ' + 'Trying search path ' + searchPath + '...');
-
       const checkResult = (err,result) => {
         if (err) {
           this._recursiveSearchPaths(
@@ -131,14 +122,18 @@ class DefaultResolver {
   }
 
   _checkFileIndexOrPackage(modulePath,context,callback) {
-    context.output.push(
-      '  ' + modulePath +
-      ', checking for files, indexes, or packages...'
-    );
     this._stat(modulePath,(err,isFile) => {
+      context.attempts.push(modulePath);
       if (err) {
         // modulePath doesn't exist - try adding on known file extensions
-        this._searchExtensions(modulePath,0,context,callback);
+        // if it doesn't have an extension already or its extension is not
+        // in our list of configured extensions
+        const ext = path.extname(modulePath);
+        if (!this._options.extensions.find((e) => e === ext)) {
+          this._searchExtensions(modulePath,0,context,callback);
+        } else {
+          callback(new Error('Unable to resolve ' + modulePath));
+        }
       } else if (!isFile) {
         // modulePath is a folder, check for package.json then index[+extensions]
         this._readPackageMain(modulePath,(err,packageMain) => {
@@ -150,8 +145,10 @@ class DefaultResolver {
 
           this._stat(packageMain,(err,isFile) => {
             if (err || !isFile) {
+              context.attempts.push(packageMain);
               this._searchExtensions(packageMain,0,context,callback);
             } else {
+              context.attempts.pop();
               callback(null,packageMain);
             }
           });
@@ -161,8 +158,10 @@ class DefaultResolver {
         // our configured extensions for it to count as a resolution
         const ext = path.extname(modulePath);
         if (!this._options.extensions.find((e) => e === ext)) {
+          context.attempts[context.attempts.length - 1] += ' (ignored due to file extension "' + ext + '". To include this file, add the extension to the resolvers.default.extensions configuration property)';
           callback(new Error('Unable to resolve ' + modulePath));
         } else {
+          context.attempts.pop();
           callback(null,modulePath);
         }
       }
@@ -180,9 +179,7 @@ class DefaultResolver {
       resolvedModulePath,
       (err,isFile) => {
         if (err || !isFile) {
-          context.output.push(
-            '    ' + resolvedModulePath + ' does not exist'
-          );
+          context.attempts.push(resolvedModulePath);
           this._searchExtensions(modulePath,++extIndex,context,callback);
         } else {
           callback(null,resolvedModulePath);
