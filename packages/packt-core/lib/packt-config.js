@@ -11,16 +11,99 @@ class PacktConfig {
   load(filename, json) {
     this.configFile = filename;
     this.workingDirectory = path.dirname(filename);
+    this._resolver = new DefaultResolver({
+      searchPaths: [
+        this.workingDirectory,
+        'node_modules',
+      ],
+      extensions: ['.js'],
+    });
 
-    return this._validate(json);
-      /*.then(() => this._resolveResolvers(json))
-        .then(() => this._resolveHandlers(json))
-        .then(() => this._resolveBundlers(json))
-        .then(() => this.buildVariants(json));*/
+    return this
+      ._validate(json)
+      .then((validated) => this._buildVariants(validated))
+      .then((variants) => this.variants = variants);
   }
 
   _validate(json) {
-    const CONFIG_SCHEMA = joi.object({
+    return Promise.all(
+      ((json.resolvers && json.resolvers.custom) || []).map(
+        c => this._resolveRequire(c)
+      ).concat((json.handlers || []).map(
+        h => this._resolveRequire(h)
+      )).concat(Object.keys(json.bundlers || {}).map(
+        b => this._resolveRequire(json.bundlers[b])
+      ))
+    ).then((resolved) => new Promise((resolve,reject) => {
+      const schema = this._generateSchema(
+        resolved.filter(r => !r.err).map(r => r.resolved),
+        Object.keys(json.bundlers || {})
+      );
+      joi.validate(json, schema,  (err, value) => { 
+        if (err) {
+          return reject(new PacktConfigError(err));
+        }
+        resolve(value);
+      });
+    }));
+  }
+
+  _generateSchema(resolved, bundlers) {
+    const customJoi = joi.extend({
+      base: joi.string(),
+      name: 'string',
+      language: {
+        bundler: '{{value}} needs to be one of {{bundlers}}',
+        resolvable: 'unable to resolve required module "{{value}}"',
+        regex: '"{{value}}" is not a valid RegExp',
+      },
+      rules: [
+        {
+          name: 'bundler',
+          params: {
+            bundlers: joi.array().items(joi.string()).required()
+          },
+          validate(params, value, state, options) {
+            if (!params.bundlers.find((b) => value === b)) {
+              return this.createError('string.bundler',{ 
+                value: value, 
+                bundlers: params.bundlers 
+              }, state, options);
+            }
+            return value;
+          }
+        },
+        {
+          name: 'regex',
+          validate(params, value, state, options) {
+            try {
+              const regex = new RegExp(value);
+              return value;
+            } catch (err) {
+              return this.createError('string.regex',{ 
+                value: value, 
+              }, state, options);
+            }
+          }
+        },
+        {
+          name: 'resolvable',
+          params: {
+            resolved: joi.array().items(joi.string()).required()
+          },
+          validate(params, value, state, options) {
+            if (!params.resolved.find((r) => r === value)) {
+              return this.createError('string.resolvable',{ 
+                value: value 
+              }, state, options);
+            }
+            return value;
+          }
+        }
+      ],
+    });
+
+    const configSchema = joi.object({
       invariantOptions: joi.object({
         workers: joi.number().integer().min(1).default(os.cpus().length - 1),
         outputPath: joi.string().default(path.join(this.workingDirectory,'build')),
@@ -54,17 +137,17 @@ class PacktConfig {
           then: joi.number().min(0).max(1).required(),
           otherwise: joi.forbidden(),
         }),
-        bundler: joi.string().required(),
+        bundler: customJoi.string().bundler(bundlers).required(),
       })).min(1).required(),
       bundlers: joi.object({}).pattern(/.*/,joi.object({
-        require: joi.string().required(),
+        require: customJoi.string().resolvable(resolved).required(),
         invariantOptions: joi.object({}).default().unknown(),
       })).min(1).required(),
       resolvers: joi.object({
         custom: joi.array().items(joi.object({
-          require: joi.string().required(),
+          require: customJoi.string().resolvable(resolved).required(),
           invariantOptions: joi.object({}).default().unknown(),
-        })),
+        })).default([]),
         default: joi.object({
           invariantOptions: joi.object({
             searchPaths: joi.array().items(joi.string()).default(
@@ -80,8 +163,8 @@ class PacktConfig {
         }).default(),
       }).default(),
       handlers: joi.array().items(joi.object({
-        pattern: joi.string().required(),
-        require: joi.string().required(),
+        pattern: customJoi.string().regex().required(),
+        require: customJoi.string().resolvable(resolved).required(),
         invariantOptions: joi.object({}).default().unknown(),
         options: joi.object({
           base: joi.object({}).default().unknown(),
@@ -90,93 +173,90 @@ class PacktConfig {
       })).min(1).required(),
     });
 
+    return configSchema;
+  }
+
+  _resolveRequire(entry) {
     return new Promise((resolve,reject) => {
-      // check the overall structure of the config
-      joi.validate(json, CONFIG_SCHEMA,  (err, value) => { 
-        if (err) {
-          return reject(new PacktConfigError(err));
-        }
-        // check the handler patterns are all valid regexes
-        for (let handler of json.handlers) {
-          try {
-            const regex = new RegExp(handler.pattern);
-          } catch (err) {
-            return reject(new PacktConfigError({
-              details: [{
-                message: '"pattern" must be a valid regular expression',
-                path: 'handlers.pattern',
-              }],
-              annotate: () => chalk.red(err.toString()),
-            }));
-          }
-        }
-
-        for (let b in json.bundles) {
-          if (!json.bundlers[json.bundles[b].bundler]) {
-            return reject(new PacktConfigError({
-              details: [{
-                message: '"bundler" refers to a bundler "' + json.bundles[b].bundler + '" which is not defined',
-                path: 'bundles.' + b,
-              }],
-              annotate: () => 'Either add a new bundler, or choose one of the existing bundlers [' + chalk.red(Object.keys(json.bundlers).join(','))+']'
-            }));  
-          }
-        }
-
-        resolve();
-      });
-    });
-  }
-
-  /*_resolveResolvers(json) {
-    return Promise.all((json.resolvers.custom || []).map(
-      c => this._resolveRequire(c,resolver)
-    )).catch((err) =>
-      return Promise.reject(new PacktError('Failed to resolve custom resolver',err))
-    );
-  }
-
-  _resolveHandlers(json) {
-    return Promise.all((json.handlers || []).map(
-      h => this._resolveRequire(h,resolver)
-    )).catch((err) =>
-      Promise.reject(new PacktError('Failed to resolve handler',err))
-    );
-  }
-
-  _resolveBundlers(json) {
-    return Promise.all((json.bundlers || []).map(
-      b => this._resolveRequire(b,resolver)
-    )).catch((err) =>
-      Promise.reject(new PacktError('Failed to resolve bundler',err))
-    );
-    }*/
-
-  _resolveRequire(entry,resolver) {
-    return new Promise((resolve,reject) => {
-      resolver.resolve(
+      this._resolver.resolve(
         entry.require,
         this.configFile,
         (err,resolved) => {
           if (err) {
-            reject(err);
+            resolve({
+              require: entry.require,
+              err: err,
+            });
           } else {
-            resolve(Object.assign(entry,{
-              require: resolved,
-            }));
+            entry.require = resolved;
+            resolve({
+              require: entry.require,
+              resolved: resolved,
+            });
           }
         }
       );
     });
   }
 
-  toJson() {
-    return {
-      inputs: this.inputs,
-      options: this.options,
-      resolvers: this.resolvers,
-      handlers: this.handlers,
-    };
+  _buildVariants(json) {
+    const variants = {};
+    Object.keys(json.options.variants).reduce((prev,next) => {
+      prev[next] = this._mergeOptions(
+        JSON.parse(JSON.stringify(json)),
+        next
+      );
+      return prev;
+    },variants);
+    json.handlers.forEach((h) => {
+      Object.keys(h.options.variants).reduce((prev,next) => {
+        if (!prev[next]) {
+          prev[next] = this._mergeOptions(
+            JSON.parse(JSON.stringify(json)),
+            next
+          );
+        }
+        return prev;
+      },variants);
+    });
+    if (Object.keys(variants).length === 0) {
+      variants['default'] = this._mergeOptions(json); 
+    }
+    return Promise.resolve(variants);
+  }
+
+  /**
+   * merge all options of a single variant over the top of the 
+   * base options. Invariant options then override both of these
+   * to give the final merged options object
+   */
+  _mergeOptions(json,variant) {
+    json.options = Object.assign(
+      json.options.base,
+      variant ? json.options.variants[variant] : {},
+      json.invariantOptions
+    );
+    delete json.invariantOptions;
+    json.handlers.forEach(h => {
+      h.options = Object.assign(
+        h.options.base,
+        variant ? h.options.variants[variant]: {},
+        h.invariantOptions
+      );
+      delete h.invariantOptions;
+    });
+    json.resolvers.custom.forEach(r => {
+      r.options = r.invariantOptions;
+      delete r.invariantOptions;
+    });
+    json.resolvers.default.options = json.resolvers.default.invariantOptions;
+    delete json.resolvers.default.invariantOptions;
+    for (let b in json.bundlers) {
+      json.bundlers[b].options = json.bundlers[b].invariantOptions;
+      delete json.bundlers[b].invariantOptions;
+    }
+
+    return json;
   }
 }
 

@@ -1,9 +1,10 @@
 const PacktConfig = require('../packt-config');
+const path = require('path');
 
 describe('Config',() => {
   it('loads a simple config',()=> {
     const config = new PacktConfig();
-    return config.load('packt.config.js',{
+    return config.load(path.join(__dirname,'packt.config.js'),{
       bundles: {
         'foo.js': {
           type: 'entrypoint',
@@ -21,13 +22,13 @@ describe('Config',() => {
       },
       bundlers: {
         'js': {
-          require: 'bar',
+          require: './default-resolver-test',
         },
       },
       handlers: [
         {
           pattern: '^\\.js$',
-          require: 'foobar',
+          require: './default-resolver-test',
         }
       ]
     });
