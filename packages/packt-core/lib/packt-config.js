@@ -49,7 +49,7 @@ class PacktConfig {
       const schema = this._generateSchema(
         resolved.filter(r => !r.err).map(r => r.resolved),
         libraries,
-        bundlers,
+        bundlers
       );
 
       joi.validate(json, schema, {
@@ -201,7 +201,7 @@ class PacktConfig {
                 'node_modules',
               ]
             ),
-            extensions: joi.array().items(joi.string().regex(/^\\..+$/)).default(
+            extensions: joi.array().items(joi.string().regex(/^\..+$/)).default(
               ['.js','.json']
             ),
           }).default(),

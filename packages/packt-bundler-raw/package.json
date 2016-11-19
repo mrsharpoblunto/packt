@@ -1,0 +1,14 @@
+{
+  "name": "packt-bundler-raw",
+  "version": "1.0.0",
+  "description": "Packt bundler for combining blobs of raw text content",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Glenn Conner",
+  "license": "MIT",
+  "devDependencies": {
+    "jest": "^17.0.0"
+  }
+}

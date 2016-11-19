@@ -6,16 +6,17 @@ const PacktConfig = require('./packt-config');
 const ResolverChain = require('./resolver-chain');
 const Timer = require('./timer');
 const ContentMap = require('./content-map');
+const errors = require('./packt-errors');
 
 class Packt {
-  constructor(reporter) {
+  constructor(configFile) {
     this._timer = new Timer();
     this._handlerTimer = new Timer();
-    this._reporter = reporter;
+    this.configFile = configFile;
   }
 
-  build(configFile) {
-    return this._loadConfig(configFile)
+  build() {
+    return this._loadConfig()
       .then(() => {
         this._resolvers = new ResolverChain(this._config.resolvers);
         this._workers = new WorkerPool(this._config);
@@ -33,9 +34,27 @@ class Packt {
       });
   }
 
-  _loadConfig(configFile) {
+  _loadConfig() {
     this._config = new PacktConfig();
-    return this._config.load(configFile,resolver);
+
+    let json;
+    try {
+      json = require(this.configFile);
+    } catch (ex) {
+      console.log(ex);
+      if (ex.message === 'missing path') {
+        return Promise.reject(new errors.PacktError(
+          'No config file found at ' + this.configFile,
+          ex
+        ));
+      } else {
+        return Promise.reject(new errors.PacktError(
+          'Unable to parse config file ' + this.configFile,
+          ex
+        ));
+      }
+    }
+    return this._config.load(this.configFile,json);
   }
 
   _loadBuildData() {

@@ -73,7 +73,7 @@ module.exports = {
       contentTypes: [
         'text/css',
       ],
-      bundler: 'css',
+      bundler: 'raw',
     },
   },
 
@@ -81,12 +81,6 @@ module.exports = {
    * configures how resources get bundled together
    */
   bundlers: {
-    'css': {
-      require: 'packt-bundler-css',
-      invariantOptions: {
-        minify: true,
-      },
-    },
     'raw': {
       require: 'packt-bundler-raw',
     },
@@ -106,7 +100,7 @@ module.exports = {
   resolvers: {
     custom: [
       {
-        require: 'packt-resolver-haste',
+        require: './packt-resolver-haste',
         invariantOptions: {
           modulePath: path.join(__dirname,'lib'),
         }

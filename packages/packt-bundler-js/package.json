@@ -1,0 +1,14 @@
+{
+  "name": "packt-bundler-js",
+  "version": "1.0.0",
+  "description": "Packt bundler for flattening a dependency tree of commonjs modules",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Glenn Conner",
+  "license": "MIT",
+  "devDependencies": {
+    "jest": "^17.0.0"
+  }
+}
