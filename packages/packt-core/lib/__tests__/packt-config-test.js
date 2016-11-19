@@ -235,4 +235,110 @@ describe('Config',() => {
       });
     });
   });
+
+  it('generates config variants',()=> {
+    const config = new PacktConfig();
+
+    MockDefaultResolver.__resolvableDirectories = {
+      './handler-js': '/path/to/handler.js',
+      './bundler-js': '/path/to/bundler.js',
+    };
+
+    return config.load(path.join(__dirname,'packt.config.js'),{
+      bundles: {
+        'entry.js': {
+          type: 'entrypoint',
+          requires: ['./index.js'],
+          depends: ['library.js','common.js'],
+          bundler: 'js',
+        },
+        'entry2.js': {
+          type: 'entrypoint',
+          requires: './index.js',
+          depends: 'library.js',
+          bundler: 'js',
+        },
+        'entry3.js': {
+          type: 'entrypoint',
+          requires: './index.js',
+          bundler: 'js',
+        },
+        'library.js': {
+          type: 'library',
+          requires: ['react.js'],
+          bundler: 'js',
+        },
+        'common.js': {
+          type: 'common',
+          bundler: 'js',
+          contentTypes: [
+            'text/javascript',
+          ],
+          threshold: 0.5,
+        },
+      },
+      options: {
+        base: {
+          lang: 'es_ES',
+        },
+        variants: {
+          'en_US': {
+            lang: 'en_US',
+          },
+          'en_GB': {
+            lang: 'en_GB',
+          },
+        },
+      },
+      bundlers: {
+        'js': {
+          require: './bundler-js',
+        },
+      },
+      handlers: [
+        {
+          pattern: '^\\.js$',
+          require: './handler-js',
+          invariantOptions: {
+              strict: false,
+          },
+          options: {
+            base: {
+              sourceMaps: true,
+            },
+            variants: {
+              'prod': {
+                strict: true,
+                sourceMaps: false,
+                minify: true,
+              },
+              'dev': {
+                minify: false,
+              }
+            }
+          }
+        }
+      ]
+    }).then((config) => {
+      expect(config).toBeTruthy();
+      expect(Object.keys(config.variants)).toEqual(
+        ['en_US','en_GB','prod','dev']);
+
+      expect(config.variants['en_US'].options.lang).toBe('en_US');
+      expect(config.variants['en_GB'].options.lang).toBe('en_GB');
+      expect(config.variants['dev'].options.lang).toBe('es_ES');
+      expect(config.variants['prod'].options.lang).toBe('es_ES');
+
+      expect(config.variants['dev'].handlers[0].options).toEqual({
+        strict: false,
+        sourceMaps: true,
+        minify: false,
+      });
+      expect(config.variants['prod'].handlers[0].options).toEqual({
+        strict: false,
+        sourceMaps: false,
+        minify: true,
+      });
+    });
+  });
 });
