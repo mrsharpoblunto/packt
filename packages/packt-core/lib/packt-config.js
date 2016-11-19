@@ -22,42 +22,81 @@ class PacktConfig {
     return this
       ._validate(json)
       .then((validated) => this._buildVariants(validated))
-      .then((variants) => this.variants = variants);
+      .then((variants) => {
+        this.variants = variants
+        return this;
+      });
   }
 
   _validate(json) {
+    const resolvers = Array.isArray(json.resolvers && json.resolvers.custom) ? 
+      json.resolvers.custom : [];
+    const handlers = Array.isArray(json.handlers) ? json.handlers : [];
+    const bundlers = (json.bundlers && typeof(json.bundlers) === 'object') ?
+      Object.keys(json.bundlers) : [];
+    
     return Promise.all(
-      ((json.resolvers && json.resolvers.custom) || []).map(
-        c => this._resolveRequire(c)
-      ).concat((json.handlers || []).map(
-        h => this._resolveRequire(h)
-      )).concat(Object.keys(json.bundlers || {}).map(
-        b => this._resolveRequire(json.bundlers[b])
-      ))
+      resolvers.map(c => this._resolveRequire(c))
+        .concat(handlers.map(h => this._resolveRequire(h)))
+        .concat(bundlers.map(b => this._resolveRequire(json.bundlers[b])))
     ).then((resolved) => new Promise((resolve,reject) => {
+      const libraries = (json.bundles && typeof(json.bundles) === 'object') ?
+        Object.keys(json.bundles).filter(
+          (b) => json.bundles[b].type === 'library' || 
+                 json.bundles[b].type === 'common'
+        ) : []
+
       const schema = this._generateSchema(
         resolved.filter(r => !r.err).map(r => r.resolved),
-        Object.keys(json.bundlers || {})
+        libraries,
+        bundlers,
       );
-      joi.validate(json, schema,  (err, value) => { 
+
+      joi.validate(json, schema, {
+        abortEarly: false,
+      }, (err, value) => { 
         if (err) {
           return reject(new PacktConfigError(err));
+        }
+        for (let b in value.bundles) {
+          if (typeof(value.bundles[b].requires) === 'string') {
+            value.bundles[b].requires = [value.bundles[b].requires];
+          }
+          if (typeof(value.bundles[b].depends) === 'string') {
+            value.bundles[b].depends = [value.bundles[b].depends];
+          }
         }
         resolve(value);
       });
     }));
   }
 
-  _generateSchema(resolved, bundlers) {
+  _generateSchema(resolved, libraries, bundlers) {
     const customJoi = joi.extend({
       base: joi.string(),
       name: 'string',
       language: {
         bundler: '{{value}} needs to be one of {{bundlers}}',
+        library: 'dependency {{value}} needs to be one of the following library or common bundles {{libraries}}',
         resolvable: 'unable to resolve required module "{{value}}"',
         regex: '"{{value}}" is not a valid RegExp',
       },
       rules: [
+        {
+          name: 'library',
+          params: {
+            libraries: joi.array().items(joi.string()).required()
+          },
+          validate(params, value, state, options) {
+            if (!params.libraries.find((b) => value === b)) {
+              return this.createError('string.library',{ 
+                value: value, 
+                libraries: params.libraries 
+              }, state, options);
+            }
+            return value;
+          }
+        },
         {
           name: 'bundler',
           params: {
@@ -107,7 +146,7 @@ class PacktConfig {
       invariantOptions: joi.object({
         workers: joi.number().integer().min(1).default(os.cpus().length - 1),
         outputPath: joi.string().default(path.join(this.workingDirectory,'build')),
-        outputFormat: joi.string().default('${filename}_{hash}.${ext}'),
+        outputFormat: joi.string().default('${filename}_${hash}.${ext}'),
         outputHash: joi.any().valid('md5','sha1','sha2').default('md5'),
         outputHashLength: joi.number().min(1).max(16).default(12),
       }).default(),
@@ -120,11 +159,17 @@ class PacktConfig {
         requires: joi.when('type', { 
           is: 'common', 
           then: joi.forbidden(),
-          otherwise: joi.array().items(joi.string()).required(),
+          otherwise: joi.alternatives().try(
+            joi.array().items(joi.string()),
+            joi.string()
+          ).required()
         }),
         depends: joi.when('type', { 
           is: 'entrypoint', 
-          then: joi.array().items(joi.string()).default(),
+          then: joi.alternatives().try(
+            joi.array().items(customJoi.string().library(libraries)),
+            customJoi.string().library(libraries)
+          ).default([]),
           otherwise: joi.forbidden(),
         }),
         contentTypes: joi.when('type', { 

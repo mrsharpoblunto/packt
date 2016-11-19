@@ -18,11 +18,7 @@ class PacktResolverError extends Error {
 class PacktConfigError extends Error {
   constructor(error) {
     super(error.details[0].path + ': ' + error.details[0].message);
-    this.details = error.details.map(e => ({
-      message: e.message,
-      path: e.path,
-    }));
-    this.context = error.annotate();
+    this.details = error.details;
   }
 }
 
