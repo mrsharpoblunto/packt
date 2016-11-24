@@ -84,8 +84,13 @@ class Packt {
   _buildInputs(inputs) {
     const start = Date.now();
     return new Promise((resolve,reject) => {
+      const updateUIInterval = setInterval(() => {
+        // TODO diff previous UI state & re-render status table
+      },100);
+
       const cleanup = (err,result) => {
         this._timer.accumulate('build',{ 'inputs': Date.now() - start });
+        clearInterval(updateUIInterval);
         this._workers.removeAllListeners();
         this._resolvers.removeAllListeners();
         if (err) {

@@ -2,25 +2,33 @@
 
 const path = require('path');
 const messageTypes = require('./message-types');
+const DefaultResolver = require('./default-resolver');
 
 class WorkerProcess {
   constructor() {
     this._queue = [];
     this._handlers = [];
     this._busy = false;
+    this._variantKeys = [];
   }
 
   start() {
-    // keep the child process alive
-    //const heartbeat = setInterval(() => {},100);
+    process.on('uncaughtException',(err) => {
+      process.send({
+        type: messageTypes.ERROR,
+        message: err.toString(),
+      });
+      process.exit(0);
+    });
+
     process.on('message',(msg) => {
       switch (msg.type) {
         case messageTypes.CONFIG:
-          this._processConfig(msg.config);
+          this._variantKeys = Object.keys(msg.variants);
+          this._processConfig(msg);
           break;
 
         case messageTypes.CLOSE:
-          //clearInterval(heartbeat);
           process.exit(0);
           break;
 
@@ -35,14 +43,57 @@ class WorkerProcess {
     });
   }
 
-  _processConfig(config) {
-    for (let pattern in config.handlers) {
-      const handler = config.handlers[pattern];
+  _processConfig(msg) {
+    const variants = msg.variants;
+    const configFile = msg.configFile;
+    const resolver = new DefaultResolver(
+      DefaultResolver.defaultOptions(msg.workingDirectory)
+    );
+
+    // pick any variant, doesn't matter which as the list of 
+    // handlers are invariant
+    const config = variants[this._variantKeys[0]];
+
+    for (let i = 0;i < config.handlers.length; ++i) {
+      const handler = config.handlers[i];
+      const options = this._variantKeys.reduce((prev, k) => {
+        prev[key] = variants[k].handlers[i].options;
+        return prev;
+      },{});
       this._handlers.push({
-        pattern: new RegExp(pattern),
-        handler: new (require(handler.require))(handler.options),
+        pattern: new RegExp(handler.pattern),
+        handler: new (require(handler.require))(),
+        options: options,
       });
     }
+
+    const wrappedResolver = (path, cb) => {
+      resolver.resolve(path, configFile, cb); 
+    };
+
+    const handlerInits = this._handlers.map((h) => {
+      return new Promise((resolve,reject) => {
+        h.handler.init(
+          h.options, 
+          variants, 
+          wrappedResolver, 
+          (err) => err ? reject(err) : resolve()
+        );
+      });
+    });
+
+    Promise.all(handlerInits).then(() => {
+      process.send({
+        type: messageTypes.INITIALIZED,
+        message: err.toString(),
+      });
+    },(err) => {
+      process.send({
+        type: messageTypes.ERROR,
+        message: err.toString(),
+      });
+      process.exit(0);
+    });
   }
 
   _matchHandler(resolved) {
@@ -64,13 +115,13 @@ class WorkerProcess {
     if (!handler) {
       return process.send({
         type: messageTypes.CONTENT,
+        variants: this._variantKeys,
         error: 'No handler matched resolved resource '+ resolved,
         resolved: resolved,
       });
     }
 
-    // hook up all additional events that could be fired by the handler
-    // TODO rename Processor maybe?
+    // TODO hook up all additional events that could be fired by the handler
     const foundDependency = (moduleName) => {
       process.send({
         type: messageTypes.DEPENDENCY,
@@ -84,16 +135,16 @@ class WorkerProcess {
     // changes on incremental builds using file last modified. virtual resources
     // need to be checked by invoking the handlers getCacheKey() function
     // and checking the value in the cache
-    // TODO send perfStats back load,parse,transform...
     handler.handler.process(
       resolved,
-      (err, response) => {
+      (err, variants, response) => {
         // clean up all handler listeners
         handler.handler.removeListener(messageTypes.DEPENDENCY,foundDependency);
 
         if (err) {
           process.send({
             handler: handler.pattern.toString(),
+            variants: variants,
             type: messageTypes.CONTENT,
             error: err.toString(),
             resolved: resolved,
@@ -101,6 +152,7 @@ class WorkerProcess {
         } else {
           process.send({
             handler: handler.pattern.toString(),
+            variants: variants,
             type: messageTypes.CONTENT,
             content: response.content,
             perfStats: response.perfStats,

@@ -250,11 +250,14 @@ class DefaultResolver {
 
 }
 
-DefaultResolver.defaultOptions = {
-  searchPaths: [
-    'node_modules',
-  ],
-  extensions: ['.js'],
+DefaultResolver.defaultOptions = function(workingDirectory) {
+  return {
+    searchPaths: [
+      workingDirectory,
+      'node_modules',
+    ],
+    extensions: ['.js'],
+  };
 };
 
 module.exports = DefaultResolver;

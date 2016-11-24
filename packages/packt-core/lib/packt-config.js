@@ -11,13 +11,9 @@ class PacktConfig {
   load(filename, json) {
     this.configFile = filename;
     this.workingDirectory = path.dirname(filename);
-    this._resolver = new DefaultResolver({
-      searchPaths: [
-        this.workingDirectory,
-        'node_modules',
-      ],
-      extensions: ['.js'],
-    });
+    this._resolver = new DefaultResolver(
+      DefaultResolver.defaultOptions(this.workingDirectory)
+    );
 
     return this
       ._validate(json)
