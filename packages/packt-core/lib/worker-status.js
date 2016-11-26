@@ -1,7 +1,7 @@
 'use strict';
 
 module.exports = {
-  INITIALIZING: 'initializing',
+  CONFIGURING: 'configuring',
   IDLE: 'idle',
   ERROR: 'error',
   PROCESSING: 'processing',

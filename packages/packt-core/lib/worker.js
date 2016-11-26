@@ -11,15 +11,17 @@ class Worker extends EventEmitter {
   constructor(config) {
     super();
     this._config = config;
-    this._status = {};
-    this._setStatus(workerStatus.INITIALIZING);
+    this._status = {
+      status: workerStatus.IDLE,
+      description: '',
+    };
   }
 
   start() {
     this._process = cp.fork(path.join(__dirname,'worker-process.js'));
     this._process.on('message',this._onMessage.bind(this));
     this._process.on('close',this._onClose.bind(this));
-    this._process.send({
+    this.send({
       type: messageTypes.CONFIG,
       config: this._config.config,
       configFile: this._config.configFile,
@@ -86,7 +88,7 @@ class Worker extends EventEmitter {
   }
 
   _setStatus(status,description) {
-    this._status.status = workerStatus.ERROR;
+    this._status.status = status;
     this._status.description = description || '';
     this.emit(messageTypes.STATUS_CHANGE, this._status);
   }
@@ -96,6 +98,12 @@ class Worker extends EventEmitter {
       throw new Error('Cannot send messages to a busy worker');
     }
     switch (message.type) {
+      case messageTypes.CONFIG:
+        this._setStatus(
+          workerStatus.CONFIGURING,
+          'loading config from ' + message.configFile
+        );
+        break;
       case messageTypes.PROCESS:
         this._setStatus(
           workerStatus.PROCESSING,

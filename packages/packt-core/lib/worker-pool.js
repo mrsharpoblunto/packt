@@ -25,7 +25,14 @@ class WorkerPool extends EventEmitter {
         this.emit(messageTypes.CONTENT,m);
       });
       w.on(messageTypes.CONTENT_ERROR,(m) => {
-        this.emit(messageTypes.CONTENT_ERROR,m);
+        this.emit(messageTypes.CONTENT_ERROR,{
+          error: new errors.PacktContentError(
+            m.handler,
+            m.variants,
+            m.error,
+            m.resolved
+          )
+        });
       });
       w.on(messageTypes.DEPENDENCY,(m) => {
         this.emit(messageTypes.DEPENDENCY,m);
@@ -62,7 +69,7 @@ class WorkerPool extends EventEmitter {
     if (this._queue.length) {
       this._idle = false;
       for (let w of this._workers) {
-        if (w.worker.status().status === workerStatus.IDLE) {
+        if (w.status().status === workerStatus.IDLE) {
           const queued = this._queue.shift();
           w.send(queued);
         }

@@ -69,11 +69,15 @@ class WorkerProcess {
 
     const initializing = this._handlers
       .map((h) => new Promise((resolve, reject) => {
-        h.handler.init(
-          h.invariantOptions,
-          (path, cb) => resolver.resolve(path, configFile, cb),
-          (err) => err ? reject(err) : resolve()
-        );
+        try {
+          h.handler.init(
+            h.invariantOptions,
+            (path, cb) => resolver.resolve(path, configFile, cb),
+            (err) => err ? reject(err) : resolve()
+          );
+        } catch (ex) {
+          reject(ex);
+        }
       }));
 
     Promise.all(initializing).then(() => {
@@ -127,9 +131,9 @@ class WorkerProcess {
         if (err) {
           process.send({
             handler: handler.pattern.toString(),
-            variants: variants,
+            variants: variants || this._allVariants,
             type: messageTypes.CONTENT,
-            error: err.toString(),
+            error: err.stack,
             resolved: resolved,
             context: context,
           });
@@ -139,7 +143,7 @@ class WorkerProcess {
           // declarations for doing scope hoisting
           process.send({
             handler: handler.pattern.toString(),
-            variants: variants,
+            variants: variants || this._allVariants,
             type: messageTypes.CONTENT,
             content: response.content,
             perfStats: response.perfStats,
@@ -149,7 +153,7 @@ class WorkerProcess {
         }
 
         // once all the expected variants are processed, go onto the next task
-        remaining = remaining.filter((r) => !variants.find((v) => v === r));
+        remaining = remaining.filter((r) => !(variants || this._allVariants).find((v) => v === r));
         if (!remaining.length) {
           handler.handler.removeAllListeners();
           process.send({ type: messageTypes.TASK_COMPLETE });

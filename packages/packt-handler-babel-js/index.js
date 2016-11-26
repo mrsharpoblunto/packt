@@ -5,15 +5,6 @@ const traverse = require('babel-traverse').default;
 const fs = require('fs');
 const EventEmitter = require('events').EventEmitter;
 
-function fbTransform(name) {
-  return require('../webpack/babel/fb-transforms/babel-plugin-' + name);
-}
-
-function igTransform(name) {
-  return require('../webpack/babel/ig-transforms/babel-plugin-' + name);
-}
-
-
 function findDependencies(babel) {
   var t = babel.types;
   return {
@@ -45,6 +36,7 @@ class JsHandler extends EventEmitter {
     this.handlerInvariants = {
       ignore: (invariants.handler.ignore || []).map((i) => new RegExp(i)),
     };
+    cb();
   }
 
   // TODO need to handle variants properly here
@@ -146,55 +138,7 @@ class JsHandler extends EventEmitter {
       'transform-es2015-shorthand-properties',
       'transform-es2015-arrow-functions',
       'transform-es2015-spread',
-      // facebook specific transforms
-      [
-        fbTransform('class-private-props'),
-        {
-          minify: !options.pretty,
-        },
-      ],
-      fbTransform('fb-classes'),
-      fbTransform('inline-invariant'),
-      fbTransform('fbt'),
-      fbTransform('fb-cxsets'),
-      // instagram specific transforms
-      [
-        igTransform('ig-i18n'),
-        {
-          translations: options.translations,
-        },
-      ],
-      [
-        igTransform('ig-cx'),
-        {
-          cxWithoutRequire: options.testMode,
-        },
-      ],
     ];
-
-    if (options.testMode) {
-      // only need to transform modules in test, as in web builds this is done for
-      // us by webpack
-      plugins.push('transform-es2015-modules-commonjs');
-      plugins.push('jest-hoist');
-    } else {
-      // we don't want to do any asset map replacement stuff in tests
-      // as its A) unecessary, and B) the asset map may not be present
-      // if the frontend build hasn't been run
-      plugins.push([
-        igTransform('ig-badge'),
-        {
-          lang: options.lang,
-          assetMap: options.assetMap,
-        },
-      ]);
-      plugins.push([
-        igTransform('ig-require-static'),
-        {
-          assetMap: options.assetMap,
-        },
-      ]);
-    }
 
     var mainDocBlockHandled = false;
 
@@ -219,10 +163,5 @@ class JsHandler extends EventEmitter {
     return {code: result.code};
   }
 }
-
-JsHandler.schema = {
-  variant: [],
-  invariant: ['ignore'],
-};
 
 module.exports = JsHandler;

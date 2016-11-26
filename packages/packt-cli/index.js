@@ -14,7 +14,7 @@ function printGeneralError(err) {
 }
 
 function printConfigError(err) {
-  console.log(chalk.red('Build failed due to configuration errors:'));
+  console.log(chalk.red('Failed due to configuration errors:'));
   for (let d of err.details) {
     let message = d.message;
     for (let c in d.context) {
@@ -24,9 +24,33 @@ function printConfigError(err) {
   }
 }
 
+function printResolverError(err) {
+  console.log(chalk.red('Failed to resolve module "' + err.module + '"'));
+  if (err.context) {
+    console.log(chalk.dim('(required by ' + err.context + ')'));
+  }
+  console.log('Resolution attempts:');
+  for (let attempt of err.attempts) {
+    console.log('  ' + attempt);
+  }
+}
+
 function printWorkerError(err) {
-  console.log(chalk.red('Build failed due to an unexpected error in worker ' + err.index));
+  console.log(chalk.red('Failed due to an unexpected error in worker ' + err.index));
   console.log(err.details);
+}
+
+function printContentError(err) {
+  console.log(chalk.red('Failed to process module "' + err.resolved + '"'));
+  console.log(chalk.bold('Handler: ') + err.handler);
+  console.log(chalk.bold('Variants: ') + '[' + err.variants.join(',') + ']');
+  const index = err.error.indexOf(':');
+  if (index < 0) {
+    err.error = chalk.bold('Error: ') + err.error;
+  } else {
+    err.error = chalk.bold(err.error.substr(0,index + 1)) + err.error.substr(index + 1);
+  }
+  console.log(err.error);
 }
 
 function repeat(chr,repeat) {
@@ -101,6 +125,10 @@ if (!argv.help) {
       printConfigError(err);
     } else if (err instanceof errors.PacktWorkerError) {
       printWorkerError(err);
+    } else if (err instanceof errors.PacktResolverError) {
+      printResolverError(err);
+    } else if (err instanceof errors.PacktContentError) {
+      printContentError(err);
     } else if (err instanceof errors.PacktError) {
       printGeneralError(err);
     } else {

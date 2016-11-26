@@ -10,7 +10,9 @@ class PacktError extends Error {
 
 class PacktResolverError extends Error {
   constructor(module, context, attempts) {
-    super('Unable to resolve "' + module + '"' + chalk.dim(context ? (' (via ' + context + ')') : ''));
+    super('Unable to resolve "' + module + '"' + (context ? (' (via ' + context + ')') : ''));
+    this.module = module;
+    this.context = context;
     this.attempts = attempts;
   }
 }
@@ -30,9 +32,25 @@ class PacktWorkerError extends Error {
   }
 }
 
+class PacktContentError extends Error {
+  constructor(
+    handler,
+    variants,
+    error,
+    resolved
+  ) {
+    super('Error processing ' + resolved + ': ' + error);
+    this.handler = handler;
+    this.variants = variants;
+    this.error = error;
+    this.resolved = resolved;
+  }
+}
+
 module.exports = {
   PacktError: PacktError,
   PacktConfigError: PacktConfigError,
   PacktResolverError: PacktResolverError,
   PacktWorkerError: PacktWorkerError,
+  PacktContentError: PacktContentError,
 };
