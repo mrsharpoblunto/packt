@@ -5,20 +5,28 @@ class ContentMap {
     this._content = {};
   }
 
-  contains(resolved) {
-    return !!this._content[resolved];
+  get(resolved) {
+    return this._content[resolved];
   }
 
-  addPending(resolved) {
-    this._content[resolved] = {
-      pending: true,
-    };
+  addIfNotPresent(resolved,ifNotPresent) {
+    const entry = this._content[resolved];
+    if (!entry) {
+      this._content[resolved] = {
+        variants: {},
+      };
+      ifNotPresent();
+    }
   }
 
-  setContent(resolved,content) {
-    this._content[resolved] = {
-      content: content,
-    };
+  setContent(resolved,variants,content) {
+    Object.assign(
+      this._content[resolved].variants,
+      variants.reduce((prev, next) => {
+        prev[next] = content;
+        return prev;
+      },{})
+    );
   }
 }
 

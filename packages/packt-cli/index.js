@@ -6,10 +6,11 @@ const Packt = require('packt-core');
 const errors = require('packt-core/lib/packt-errors');
 const chalk = require('chalk');
 const escapes = require('ansi-escapes');
+const ConsoleReporter = require('./console-reporter');
 
 function printGeneralError(err) {
-  console.log(chalk.red(err.toString()));
-  console.log(chalk.dim(err.originalError.toString()));
+  console.log(chalk.red(err));
+  console.log(chalk.dim(err.originalError.stack));
 }
 
 function printConfigError(err) {
@@ -21,6 +22,11 @@ function printConfigError(err) {
     }
     console.log('  ' + chalk.bold(d.path) + ': ' + message);
   }
+}
+
+function printWorkerError(err) {
+  console.log(chalk.red('Build failed due to an unexpected error in worker ' + err.index));
+  console.log(err.details);
 }
 
 function repeat(chr,repeat) {
@@ -47,13 +53,14 @@ const argv = yargs
 
 if (!argv.help) {
   const packt = new Packt(
-    path.resolve(process.cwd(),argv.config)
+    path.resolve(process.cwd(),argv.config),
+    new ConsoleReporter()
   );
 
   console.log(chalk.bold('Packt ' + require('./package.json').version));
   console.log(chalk.bold('Using config: ') + packt.configFile);
 
-  if (process.stdout.isTTY) {
+  /* if (process.stdout.isTTY) {
     console.log();
     console.log(chalk.bold('Processed') + ' ' + chalk.green('122') + chalk.bold('/224  ') +
                 chalk.bold('Bundled') + ' ' + chalk.blue('2') + chalk.bold('/7'));
@@ -82,7 +89,7 @@ if (!argv.help) {
       console.log(repeat('-',windowSize[0]));
       ++i;
     },1000);
-  }
+    }*/
 
 
 
@@ -92,10 +99,12 @@ if (!argv.help) {
     console.log();
     if (err instanceof errors.PacktConfigError) {
       printConfigError(err);
+    } else if (err instanceof errors.PacktWorkerError) {
+      printWorkerError(err);
     } else if (err instanceof errors.PacktError) {
       printGeneralError(err);
     } else {
-      console.log(chalk.red(err.toString()));
+      console.log(chalk.red(err.stack));
     }
 
     console.log();

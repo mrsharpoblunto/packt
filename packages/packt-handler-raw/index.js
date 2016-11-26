@@ -4,7 +4,11 @@ const EventEmitter = require('events').EventEmitter;
 
 class RawHandler extends EventEmitter {
 
-  process(resolved,callback) {
+  init(invariants, resolver, callback) {
+    callback();
+  }
+
+  process(resolved, variants, callback) {
     const stats = {};
     let start = Date.now();
     fs.readFile(resolved,'utf8',(err,source) => {
@@ -20,6 +24,7 @@ class RawHandler extends EventEmitter {
         stats.transform = Date.now() - start;
         callback(null,{
           content: content,
+          variants: Object.keys(variants),
           perfStats: stats,
         });
       }

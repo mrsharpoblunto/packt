@@ -3,6 +3,7 @@
 const path = require('path');
 const DefaultResolver = require('./default-resolver');
 const PacktConfigError = require('./packt-errors').PacktConfigError;
+const bundleTypes = require('./bundle-types');
 const joi = require('joi');
 const os = require('os');
 const chalk = require('chalk');
@@ -18,10 +19,7 @@ class PacktConfig {
     return this
       ._validate(json)
       .then((validated) => this._buildVariants(validated))
-      .then((variants) => {
-        this.variants = variants
-        return this;
-      });
+      .then((config) => this.config = config);
   }
 
   _validate(json) {
@@ -38,8 +36,8 @@ class PacktConfig {
     ).then((resolved) => new Promise((resolve,reject) => {
       const libraries = (json.bundles && typeof(json.bundles) === 'object') ?
         Object.keys(json.bundles).filter(
-          (b) => json.bundles[b].type === 'library' || 
-                 json.bundles[b].type === 'common'
+          (b) => json.bundles[b].type === bundleTypes.LIBRARY || 
+                 json.bundles[b].type === bundleTypes.COMMON
         ) : []
 
       const schema = this._generateSchema(
@@ -151,9 +149,13 @@ class PacktConfig {
         variants: joi.object({}).default().unknown(),
       }).default(),
       bundles: joi.object({}).pattern(/.*/,joi.object({
-        type: joi.any().valid('entrypoint','library','common').required(),
+        type: joi.any().valid(
+          bundleTypes.ENTRYPOINT,
+          bundleTypes.LIBRARY,
+          bundleTypes.COMMON
+        ).required(),
         requires: joi.when('type', { 
-          is: 'common', 
+          is: bundleTypes.COMMON, 
           then: joi.forbidden(),
           otherwise: joi.alternatives().try(
             joi.array().items(joi.string()),
@@ -161,7 +163,7 @@ class PacktConfig {
           ).required()
         }),
         depends: joi.when('type', { 
-          is: 'entrypoint', 
+          is: bundleTypes.ENTRYPOINT, 
           then: joi.alternatives().try(
             joi.array().items(customJoi.string().library(libraries)),
             customJoi.string().library(libraries)
@@ -169,12 +171,12 @@ class PacktConfig {
           otherwise: joi.forbidden(),
         }),
         contentTypes: joi.when('type', { 
-          is: 'common', 
+          is: bundleTypes.COMMON, 
           then: joi.array().items(joi.string().regex(/[a-z]+\/[a-z]+/)).required(),
           otherwise: joi.forbidden(),
         }),
         threshold: joi.when('type', { 
-          is: 'common', 
+          is: bundleTypes.COMMON, 
           then: joi.number().min(0).max(1).required(),
           otherwise: joi.forbidden(),
         }),
@@ -240,64 +242,41 @@ class PacktConfig {
     });
   }
 
-  _buildVariants(json) {
-    const variants = {};
-    Object.keys(json.options.variants).reduce((prev,next) => {
-      prev[next] = this._mergeOptions(
-        JSON.parse(JSON.stringify(json)),
-        next
-      );
-      return prev;
-    },variants);
-    json.handlers.forEach((h) => {
-      Object.keys(h.options.variants).reduce((prev,next) => {
-        if (!prev[next]) {
-          prev[next] = this._mergeOptions(
-            JSON.parse(JSON.stringify(json)),
-            next
-          );
+  _buildVariants(config) {
+    const variants = Object.keys(config.options.variants);
+    for (let handler of config.handlers) {
+      const extraVariants = 
+        Object.keys(handler.options.variants);
+      for (let extra of extraVariants) {
+        if (!variants.find((v) => v === extra)) {
+          variants.push(extra);
         }
-        return prev;
-      },variants);
-    });
-    if (Object.keys(variants).length === 0) {
-      variants['default'] = this._mergeOptions(json); 
+      }
     }
-    return Promise.resolve(variants);
+
+    config.hasVariants = !!variants.length;
+    config.options = this._varyOptions(variants, config.options);
+    for (let handler of config.handlers) {
+      handler.options = this._varyOptions(variants, handler.options);
+    }
+    return Promise.resolve(config);
   }
 
-  /**
-   * merge all options of a single variant over the top of the 
-   * base options. Invariant options then override both of these
-   * to give the final merged options object
-   */
-  _mergeOptions(json,variant) {
-    json.options = Object.assign(
-      json.options.base,
-      variant ? json.options.variants[variant] : {},
-      json.invariantOptions
-    );
-    delete json.invariantOptions;
-    json.handlers.forEach(h => {
-      h.options = Object.assign(
-        h.options.base,
-        variant ? h.options.variants[variant]: {},
-        h.invariantOptions
-      );
-      delete h.invariantOptions;
-    });
-    json.resolvers.custom.forEach(r => {
-      r.options = r.invariantOptions;
-      delete r.invariantOptions;
-    });
-    json.resolvers.default.options = json.resolvers.default.invariantOptions;
-    delete json.resolvers.default.invariantOptions;
-    for (let b in json.bundlers) {
-      json.bundlers[b].options = json.bundlers[b].invariantOptions;
-      delete json.bundlers[b].invariantOptions;
+  _varyOptions(variants, options) {
+    if (!variants.length) {
+      return {
+        'default': options.base,
+      };
+    } else {
+      return variants.reduce((prev,next) => {
+        prev[next] = Object.assign(
+          {},
+          options.base,
+          options.variants[next] || {}
+        );
+        return prev;
+      },{});
     }
-
-    return json;
   }
 }
 

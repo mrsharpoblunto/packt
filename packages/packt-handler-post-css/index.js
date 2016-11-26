@@ -5,7 +5,11 @@ const postcss = require('postcss');
 
 class CssHandler extends EventEmitter {
 
-  process(resolved,callback) {
+  init(invariants, resolver, callback) {
+    callback();
+  }
+
+  process(resolved, variants, callback) {
     const stats = {};
     let start = Date.now();
     fs.readFile(resolved,'utf8',(err,source) => {
@@ -23,6 +27,7 @@ class CssHandler extends EventEmitter {
         stats.transform = Date.now() - start;
         callback(null,{
           content: result.css,
+          variants: Object.keys(variants),
           perfStats: stats,
         });
       })

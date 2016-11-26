@@ -5,13 +5,13 @@ const path = require('path');
 const EventEmitter = require('events').EventEmitter;
 
 const messageTypes = require('./message-types');
-class workerStatus = require('./worker-status');
+const workerStatus = require('./worker-status');
 
 class Worker extends EventEmitter {
   constructor(config) {
     super();
-
     this._config = config;
+    this._status = {};
     this._setStatus(workerStatus.INITIALIZING);
   }
 
@@ -21,7 +21,7 @@ class Worker extends EventEmitter {
     this._process.on('close',this._onClose.bind(this));
     this._process.send({
       type: messageTypes.CONFIG,
-      variants: this._config.variants,
+      config: this._config.config,
       configFile: this._config.configFile,
       workingDirectory: this._config.workingDirectory,
     });
@@ -29,24 +29,27 @@ class Worker extends EventEmitter {
 
   _onMessage(m) {
     switch (m.type) {
-      case messageTypes.INITIALIZED:
+      case messageTypes.TASK_COMPLETE:
         this._setStatus(workerStatus.IDLE);
         break;
 
       case messageTypes.CONTENT:
-        this._setStatus(workerStatus.IDLE);
         if (m.error) {
           this.emit(messageTypes.CONTENT_ERROR,{
             handler: m.handler,
+            variants: m.variants,
             error: m.error,
             resolved: m.resolved,
+            context: m.context,
           });
         } else {
           this.emit(messageTypes.CONTENT,{
             handler: m.handler,
+            variants: m.variants,
             content: m.content,
             perfStats: m.perfStats,
             resolved: m.resolved,
+            context: m.context,
           });
         }
         break;
@@ -54,7 +57,9 @@ class Worker extends EventEmitter {
       case messageTypes.DEPENDENCY:
         this.emit(messageTypes.DEPENDENCY,{
           moduleName: m.moduleName,
+          variants: m.variants,
           resolvedParentModule: m.resolvedParentModule,
+          context: m.context,
         });
         break;
 
@@ -83,7 +88,7 @@ class Worker extends EventEmitter {
   _setStatus(status,description) {
     this._status.status = workerStatus.ERROR;
     this._status.description = description || '';
-    this.emit(messageTypes.STATUS_CHANGE,this._status.status);
+    this.emit(messageTypes.STATUS_CHANGE, this._status);
   }
 
   send(message) {

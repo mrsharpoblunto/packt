@@ -39,17 +39,16 @@ function findDependencies(babel) {
 }
 
 class JsHandler extends EventEmitter {
-  constructor(options) {
-    super();
-    this.options = Object.assign({
-      ignore: [],
-    },options);
-    for (let i = 0;i < this.options.ignore.length;++i) {
-      this.options.ignore[i] = new RegExp(this.options.ignore[i]);
-    }
+
+  init(invariants, resolver, cb) {
+    this.globalInvariants = invariants.global;
+    this.handlerInvariants = {
+      ignore: (invariants.handler.ignore || []).map((i) => new RegExp(i)),
+    };
   }
 
-  process(resolved,callback) {
+  // TODO need to handle variants properly here
+  process(resolved, variants, callback) {
     const stats = {};
     let start = Date.now();
 
@@ -63,7 +62,7 @@ class JsHandler extends EventEmitter {
 
       start = Date.now();
 
-      for (let ignore of this.options.ignore) {
+      for (let ignore of this.handlerInvariants.ignore) {
         if (ignore.test(resolved)) {
           // TODO still need to modify the ast by replacing requires etc..
           const ast = babylon.parse(source,{sourceType: 'module'});
@@ -73,7 +72,10 @@ class JsHandler extends EventEmitter {
                 if (path.node.callee.name === 'require') {
                   if (path.node.arguments.length !== 1) {
                     if (path.node.arguments[0].type !== 'StringLiteral') {
-                    console.log("Expected string literal as argument to require");
+                      // TODO should error here... need a #define plugin
+                      // that resolves statically resolvable strings at build time
+                      console.log("Expected string literal as argument to require");
+                    }
                   } else {
                     this.emit('dependency',path.node.arguments[0].value);
                   }
@@ -84,6 +86,7 @@ class JsHandler extends EventEmitter {
           stats.transform = Date.now() - start;
           callback(null,{
             content: source,
+            variants: Object.keys(variants),
             perfStats: stats,
           });
           return;
@@ -216,5 +219,10 @@ class JsHandler extends EventEmitter {
     return {code: result.code};
   }
 }
+
+JsHandler.schema = {
+  variant: [],
+  invariant: ['ignore'],
+};
 
 module.exports = JsHandler;

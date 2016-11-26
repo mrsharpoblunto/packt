@@ -10,6 +10,16 @@ class MockDefaultResolver {
     }
   }
 }
+
+MockDefaultResolver.defaultOptions = function(workingDirectory) {
+  return {
+    searchPaths: [
+      workingDirectory,
+      'node_modules',
+    ],
+    extensions: ['.js'],
+  }
+};
 MockDefaultResolver.__resolvableDirectories = {};
 
 module.exports = MockDefaultResolver;

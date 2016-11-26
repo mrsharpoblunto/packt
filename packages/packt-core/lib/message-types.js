@@ -1,6 +1,7 @@
 'use strict';
 
 module.exports = {
+  IDLE: 'idle',
   STATUS_CHANGE: 'status_change',
   CONTENT: 'content',
   CONTENT_ERROR: 'content_error',
@@ -10,5 +11,5 @@ module.exports = {
   CONFIG: 'config',
   RESOLVED: 'resolved',
   RESOLVED_ERROR: 'resolved_error',
-  INITIALIZED: 'initialized',
+  TASK_COMPLETE: 'task_complete',
 };

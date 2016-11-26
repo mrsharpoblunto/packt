@@ -3,8 +3,11 @@ const fs = require('fs');
 const EventEmitter = require('events').EventEmitter;
 
 class JsonHandler extends EventEmitter {
+  init(invariants, resolver, callback) {
+    callback();
+  }
 
-  process(resolved,callback) {
+  process(resolved, variants, callback) {
     const stats = {};
     let start = Date.now();
     fs.readFile(resolved,'utf8',(err,source) => {
@@ -20,6 +23,7 @@ class JsonHandler extends EventEmitter {
         stats.transform = Date.now() - start;
         callback(null,{
           content: 'module.exports = ' + source,
+          variants: Object.keys(variants),
           perfStats: stats,
         });
       }

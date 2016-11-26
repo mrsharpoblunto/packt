@@ -22,8 +22,17 @@ class PacktConfigError extends Error {
   }
 }
 
+class PacktWorkerError extends Error {
+  constructor(index,message) {
+    super('Worker ' + index + ' error: ' + message);
+    this.details = message;
+    this.index = index;
+  }
+}
+
 module.exports = {
   PacktError: PacktError,
   PacktConfigError: PacktConfigError,
   PacktResolverError: PacktResolverError,
+  PacktWorkerError: PacktWorkerError,
 };

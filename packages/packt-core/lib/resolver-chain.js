@@ -13,18 +13,18 @@ class ResolverChain extends EventEmitter {
     this._resolvers = (resolvers.custom || []).map(r => {
         return new (require(
           r.require
-        ))(r.options);
+        ))(r.invariantOptions);
     });
     const resolverOptions =
-      (resolvers.default && resolvers.default.options) ?
-        resolvers.default.options : DefaultResolver.defaultOptions;
+      (resolvers.default && resolvers.default.invariantOptions) ?
+        resolvers.default.invariantOptions : DefaultResolver.defaultOptions;
 
     this._resolvers.push(new DefaultResolver(resolverOptions));
     this._resolving = 0;
     this._resolvingQueue = {};
   }
 
-  resolve(module,resolvedParentModule) {
+  resolve(module,resolvedParentModule, context) {
     this._resolvingQueue[module] = true;
     ++this._resolving;
     const perfStats = {};
@@ -40,6 +40,7 @@ class ResolverChain extends EventEmitter {
           delete this._resolvingQueue[module];
           this.emit(messageTypes.RESOLVED_ERROR,{
             error: err,
+            context: context,
             perfStats: perfStats,
           });
         } else if (!resolved) {
@@ -53,6 +54,7 @@ class ResolverChain extends EventEmitter {
                 'Unable to resolve ' + unresolved +
                 (context ? (' (' + context + ')') : '')
               ),
+              context: context,
               perfStats: perfStats,
             });
           }
@@ -61,8 +63,12 @@ class ResolverChain extends EventEmitter {
           delete this._resolvingQueue[module];
           this.emit(messageTypes.RESOLVED, {
             resolved: resolved,
+            context: context,
             perfStats: perfStats,
           });
+        }
+        if (!this._resolving) {
+          this.emit(messageTypes.IDLE);
         }
       });
     }
@@ -70,7 +76,7 @@ class ResolverChain extends EventEmitter {
   }
 
   idle() {
-    return this._resolving === 0;
+    return !this._resolving;
   }
 
 }

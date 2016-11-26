@@ -4,6 +4,7 @@ const EventEmitter = require('events').EventEmitter;
 const Worker = require('./worker');
 const messageTypes = require('./message-types');
 const workerStatus = require('./worker-status');
+const errors = require('./packt-errors');
 
 class WorkerPool extends EventEmitter {
   constructor(config) {
@@ -11,71 +12,77 @@ class WorkerPool extends EventEmitter {
 
     this._queue = [];
     this._workers = [];
+    this._idle = true;
 
-    for (let i = 0; i < config.options.workers; ++i) {
-      this._createWorker(config);
+    for (let i = 0; i < config.config.invariantOptions.workers; ++i) {
+      this._workers.push(new Worker(config));
     }
   }
 
-  _createWorker(config) {
-    const worker = new Worker(config);
-
-    worker.on(messageTypes.CONTENT,(m) => {
-      this.emit(messageTypes.CONTENT,m);
-    });
-    worker.on(messageTypes.CONTENT_ERROR,(m) => {
-      this.emit(messageTypes.CONTENT_ERROR,m);
-    });
-    worker.on(messageTypes.DEPENDENCY,(m) => {
-      this.emit(messageTypes.DEPENDENCY,m);
-    });
-    worker.on(messageTypes.STATUS_CHANGE,(s) => {
-      switch (status) {
-        case workerStatus.IDLE:
-          this._dequeue();
-          break;
-        case workerStatus.ERROR:
-          this.emit(messageTypes.ERROR,{
-            error: new Error('Worker process error: ' + m.message),
-          });
-          break;
-      }
-    });
-    this._workers.push(worker);
-  }
-
   start() {
-    this._workers.forEach((w) => w.worker.start());
+    this._workers.forEach((w, index) => {
+      w.on(messageTypes.CONTENT,(m) => {
+        this.emit(messageTypes.CONTENT,m);
+      });
+      w.on(messageTypes.CONTENT_ERROR,(m) => {
+        this.emit(messageTypes.CONTENT_ERROR,m);
+      });
+      w.on(messageTypes.DEPENDENCY,(m) => {
+        this.emit(messageTypes.DEPENDENCY,m);
+      });
+      w.on(messageTypes.STATUS_CHANGE,(s) => {
+        switch (s.status) {
+          case workerStatus.IDLE:
+            this._dequeue();
+            if (this._idle) {
+              this.emit(messageTypes.IDLE);
+            }
+            break;
+          case workerStatus.ERROR:
+            this.emit(messageTypes.ERROR,{
+              error: new errors.PacktWorkerError(index, s.description),
+            });
+            break;
+        }
+      });
+      w.start()
+    });
   }
 
-  process(resolved) {
+  process(resolved, context) {
     this._queue.push({
       type: messageTypes.PROCESS,
       resolved: resolved,
+      context: context,
     });
     this._dequeue();
   }
 
   _dequeue() {
     if (this._queue.length) {
+      this._idle = false;
       for (let w of this._workers) {
         if (w.worker.status().status === workerStatus.IDLE) {
           const queued = this._queue.shift();
-          w.worker.send(queued);
-          break;
+          w.send(queued);
         }
       }
+    } else {
+      this._idle = this._workers.reduce((prev,next) => {
+        return prev && next.status().status === workerStatus.IDLE;
+      },true);
     }
   }
 
   stop() {
-    return Promise.all(this._workers.map((w) => w.worker.stop()));
+    return Promise.all(this._workers.map((w) => {
+      w.removeAllListeners();
+      w.stop()
+    }));
   }
 
   idle() {
-    return this._workers.reduce((prev,current) => {
-      return prev && current.worker.status() === workerStatus.IDLE;
-    },true);
+    return this._idle;
   }
 
   status() {

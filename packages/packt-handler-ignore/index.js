@@ -4,9 +4,14 @@ const EventEmitter = require('events').EventEmitter;
 
 class IgnoreHandler extends EventEmitter {
 
-  process(resolved,callback) {
+  init(invariants, resolver, callback) {
+    callback();
+  }
+
+  process(resolved, variants, callback) {
     callback(null,{
       content: '',
+      variants: Object.keys(variants),
       perfStats: {
         diskIO: 0,
         transform: 0,

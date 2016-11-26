@@ -58,42 +58,42 @@ describe('Config',() => {
       ]
     }).then((config) => {
       expect(config).toBeTruthy();
-      expect(Object.keys(config.variants).length).toBe(1);
+      expect(config.hasVariants).toBe(false);
 
-      const variant = config.variants['default'];
-      expect(variant).toBeTruthy();
-      expect(variant.options).toBeTruthy();
-      expect(variant.options.workers).toBeGreaterThan(0);
-      expect(variant.options.outputPath).toContain('build');
-      expect(variant.options.outputFormat).toBe('${filename}_${hash}.${ext}');
-      expect(variant.options.outputHash).toBe('md5');
-      expect(variant.options.outputHashLength).toBe(12);
+      const invariant = config.invariantOptions;
+      expect(invariant).toBeTruthy();
+      expect(invariant.workers).toBeGreaterThan(0);
+      expect(invariant.outputPath).toContain('build');
+      expect(invariant.outputFormat).toBe('${filename}_${hash}.${ext}');
+      expect(invariant.outputHash).toBe('md5');
+      expect(invariant.outputHashLength).toBe(12);
 
-      expect(variant.resolvers).toBeTruthy();
-      expect(variant.resolvers.custom.length).toBe(0);
+      expect(config.resolvers).toBeTruthy();
+      expect(config.resolvers.custom.length).toBe(0);
 
-      const defaultResolver = variant.resolvers.default;
+      const defaultResolver = config.resolvers.default;
       expect(defaultResolver).toBeTruthy();
-      expect(defaultResolver.options).toBeTruthy();
-      expect(defaultResolver.options.searchPaths).toEqual([
+      expect(defaultResolver.invariantOptions).toBeTruthy();
+      expect(defaultResolver.invariantOptions.searchPaths).toEqual([
              __dirname,
              'node_modules'
       ]);
-      expect(defaultResolver.options.extensions).toEqual(['.js','.json']);
+      expect(defaultResolver.invariantOptions.extensions).toEqual(['.js','.json']);
 
-      expect(variant.handlers.length).toBe(1);
-      expect(variant.handlers[0].options).toBeTruthy();
-      expect(variant.handlers[0].require).toBe('/path/to/handler.js');
+      expect(config.handlers.length).toBe(1);
+      expect(config.handlers[0].options).toBeTruthy();
+      expect(config.handlers[0].invariantOptions).toBeTruthy();
+      expect(config.handlers[0].require).toBe('/path/to/handler.js');
 
-      expect(Object.keys(variant.bundlers).length).toBe(1);
-      expect(variant.bundlers['js'].options).toBeTruthy();
-      expect(variant.bundlers['js'].require).toBe('/path/to/bundler.js');
+      expect(Object.keys(config.bundlers).length).toBe(1);
+      expect(config.bundlers['js'].invariantOptions).toBeTruthy();
+      expect(config.bundlers['js'].require).toBe('/path/to/bundler.js');
       
-      expect(Object.keys(variant.bundles).length).toBe(5);
-      expect(variant.bundles['entry2.js'].requires.length).toBe(1);
-      expect(variant.bundles['entry2.js'].depends.length).toBe(1);
-      expect(variant.bundles['entry2.js'].requires[0]).toBe('./index.js');
-      expect(variant.bundles['entry3.js'].depends.length).toBe(0);
+      expect(Object.keys(config.bundles).length).toBe(5);
+      expect(config.bundles['entry2.js'].requires.length).toBe(1);
+      expect(config.bundles['entry2.js'].depends.length).toBe(1);
+      expect(config.bundles['entry2.js'].requires[0]).toBe('./index.js');
+      expect(config.bundles['entry3.js'].depends.length).toBe(0);
     });
   });
 
@@ -308,7 +308,6 @@ describe('Config',() => {
             },
             variants: {
               'prod': {
-                strict: true,
                 sourceMaps: false,
                 minify: true,
               },
@@ -321,21 +320,26 @@ describe('Config',() => {
       ]
     }).then((config) => {
       expect(config).toBeTruthy();
-      expect(Object.keys(config.variants)).toEqual(
+      expect(config.hasVariants).toBe(true);
+      expect(Object.keys(config.options)).toEqual(
         ['en_US','en_GB','prod','dev']);
 
-      expect(config.variants['en_US'].options.lang).toBe('en_US');
-      expect(config.variants['en_GB'].options.lang).toBe('en_GB');
-      expect(config.variants['dev'].options.lang).toBe('es_ES');
-      expect(config.variants['prod'].options.lang).toBe('es_ES');
+      expect(config.options['en_US'].lang).toBe('en_US');
+      expect(config.options['en_GB'].lang).toBe('en_GB');
+      expect(config.options['dev'].lang).toBe('es_ES');
+      expect(config.options['prod'].lang).toBe('es_ES');
 
-      expect(config.variants['dev'].handlers[0].options).toEqual({
-        strict: false,
+      expect(config.handlers[0].invariantOptions).toBeTruthy();
+      expect(config.handlers[0].invariantOptions.strict).toBe(false);
+
+      expect(Object.keys(config.handlers[0].options)).toEqual(
+        ['en_US','en_GB','prod','dev']);
+
+      expect(config.handlers[0].options['dev']).toEqual({
         sourceMaps: true,
         minify: false,
       });
-      expect(config.variants['prod'].handlers[0].options).toEqual({
-        strict: false,
+      expect(config.handlers[0].options['prod']).toEqual({
         sourceMaps: false,
         minify: true,
       });
