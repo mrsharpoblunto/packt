@@ -59,11 +59,14 @@ class WorkerProcess {
           global: config.invariantOptions,
           handler: handlerConfig.invariantOptions,
         },
-        options: Object.keys(config.options).map((v) => ({
+        options: {},
+      };
+      for (let v in config.options) {
+        handler.options[v] = {
           global: config.options[v],
           handler: handlerConfig.options[v],
-        })),
-      };
+        };
+      }
       this._handlers.push(handler);
     }
 

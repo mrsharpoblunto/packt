@@ -18,7 +18,9 @@ class Worker extends EventEmitter {
   }
 
   start() {
-    this._process = cp.fork(path.join(__dirname,'worker-process.js'));
+    this._process = cp.fork(path.join(__dirname,'worker-process.js'), {
+      cwd: this._config.workingDirectory,
+    });
     this._process.on('message',this._onMessage.bind(this));
     this._process.on('close',this._onClose.bind(this));
     this.send({

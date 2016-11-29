@@ -118,7 +118,8 @@ if (!argv.help) {
 
 
   packt.build().then(() => {
-    console.log(chalk.bold.green('Packt like sardines in a crushd tin box'));
+    console.log();
+    console.log(chalk.green('Packt like sardines in a crushd tin box'));
   }).catch((err) => {
     console.log();
     if (err instanceof errors.PacktConfigError) {
