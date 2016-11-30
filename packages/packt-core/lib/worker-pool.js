@@ -68,10 +68,13 @@ class WorkerPool extends EventEmitter {
   _dequeue() {
     if (this._queue.length) {
       this._idle = false;
+      let i = 0;
       for (let w of this._workers) {
+        ++i;
         if (w.status().status === workerStatus.IDLE) {
           const queued = this._queue.shift();
           w.send(queued);
+          break;
         }
       }
     } else {

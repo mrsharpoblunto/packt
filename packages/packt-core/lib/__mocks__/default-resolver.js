@@ -13,6 +13,7 @@ class MockDefaultResolver {
 
 MockDefaultResolver.defaultOptions = function(workingDirectory) {
   return {
+    rootPath: workingDirectory,
     searchPaths: [
       workingDirectory,
       'node_modules',

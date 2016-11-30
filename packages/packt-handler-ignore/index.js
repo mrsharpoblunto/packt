@@ -9,14 +9,17 @@ class IgnoreHandler extends EventEmitter {
   }
 
   process(resolved, variants, callback) {
-    callback(null,{
-      content: '',
-      variants: Object.keys(variants),
-      perfStats: {
-        diskIO: 0,
-        transform: 0,
-      },
-    });
+    callback(
+      null,
+      Object.keys(variants),
+      {
+        content: '',
+        perfStats: {
+          diskIO: 0,
+          transform: 0,
+        },
+      }
+    );
   }
 }
 

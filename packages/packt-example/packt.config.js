@@ -22,10 +22,24 @@ module.exports = {
     outputHashLength: 12,
   }, 
 
+  resolvers: {
+    default: {
+      invariantOptions: {
+        searchPaths: [
+          __dirname,
+          path.join(__dirname,'src'),
+          path.join(__dirname,'node_modules'),
+          path.join(__dirname,'shaders'),
+        ],
+        extensions: ['.js','.glsl'],
+      },
+    },
+  },
+
   bundles: {
-    'index.js': {
+    'bundle.js': {
       type: 'entrypoint',
-      requires: ['index.js'],
+      requires: ['src/main.js'],
       bundler: 'js',
     },
   },
@@ -53,15 +67,32 @@ module.exports = {
       require: 'packt-handler-babel-js',
       options: {
         base: {
-            ignore: [
-              '/node_modules/',
-            ],
+          plugins: [
+            "transform-flow-strip-types",
+          ],
+          presets: [
+            "es2015",
+            "stage-0",
+          ],
         },
         variants: {
         },
       },
       invariantOptions: {
+        parserOpts: {
+          plugins: [
+            'flow',
+            'classProperties',
+          ],
+        },
+        ignore: [
+          '/node_modules/',
+        ],
       },
+    },
+    {
+      pattern: '\\.glsl$',
+      require: 'packt-handler-raw',
     },
   ],
 };

@@ -10,6 +10,7 @@
   "license": "MIT",
   "dependencies": {
     "babel-core": "^6.18.2",
+    "babel-code-frame": "^6.16.0",
     "babylon": "^6.13.1"
   },
   "devDependencies": {

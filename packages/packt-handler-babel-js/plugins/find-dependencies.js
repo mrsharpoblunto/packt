@@ -8,7 +8,10 @@ function findDependencies(babel) {
     visitor: {
       ImportDeclaration: function(path) {
         const emitter = this.opts.emitter;
-        emitter.emit('dependency',path.node.source.value);
+        emitter.emit('dependency',{
+          moduleName: path.node.source.value,
+          variants: this.opts.variants,
+        });
       },
       CallExpression: function(path) {
         if (path.node.callee.name === 'require') {
@@ -18,7 +21,10 @@ function findDependencies(babel) {
             console.log("Expected string literal as argument to require");
           } else {
             const emitter = this.opts.emitter;
-            emitter.emit('dependency',path.node.arguments[0].value);
+            emitter.emit('dependency',{
+              moduleName: path.node.arguments[0].value,
+              variants: this.opts.variants,
+            });
           }
         }
       }

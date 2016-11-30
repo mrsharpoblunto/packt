@@ -1,5 +1,6 @@
 'use strict';
 const babel = require('babel-core');
+const codeFrame = require('babel-code-frame');
 const babylon = require('babylon');
 const fs = require('fs');
 const EventEmitter = require('events').EventEmitter;
@@ -52,12 +53,24 @@ class JsHandler extends EventEmitter {
         ast = babylon.parse(
           source, 
           ignore
-            ? { sourceType: 'module' }
-            : this._handlerInvariants.parserOpts
+            ? { sourceType: 'module', sourceFileName: resolved }
+            : Object.assign(
+                { 
+                  sourceFileName: resolved,
+                },
+                this._handlerInvariants.parserOpts
+              )
         );
       }
       catch (ex) {
-        return callback(err);
+        if (ex.pos && ex.loc) {
+          ex = 'SyntaxError:\n' + codeFrame(source,ex.loc.line,ex.loc.column, {
+            highlightCode: true,
+            linesAbove: 2,
+            linesBelow: 3,
+          });
+        }
+        return callback(ex);
       }
 
       const needsDeepCopy = !ignore && Object.keys(variants).length > 1;
@@ -69,9 +82,11 @@ class JsHandler extends EventEmitter {
           const result = babel.transformFromAst(
             variantAst,
             source,
-            ignore
-              ? this._injectHandlerOptions(variant.options)
-              : this._injectHandlerOptions({})
+            this._injectHandlerOptions(
+              resolved,
+              key,
+              ignore ? {} : variant.handler
+            )
           );
           stats.transform = Date.now() - start;
           start = Date.now();
@@ -93,20 +108,24 @@ class JsHandler extends EventEmitter {
     });
   }
 
-  _injectHandlerOptions(options) {
+  _injectHandlerOptions(resolved, variant, options) {
     const opts = Object.assign(
       {
         plugins: [],
       },
-      options
+      options,
+      {
+        filename: resolved,
+      }
     );
     opts.plugins.unshift([
       require('./plugins/find-dependencies'),
       {
         emitter: this,
+        variants: [variant],
       },
     ]);
-
+    return opts;
   }
 }
 

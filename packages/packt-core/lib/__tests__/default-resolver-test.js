@@ -8,6 +8,7 @@ describe('default resolver',() => {
 
   beforeEach(() => {
     resolver = new DefaultResolver({
+      rootPath: '/my-project',
       searchPaths: [
         'node_modules',
       ],

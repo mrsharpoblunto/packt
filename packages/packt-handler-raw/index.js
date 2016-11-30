@@ -22,14 +22,20 @@ class RawHandler extends EventEmitter {
         start = Date.now();
         const content = 'module.exports = "' + JSON.stringify(source) + '";';
         stats.transform = Date.now() - start;
-        callback(null,{
-          content: content,
-          variants: Object.keys(variants),
-          perfStats: stats,
-        });
+        callback(
+          null,
+          Object.keys(variants),
+          {
+            content: content,
+            perfStats: stats,
+          }
+        );
       }
       catch (err) {
-        callback(err);
+        callback(
+          err,
+          Object.keys(variants)
+        );
       }
     });
   }

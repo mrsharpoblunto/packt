@@ -136,7 +136,7 @@ class WorkerProcess {
             handler: handler.pattern.toString(),
             variants: variants || this._allVariants,
             type: messageTypes.CONTENT,
-            error: err.stack,
+            error: typeof err === 'string' ? err : err.stack,
             resolved: resolved,
             context: context,
           });

@@ -25,14 +25,20 @@ class CssHandler extends EventEmitter {
       .process(source)
       .then((result) => {
         stats.transform = Date.now() - start;
-        callback(null,{
-          content: result.css,
-          variants: Object.keys(variants),
-          perfStats: stats,
-        });
+        callback(
+          null,
+          Object.keys(variants),
+          {
+            content: result.css,
+            perfStats: stats,
+          }
+        );
       })
       .catch((err) => {
-        callback(err);
+        callback(
+          err,
+          Object.keys(variants)
+        );
       });
     });
   }

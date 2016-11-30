@@ -8,6 +8,7 @@ class DefaultResolver {
   constructor(options) {
     this._options = options;
     this._cache = {};
+    this._waiting = {};
     this._packageCache = {};
   }
 
@@ -86,7 +87,7 @@ class DefaultResolver {
   }
 
   _recursiveSearchPaths(moduleName,moduleDir,currentDir,searchIndex,context,callback) {
-    if (currentDir.length === 1) {
+    if (currentDir.length < this._options.rootPath.length) {
       // we've reached the root, stop searching up and try the
       // next searchPath
       this._searchPaths(
@@ -192,6 +193,13 @@ class DefaultResolver {
     if (cached) {
       callback(cached.err,cached.isFile);
     } else {
+      let waiting = this._waiting[path];
+      if (waiting) {
+        waiting.push(callback);
+        return;
+      } else {
+        waiting = this._waiting[path] = [];
+      }
       fs.stat(path,(err,stats) => {
         const entry = {
           err: err,
@@ -199,6 +207,13 @@ class DefaultResolver {
         };
         this._cache[path] = entry;
         callback(entry.err,entry.isFile);
+        if (waiting) {
+          for (let w of waiting) {
+            w(entry.err, entry.isFile);
+          }
+          delete this._waiting[path];
+        }
+
       });
     }
   }
@@ -252,6 +267,7 @@ class DefaultResolver {
 
 DefaultResolver.defaultOptions = function(workingDirectory) {
   return {
+    rootPath: workingDirectory,
     searchPaths: [
       workingDirectory,
       'node_modules',

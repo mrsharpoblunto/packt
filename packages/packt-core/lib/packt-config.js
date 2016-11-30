@@ -193,6 +193,7 @@ class PacktConfig {
         })).default([]),
         default: joi.object({
           invariantOptions: joi.object({
+            rootPath: joi.string().default(this.workingDirectory),
             searchPaths: joi.array().items(joi.string()).default(
               [
                 this.workingDirectory,

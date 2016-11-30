@@ -21,14 +21,20 @@ class JsonHandler extends EventEmitter {
         start = Date.now();
         const result = JSON.parse(source);
         stats.transform = Date.now() - start;
-        callback(null,{
-          content: 'module.exports = ' + source,
-          variants: Object.keys(variants),
-          perfStats: stats,
-        });
+        callback(
+          null,
+          Object.keys(variants),
+          {
+            content: 'module.exports = ' + source,
+            perfStats: stats,
+          }
+        );
       }
       catch (err) {
-        callback(err);
+        callback(
+          err,
+          Object.keys(variants)
+        );
       }
     });
   }
