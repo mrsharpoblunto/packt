@@ -74,6 +74,7 @@ module.exports = {
             "es2015",
             "stage-0",
           ],
+          compact: false,
         },
         variants: {
         },

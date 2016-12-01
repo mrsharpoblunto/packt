@@ -109,7 +109,7 @@ class Worker extends EventEmitter {
       case messageTypes.PROCESS:
         this._setStatus(
           workerStatus.PROCESSING,
-          message.moduleName
+          message.resolved
         );
         break;
       case messageTypes.BUNDLING:

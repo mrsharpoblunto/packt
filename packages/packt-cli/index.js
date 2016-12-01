@@ -84,37 +84,6 @@ if (!argv.help) {
   console.log(chalk.bold('Packt ' + require('./package.json').version));
   console.log(chalk.bold('Using config: ') + packt.configFile);
 
-  /* if (process.stdout.isTTY) {
-    console.log();
-    console.log(chalk.bold('Processed') + ' ' + chalk.green('122') + chalk.bold('/224  ') +
-                chalk.bold('Bundled') + ' ' + chalk.blue('2') + chalk.bold('/7'));
-    const windowSize = process.stdout.getWindowSize();
-    process.stdout.write(escapes.clearScreen);
-
-    let i = 0;
-    setInterval(function() {
-      if (i !== 0) {
-        process.stdout.write(escapes.eraseLines(16));
-      }
-      console.log(i + '' + repeat('-',windowSize[0] - 2));
-      console.log('|' + chalk.bgBlack.bold(rightPad(' idle',' ',12)) + '|');
-      console.log('|' + chalk.bgGreen.gray.bold(rightPad(' processing',' ',12)) + '|' + ' .../fdsfda/foobar/dasds.js');
-      console.log('|' + chalk.bgBlack.bold(rightPad(' idle',' ',12)) + '|');
-      console.log('|' + chalk.bgGreen.gray.bold(rightPad(' processing',' ',12)) + '|' + ' .../foobar/dasds.js');
-      console.log('|' + chalk.bgGreen.gray.bold(rightPad(' processing',' ',12)) + '|' + ' .../bar/fdsfsd.js');
-      console.log('|' + chalk.bgBlack.bold(rightPad(' idle',' ',12)) + '|');
-      console.log('|' + chalk.bgBlack.bold(rightPad(' idle',' ',12)) + '|');
-      console.log('|' + chalk.bgGreen.gray.bold(rightPad(' processing',' ',12)) + '|' + ' .../fdsfds/sdfdasfads.css');
-      console.log('|' + chalk.bgBlack.bold(rightPad(' idle',' ',12)) + '|');
-      console.log('|' + chalk.bgRed.gray.bold(rightPad(' error',' ',12)) + '|' + chalk.red(' something went wrong'));
-      console.log('|' + chalk.bgGreen.gray.bold(rightPad(' processing',' ',12)) + '|' + ' .../dfsdfds/sdfadfsda/asdfads.js');
-      console.log('|' + chalk.bgBlack.bold(rightPad(' idle',' ',12)) + '|');
-      console.log('|' + chalk.bgBlue.gray.bold(rightPad(' bundling',' ',12)) + '|');
-      console.log(repeat('-',windowSize[0]));
-      ++i;
-    },1000);
-    }*/
-
 
 
   packt.build().then(() => {
