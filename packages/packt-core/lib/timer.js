@@ -36,6 +36,14 @@ class Timer {
       return c[sub];
     }
   }
+
+  getCategories() {
+    return Object.keys(this._categories);
+  }
+
+  getSubcategories(category) {
+    return Object.keys(this._categories[category]);
+  }
 }
 
 module.exports = Timer;

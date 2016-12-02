@@ -1,5 +1,6 @@
 'use strict';
 
+const path = require('path');
 const messageTypes = require('./message-types');
 const WorkerPool = require('./worker-pool');
 const PacktConfig = require('./packt-config');
@@ -10,30 +11,46 @@ const errors = require('./packt-errors');
 const bundleTypes = require('./bundle-types');
 
 class Packt {
-  constructor(configFile,reporter) {
+  constructor(workingDirectory,options,reporter) {
     this._timer = new Timer();
     this._handlerTimer = new Timer();
     this._reporter = reporter;
-    this.configFile = configFile;
+
+    this._options = Object.assign({},options);
+    this._options.config = path.resolve(workingDirectory, options.config);
+
+    const version = require('../package.json').version;
+    this._reporter.onInit(version, this._options);
   }
 
   build() {
     return this._loadConfig()
-      .then(() => {
+      .then((config) => {
+        this._reporter.onLoadConfig(config);
         this._resolvers = new ResolverChain(
           this._config.config.resolvers
         );
         this._workers = new WorkerPool(this._config);
-        this._loadBuildData()
+        return this._loadBuildData()
       })
       .then(() => this._determineBuildable())
-      .then((modules) => this._buildModules(modules))
+      .then((modules) => {
+        this._reporter.onStartBuild();
+        return this._buildModules(modules);
+       })
       .then(() => this._bundleModules())
-      .then(() => this._workers.stop())
+      .then(() => {
+        this._reporter.onFinishBuild({
+          global: this._timer,
+          handlers: this._handlerTimer,
+        });
+        return this._workers.stop()
+      })
       .catch((err) => {
         if (this._workers) {
           this._workers.stop();
         }
+        this._reporter.onError(err);
         return Promise.reject(err);
       });
   }
@@ -43,21 +60,21 @@ class Packt {
 
     let json;
     try {
-      json = require(this.configFile);
+      json = require(this._options.config);
     } catch (ex) {
       if (ex.message === 'missing path') {
         return Promise.reject(new errors.PacktError(
-          'No config file found at ' + this.configFile,
+          'No config file found at ' + this._options.config,
           ex
         ));
       } else {
         return Promise.reject(new errors.PacktError(
-          'Unable to parse config file ' + this.configFile,
+          'Unable to parse config file ' + this._options.config,
           ex
         ));
       }
     }
-    return this._config.load(this.configFile,json);
+    return this._config.load(this._options.config,json);
   }
 
   _loadBuildData() {
@@ -92,19 +109,15 @@ class Packt {
   }
 
   _buildModules(modules) {
-    if (this._reporter) {
-      this._reporter.startBuild();
-    }
     const start = Date.now();
     return new Promise((resolve,reject) => {
       const updateReporter = this._reporter ? setInterval(() => {
-        this._reporter.updateBuild(this._workers.status());
+        this._reporter.onUpdateBuildStatus(this._workers.status());
       },100) : null;
 
       const cleanup = (err,result) => {
         this._timer.accumulate('build',{ 'modules': Date.now() - start });
         if (updateReporter) {
-          this._reporter.finishBuild();
           clearInterval(updateReporter);
         }
         this._workers.removeAllListeners();
