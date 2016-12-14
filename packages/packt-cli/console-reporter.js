@@ -1,6 +1,7 @@
 'use strict';
 const escapes = require('ansi-escapes');
 const workerStatus = require('packt-core/lib/worker-status');
+const errors = require('packt-core/lib/packt-errors');
 const S = require('string');
 const chalk = require('chalk');
 
@@ -34,9 +35,9 @@ class ConsoleReporter {
   onUpdateBuildStatus(workers, buildStats) {
     if (this._isTTY) {
       if (this._eraseCount) {
-        process.stdout.write(escapes.eraseLines(this._eraseCount));
+        process.stdout.write(escapes.cursorUp(this._eraseCount));
       } else {
-        this._eraseCount = workers.length + 5;
+        this._eraseCount = workers.length + 4;
       }
 
       const windowSize = process.stdout.getWindowSize();
@@ -81,24 +82,28 @@ class ConsoleReporter {
 
   // TODO need summary data around modules built etc.
   // need to pass through stats on each compiled module as well
-  onFinishBuild(timings, buildStats) {
+  onFinishBuild(buildTimings, moduleTimings, dependencyGraph) {
+    console.log(moduleTimings);
     if (this._eraseCount) {
-      process.stdout.write(escapes.eraseLines(this._eraseCount));
+      process.stdout.write(escapes.eraseLines(this._eraseCount + 1));
     }
 
-    console.log(chalk.green('Build completed in ') + chalk.bold((timings.global.get('build','modules')/1000).toFixed(2) + 's'));
+    console.log(chalk.green('Build completed in ') + chalk.bold((buildTimings.global.get('build','modules')/1000).toFixed(2) + 's'));
     console.log();
 
-    console.log(chalk.bold('Build stats:'));
+    console.log(chalk.bold('Timing information:'));
 
-    const resolvers = timings.global.getSubcategories('resolvers');
-    for (let r of resolvers) {
-      console.log('  Resolver ' + chalk.bold(r) + ': ' + (timings.global.get('resolvers',r)/1000).toFixed(2) + 's');
+    const resolvers = buildTimings.global.getSubcategories('resolvers');
+    for (let i = 0;i < resolvers.length - 1; ++i) {
+      const r = resolvers[i];
+      console.log('  Resolver ' + chalk.bold('custom' + r) + ': ' + (buildTimings.global.get('resolvers',r)/1000).toFixed(2) + 's');
     }
-    const handlers = timings.handlers.getCategories();
+    console.log('  Resolver ' + chalk.bold('default') + ': ' + (
+      buildTimings.global.get('resolvers',resolvers[resolvers.length - 1])/1000).toFixed(2) + 's');
+    const handlers = buildTimings.handlers.getCategories();
     for (let h of handlers) {
-      const io = timings.handlers.get(h,'diskIO') / 1000;
-      const transform = timings.handlers.get(h,'transform') / 1000;
+      const io = buildTimings.handlers.get(h,'diskIO') / 1000;
+      const transform = buildTimings.handlers.get(h,'transform') / 1000;
       const total = io + transform;
 
       console.log('  Handler ' + chalk.bold(h) + ': ' + total.toFixed(2) + 's ' +
@@ -109,20 +114,24 @@ class ConsoleReporter {
 
   onError(err) {
     console.log();
-    if (err instanceof errors.PacktConfigError) {
-      printConfigError(err);
-    } else if (err instanceof errors.PacktWorkerError) {
-      printWorkerError(err);
-    } else if (err instanceof errors.PacktResolverError) {
-      printResolverError(err);
-    } else if (err instanceof errors.PacktContentError) {
-      printContentError(err);
-    } else if (err instanceof errors.PacktError) {
-      printGeneralError(err);
-    } else {
-      console.log(chalk.red(err.stack));
+    try {
+      if (err instanceof errors.PacktConfigError) {
+        printConfigError(err);
+      } else if (err instanceof errors.PacktWorkerError) {
+        printWorkerError(err);
+      } else if (err instanceof errors.PacktResolverError) {
+        printResolverError(err);
+      } else if (err instanceof errors.PacktContentError) {
+        printContentError(err);
+      } else if (err instanceof errors.PacktError) {
+        printGeneralError(err);
+      }
+      console.log(chalk.bold.red('Build failed'));
+      return;
+    } catch (ex) {
     }
 
+    console.log(chalk.red(err.stack));
     console.log(chalk.bold.red('Build failed'));
   }
 }

@@ -95,6 +95,11 @@ class JsHandler extends EventEmitter {
             [key],
             {
               content: result.code,
+              metadata: {
+                exports: {},
+                sourceLength: source.length,
+                transformedLength: result.code.length,
+              },
               perfStats: stats,
             }
           );
@@ -118,7 +123,14 @@ class JsHandler extends EventEmitter {
         filename: resolved,
       }
     );
-    opts.plugins.unshift([
+    // TODO pass in moduleScope (get this from main process...)
+    opts.plugins.push([
+      require('./plugins/find-exports'),
+      {
+        
+      },
+    ]);
+    opts.plugins.push([
       require('./plugins/find-dependencies'),
       {
         emitter: this,

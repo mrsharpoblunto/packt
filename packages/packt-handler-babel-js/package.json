@@ -4,7 +4,7 @@
   "description": "Packt file handler to process js files using Babel",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "NODE_ENV=test jest"
   },
   "author": "Glenn Conner",
   "license": "MIT",

@@ -25,7 +25,7 @@ class ResolverChain extends EventEmitter {
     this._resolvingQueue = {};
   }
 
-  resolve(module,resolvedParentModule, context) {
+  resolve(moduleName,resolvedParentModule, context) {
     this._resolvingQueue[module] = true;
     ++this._resolving;
     const perfStats = {};
@@ -34,14 +34,15 @@ class ResolverChain extends EventEmitter {
       const resolver = this._resolvers[resolverIndex];
       const start = Date.now();
       try {
-        resolver.resolve(module,resolvedParentModule,(err,resolved) => {
+        resolver.resolve(moduleName,resolvedParentModule,(err,resolved) => {
           const end = Date.now();
           perfStats[resolverIndex] = end - start;
           if (err) {
             --this._resolving;
-            delete this._resolvingQueue[module];
+            delete this._resolvingQueue[moduleName];
             this.emit(messageTypes.RESOLVED_ERROR,{
               error: err,
+              moduleName: moduleName,
               context: context,
               perfStats: perfStats,
             });
@@ -50,21 +51,24 @@ class ResolverChain extends EventEmitter {
               tryResolve(resolverIndex);
             } else {
               --this._resolving;
-              delete this._resolvingQueue[module];
+              delete this._resolvingQueue[moduleName];
               this.emit(messageTypes.RESOLVED_ERROR, {
                 error: new Error(
                   'No resolvers left to resolve ' + unresolved + 
                   (context ? (' (' + context + ')') : '')
                 ),
+                moduleName: moduleName,
                 context: context,
                 perfStats: perfStats,
               });
             }
           } else {
             --this._resolving;
-            delete this._resolvingQueue[module];
+            delete this._resolvingQueue[moduleName];
             this.emit(messageTypes.RESOLVED, {
-              resolved: resolved,
+              moduleName: moduleName,
+              resolvedModule: resolved,
+              resolvedParentModule: resolvedParentModule,
               context: context,
               perfStats: perfStats,
             });

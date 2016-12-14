@@ -40,6 +40,12 @@ module.exports = {
     'bundle.js': {
       type: 'entrypoint',
       requires: ['src/main.js'],
+      depends: ['vendor.js'],
+      bundler: 'js',
+    },
+    'vendor.js': {
+      type: 'library',
+      requires: ['node_modules/twgl.js'],
       bundler: 'js',
     },
   },

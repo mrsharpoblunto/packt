@@ -7,6 +7,7 @@ const PacktConfig = require('./packt-config');
 const ResolverChain = require('./resolver-chain');
 const Timer = require('./timer');
 const ContentMap = require('./content-map');
+const DependencyGraph = require('./dependency-graph');
 const errors = require('./packt-errors');
 const bundleTypes = require('./bundle-types');
 
@@ -18,6 +19,7 @@ class Packt {
 
     this._options = Object.assign({},options);
     this._options.config = path.resolve(workingDirectory, options.config);
+    this._buildStats = {};
 
     const version = require('../package.json').version;
     this._reporter.onInit(version, this._options);
@@ -26,6 +28,7 @@ class Packt {
   build() {
     return this._loadConfig()
       .then((config) => {
+
         this._reporter.onLoadConfig(config);
         this._resolvers = new ResolverChain(
           this._config.config.resolvers
@@ -43,7 +46,9 @@ class Packt {
         this._reporter.onFinishBuild({
           global: this._timer,
           handlers: this._handlerTimer,
-        });
+        },
+        this._buildStats,
+        this._dependencyGraph);
         return this._workers.stop()
       })
       .catch((err) => {
@@ -83,6 +88,7 @@ class Packt {
     // TODO should have one content map per dependency tree - lazy load
     // if the tree requires changes
     this._contentMap = new ContentMap();
+    this._dependencyGraph = new DependencyGraph();
     return Promise.resolve(this._contentMap);
   }
 
@@ -114,6 +120,7 @@ class Packt {
       const updateReporter = this._reporter ? setInterval(() => {
         this._reporter.onUpdateBuildStatus(this._workers.status());
       },100) : null;
+      this._buildStats = {};
 
       const cleanup = (err,result) => {
         this._timer.accumulate('build',{ 'modules': Date.now() - start });
@@ -130,11 +137,27 @@ class Packt {
       };
 
       this._resolvers.on(messageTypes.RESOLVED,(m) => {
+        // TODO need to keep old moduleName so we can associate this resolved
+        // import with the resolved value in the content imports list for re
+        // writing later - something like
+        // this._contentMap.resolvedDep(
+        //   m.resolvedParentModule,
+        //   m.moduleName,
+        //   m.resolvedModuleName
+        // );
         this._timer.accumulate('resolvers',m.perfStats);
-        // TODO record dependency as well
+        if (m.resolvedParentModule === this._config.configFile) {
+          m.resolvedParentModule = null;
+        }
+        this._dependencyGraph.addDependency(
+          m.resolvedModule,
+          m.resolvedParentModule,
+          m.context.variants,
+          m.context.bundle
+        );
         this._contentMap.addIfNotPresent(
-          m.resolved,
-          () => this._workers.process(m.resolved,m.context)
+          m.resolvedModule,
+          () => this._workers.process(m.resolvedModule, m.context)
         );
       });
       this._resolvers.on(messageTypes.RESOLVED_ERROR,(m) => {
@@ -150,6 +173,7 @@ class Packt {
         cleanup(m.error);
       });
       this._workers.on(messageTypes.CONTENT,(m) => {
+        this._buildStats[m.resolved] = m.perfStats;
         this._handlerTimer.accumulate(m.handler,m.perfStats);
         this._handlerTimer.accumulate(m.handler,{ modules: m.variants.length });
         this._contentMap.setContent(
@@ -165,7 +189,7 @@ class Packt {
         this._resolvers.resolve(
           m.moduleName,
           m.resolvedParentModule,
-          m.context
+          Object.assign({},m.context, { variants: m.variants })
         );
       });
       this._workers.on(messageTypes.IDLE,() => {
@@ -178,6 +202,7 @@ class Packt {
       modules.forEach((module) => {
         this._resolvers.resolve(module.module,this._config.configFile,{
           bundle: module.bundle,
+          variants: Object.keys(this._config.config.options),
         });
       });
     });
