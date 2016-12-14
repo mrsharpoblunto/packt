@@ -1,7 +1,7 @@
 'use strict';
 const babel = require('babel-core');
 
-const PACKT_IMPORT_PLACEHOLDER = '__packt_import__';
+const constants = require('./constants');
 
 function findDependencies(babel) {
   var t = babel.types;
@@ -39,7 +39,7 @@ function findDependencies(babel) {
                 newAlias,
                 t.memberExpression(
                   t.callExpression(
-                    t.identifier(PACKT_IMPORT_PLACEHOLDER),
+                    t.identifier(constants.PACKT_IMPORT_PLACEHOLDER),
                     [t.stringLiteral(moduleName)],
                   ),
                   t.identifier(symbol)
@@ -50,7 +50,7 @@ function findDependencies(babel) {
             declarators.push(t.variableDeclarator(
                 newAlias,
                 t.callExpression(
-                  t.identifier(PACKT_IMPORT_PLACEHOLDER),
+                  t.identifier(constants.PACKT_IMPORT_PLACEHOLDER),
                   [t.stringLiteral(moduleName)],
                 )
               )
@@ -77,7 +77,7 @@ function findDependencies(babel) {
             console.log("Expected string literal as argument to require");
           } else {
             const emitter = this.opts.emitter;
-            path.node.callee.name = PACKT_IMPORT_PLACEHOLDER;
+            path.node.callee.name = constants.PACKT_IMPORT_PLACEHOLDER;
             emitter.emit('dependency',{
               moduleName: path.node.arguments[0].value,
               variants: this.opts.variants,

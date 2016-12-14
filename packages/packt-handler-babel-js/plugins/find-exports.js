@@ -1,72 +1,7 @@
 'use strict';
 
 const babel = require('babel-core');
-
-/*
- 
- ex 1.
-
- function foo() {
- }
-
- module.exports = foo;
- module.exports.bar = 1;
-
- =>
-
- function $1foo() {
- }
-
- const $1exports = $1foo;
- $1exports.bar = 1;
-
- ex 2.
-
- export function bar() {
- }
-
- export function baz() {
- }
-
- =>
-
- function $2bar() {
- }
-
-// record offsets
- function $2baz() {
- }
-
- const $2exports = {
-   bar: $2bar
-   baz: $2baz
- }
-
- ex. 3
- const x = require('foo').default;
-
- =>
-
- const $5x = { default: __packt_import__('foo') }.default;
-
- ex. 4
-
- import {bar as baz} from 'bar';
-
- =>
-
- const $3baz = __packt_import__('bar').bar;
-
- ex. 5 
-
- import * as bar from 'bar';
-
- =>
-
- const $4bar = __packt_import('bar');
- 
- 
- */
+const constants = require('./constants');
 
 function findExports(babel) {
   var t = babel.types;
@@ -148,12 +83,66 @@ function findExports(babel) {
         }
       },
       MemberExpression: function(path) {
-        // TODO replace module.exports with exportAlias
+        if (
+          path.node.object.name === 'module' &&
+          path.node.property.name === 'exports' &&
+            !path.scope.hasBinding(path.node.object.name)
+        ) {
+          path.replaceWith(this.exportAlias);
+        }
+      },
+      ExportAllDeclaration: function(path) {
+        this.opts.emitter.emit('dependency',{
+          moduleName: path.node.source.value,
+          variants: this.opts.variants,
+          symbols: ['*'],
+        });
+        path.replaceWith(t.callExpression(
+          t.memberExpression(
+            t.identifier('Object'),
+            t.identifier('assign')
+          ),
+          [
+            this.exportAlias,
+            t.callExpression(
+              t.identifier(constants.PACKT_IMPORT_PLACEHOLDER),
+              [path.node.source],
+            ),
+          ]
+        ));
       },
       ExportDefaultDeclaration: function(path) {
-
-        // TODO assign to exportAlias.default
-        // TODO record exported symbol name & local alias
+        if (path.node.declaration) {
+          const decl = path.node.declaration;
+          if (decl.type === 'FunctionDeclaration') {
+            if (!decl.id) {
+              decl.type = 'FunctionExpression';
+            } else {
+              path.insertBefore(decl);
+              path.replaceWith(
+                t.assignmentExpression(
+                  '=',
+                  t.memberExpression(
+                    this.exportAlias,
+                    t.identifier('default')
+                  ),
+                  decl.id
+                )
+              );
+              return;
+            }
+          }
+          path.replaceWith(
+            t.assignmentExpression(
+              '=',
+              t.memberExpression(
+                this.exportAlias,
+                t.identifier('default')
+              ),
+              decl
+            )
+          );
+        }
       },
       ExportNamedDeclaration: function(path) {
         if (path.node.declaration) {
@@ -180,6 +169,43 @@ function findExports(babel) {
           } else {
             path.replaceWithMultiple(assignments);
           }
+        } else if (path.node.source) {
+          const objectProps = [];
+          const symbols = [];
+          for (let spec of path.node.specifiers) {
+            objectProps.push(
+              t.objectProperty(
+                spec.exported,
+                t.memberExpression(
+                  t.callExpression(
+                    t.identifier(constants.PACKT_IMPORT_PLACEHOLDER),
+                    [path.node.source]
+                  ),
+                  spec.local || spec.exported
+                )
+              )
+            );
+            symbols.push(spec.exported.name);
+          }
+
+          this.opts.emitter.emit('dependency',{
+            moduleName: path.node.source.value,
+            variants: this.opts.variants,
+            symbols: symbols,
+          });
+
+          path.replaceWith(
+            t.callExpression(
+              t.memberExpression(
+                t.identifier('Object'),
+                t.identifier('assign')
+              ),
+              [
+                this.exportAlias,
+                t.objectExpression(objectProps)
+              ]
+            )
+          );
         } else {
           const objectProps = [];
           for (let spec of path.node.specifiers) {
@@ -187,7 +213,7 @@ function findExports(babel) {
               t.objectProperty(spec.exported,spec.local)
             );
           }
-          return path.replaceWith(
+          path.replaceWith(
             t.callExpression(
               t.memberExpression(
                 t.identifier('Object'),
@@ -200,8 +226,6 @@ function findExports(babel) {
             )
           );
         }
-        // TODO assign to exportAlias.namedProp
-        // TODO record exported symbol name & local alias
       },
     },
   };

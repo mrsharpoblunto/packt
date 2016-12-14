@@ -170,6 +170,7 @@ describe('Finds all dependencies and metadata',() => {
   });
 
   /**
+   * TODO
    * import default, { } from 'module';
    * import default, * as name from 'module';
    * import 'module';

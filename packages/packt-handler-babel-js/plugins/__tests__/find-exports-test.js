@@ -86,7 +86,7 @@ describe('Finds all exports & hoists scopes',() => {
     );
   });
 
-  it('Rewrites named aliased exports', () => {
+  it('Rewrites named uninitialized exports', () => {
     const pluginOpts = {
       scope: '$',
     };
@@ -121,7 +121,7 @@ describe('Finds all exports & hoists scopes',() => {
     );
   });
 
-  it('Rewrites named aliased exports', () => {
+  it('Rewrites named initialized exports', () => {
     const pluginOpts = {
       scope: '$',
     };
@@ -155,52 +155,194 @@ describe('Finds all exports & hoists scopes',() => {
     );
   });
 
-  /*
-   * export default foo;
-   * _exports = {};
-   * _exports.default = _foo;
-   */
+  it('Rewrites uninitialized default exports', () => {
+    const pluginOpts = {
+      scope: '$',
+    };
 
-  /*
-   * export default function () {}
-   * function _() {}
-   * _exports = {};
-   * _exports.default = _;
-   */
+    const result = babel.transform(
+      'var foo = "baz";\n' +
+      'export default foo;',
+    {
+      plugins: [
+        [
+          findExports,
+          pluginOpts,
+        ]
+      ]
+    });
 
-  /*
-   * export default function foo() {}
-   * function _foo() {}
-   * _exports = {};
-   * _exports.default = _foo;
-   */
+    expect(result.code).toEqual(
+      'var _exports$ = {};\n' +
+      'var _foo$ = "baz";\n' +
+      '_exports$.default = _foo$;'
+    );
+  });
 
-  /*
-   * export * from 'module';
-   * _exports = {};
-   * Object.assign(_exports,__packt_import('module'));
-   * // adds dep on module.
-   */
+  it('Rewrites default function exports', () => {
+    const pluginOpts = {
+      scope: '$',
+    };
 
-  /*
-   * export { foo, bar } fom 'module';
-   * _exports = {};
-   * Object.assign(_exports,{
-   *  foo: __packt_import('module').foo,
-   *  bar: __packt_import('module').bar,
-   * });
-   * // adds dep on module
-   */
+    const result = babel.transform(
+      'export default function() {}',
+    {
+      plugins: [
+        [
+          findExports,
+          pluginOpts,
+        ]
+      ]
+    });
 
-  /*
-   * export { foo as baz } fom 'module';
-   * _exports = {};
-   * Object.assign(_exports,{
-   *  baz: __packt_import('module').foo,
-   * });
-   * // adds dep on module
-   */
+    expect(result.code).toEqual(
+      'var _exports$ = {};\n\n' +
+      '_exports$.default = function () {};'
+    );
+  });
 
+  it('Rewrites default named function exports', () => {
+    const pluginOpts = {
+      scope: '$',
+    };
 
+    const result = babel.transform(
+      'export default function foo() {}',
+    {
+      plugins: [
+        [
+          findExports,
+          pluginOpts,
+        ]
+      ]
+    });
 
+    expect(result.code).toEqual(
+      'var _exports$ = {};\n' +
+      'function _foo$() {}\n' +
+      '_exports$.default = _foo$;'
+    );
+  });
+
+  it('Rewrites default named function exports', () => {
+    const pluginOpts = {
+      scope: '$',
+    };
+
+    const result = babel.transform(
+      'export default class foo {}',
+    {
+      plugins: [
+        [
+          findExports,
+          pluginOpts,
+        ]
+      ]
+    });
+
+    expect(result.code).toEqual(
+      'var _exports$ = {};\n' +
+      'function _foo$() {}\n' +
+      '_exports$.default = _foo$;'
+    );
+  });
+
+  it('Rewrites wildcard exports imported from another module', () => {
+    const pluginOpts = {
+      scope: '$',
+      emitter: {
+        emit: jest.fn(),
+      },
+      variants: ['default'],
+    };
+
+    const result = babel.transform(
+      'export * from "module";',
+    {
+      plugins: [
+        [
+          findExports,
+          pluginOpts,
+        ]
+      ]
+    });
+
+    expect(result.code).toEqual(
+      'var _exports$ = {};\n' +
+      'Object.assign(_exports$, __packt_import__("module"));'
+    );
+    expect(pluginOpts.emitter.emit.mock.calls.length).toBe(1);
+    expect(pluginOpts.emitter.emit.mock.calls[0][0]).toEqual('dependency');
+    expect(pluginOpts.emitter.emit.mock.calls[0][1]).toEqual({
+      moduleName: 'module',
+      variants: ['default'],
+      symbols: ['*'],
+    });
+  });
+
+  it('Rewrites named exports imported from another module', () => {
+    const pluginOpts = {
+      scope: '$',
+      emitter: {
+        emit: jest.fn(),
+      },
+      variants: ['default'],
+    };
+
+    const result = babel.transform(
+      'export {foo, bar as baz} from "module";',
+    {
+      plugins: [
+        [
+          findExports,
+          pluginOpts,
+        ]
+      ]
+    });
+
+    expect(result.code).toEqual(
+      'var _exports$ = {};\n' +
+      'Object.assign(_exports$, {\n' +
+      '  foo: __packt_import__("module").foo,\n' +
+      '  baz: __packt_import__("module").bar\n' +
+      '});'
+    );
+    expect(pluginOpts.emitter.emit.mock.calls.length).toBe(1);
+    expect(pluginOpts.emitter.emit.mock.calls[0][0]).toEqual('dependency');
+    expect(pluginOpts.emitter.emit.mock.calls[0][1]).toEqual({
+      moduleName: 'module',
+      variants: ['default'],
+      symbols: ['foo','baz'],
+    });
+  });
+
+  it('Rewrites default module.exports', () => {
+    const pluginOpts = {
+      scope: '$',
+    };
+
+    const result = babel.transform(
+      'module.exports = "foo";\n' +
+      'function x() {\n' +
+      '  const module = {};\n' +
+      '  module.exports = "bar";\n' +
+      '}',
+    {
+      plugins: [
+        [
+          findExports,
+          pluginOpts,
+        ]
+      ]
+    });
+
+    expect(result.code).toEqual(
+      'var _exports$ = {};\n' +
+      '_exports$ = "foo";\n' +
+      'function _x$() {\n' +
+      '  const module = {};\n' +
+      '  module.exports = "bar";\n' +
+      '}',
+    );
+  });
 });
