@@ -58,7 +58,7 @@ function findDependencies(babel) {
           }
           path.scope.rename(spec.local.name, newAlias.name);
         }
-        emitter.emit('dependency',{
+        emitter.emit('import',{
           moduleName: path.node.source.value,
           variants: this.opts.variants,
           symbols: symbols,
@@ -78,7 +78,7 @@ function findDependencies(babel) {
           } else {
             const emitter = this.opts.emitter;
             path.node.callee.name = constants.PACKT_IMPORT_PLACEHOLDER;
-            emitter.emit('dependency',{
+            emitter.emit('import',{
               moduleName: path.node.arguments[0].value,
               variants: this.opts.variants,
               symbols: ['*'],

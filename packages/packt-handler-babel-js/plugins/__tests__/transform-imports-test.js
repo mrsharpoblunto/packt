@@ -1,4 +1,4 @@
-const findDeps = require('../find-dependencies');
+const transformImports = require('../transform-imports');
 const babel = require('babel-core');
 
 describe('Finds all dependencies and metadata',() => {
@@ -16,7 +16,7 @@ describe('Finds all dependencies and metadata',() => {
     {
       plugins: [
         [
-          findDeps,
+          transformImports,
           pluginOpts,
         ],
       ],
@@ -24,7 +24,7 @@ describe('Finds all dependencies and metadata',() => {
 
     expect(result.code).toEqual('var _foo$ = __packt_import__("bar").default;\n\n_foo$();');
     expect(pluginOpts.emitter.emit.mock.calls.length).toBe(1);
-    expect(pluginOpts.emitter.emit.mock.calls[0][0]).toEqual('dependency');
+    expect(pluginOpts.emitter.emit.mock.calls[0][0]).toEqual('import');
     expect(pluginOpts.emitter.emit.mock.calls[0][1]).toEqual({
       moduleName: 'bar',
       variants: ['default'],
@@ -46,7 +46,7 @@ describe('Finds all dependencies and metadata',() => {
     {
       plugins: [
         [
-          findDeps,
+          transformImports,
           pluginOpts,
         ],
       ],
@@ -57,7 +57,7 @@ describe('Finds all dependencies and metadata',() => {
       '    _baz$ = __packt_import__("bar").baz;\n\n' +
       '_foo$();\n_baz$();');
     expect(pluginOpts.emitter.emit.mock.calls.length).toBe(1);
-    expect(pluginOpts.emitter.emit.mock.calls[0][0]).toEqual('dependency');
+    expect(pluginOpts.emitter.emit.mock.calls[0][0]).toEqual('import');
     expect(pluginOpts.emitter.emit.mock.calls[0][1]).toEqual({
       moduleName: 'bar',
       variants: ['default'],
@@ -79,7 +79,7 @@ describe('Finds all dependencies and metadata',() => {
     {
       plugins: [
         [
-          findDeps,
+          transformImports,
           pluginOpts,
         ],
       ],
@@ -90,7 +90,7 @@ describe('Finds all dependencies and metadata',() => {
       '    _bar$ = __packt_import__("bar").baz;\n\n' +
       '_$();\n_bar$();');
     expect(pluginOpts.emitter.emit.mock.calls.length).toBe(1);
-    expect(pluginOpts.emitter.emit.mock.calls[0][0]).toEqual('dependency');
+    expect(pluginOpts.emitter.emit.mock.calls[0][0]).toEqual('import');
     expect(pluginOpts.emitter.emit.mock.calls[0][1]).toEqual({
       moduleName: 'bar',
       variants: ['default'],
@@ -112,7 +112,7 @@ describe('Finds all dependencies and metadata',() => {
     {
       plugins: [
         [
-          findDeps,
+          transformImports,
           pluginOpts,
         ],
       ],
@@ -121,7 +121,7 @@ describe('Finds all dependencies and metadata',() => {
     expect(result.code).toEqual(
       'var _foobar$ = __packt_import__("bar");\n\n_foobar$.baz();');
     expect(pluginOpts.emitter.emit.mock.calls.length).toBe(1);
-    expect(pluginOpts.emitter.emit.mock.calls[0][0]).toEqual('dependency');
+    expect(pluginOpts.emitter.emit.mock.calls[0][0]).toEqual('import');
     expect(pluginOpts.emitter.emit.mock.calls[0][1]).toEqual({
       moduleName: 'bar',
       variants: ['default'],
@@ -144,7 +144,7 @@ describe('Finds all dependencies and metadata',() => {
     {
       plugins: [
         [
-          findDeps,
+          transformImports,
           pluginOpts,
         ],
       ],
@@ -155,13 +155,13 @@ describe('Finds all dependencies and metadata',() => {
       '  const y = __packt_import__("baz");\n  x();\n' +
       '}');
     expect(pluginOpts.emitter.emit.mock.calls.length).toBe(2);
-    expect(pluginOpts.emitter.emit.mock.calls[0][0]).toEqual('dependency');
+    expect(pluginOpts.emitter.emit.mock.calls[0][0]).toEqual('import');
     expect(pluginOpts.emitter.emit.mock.calls[0][1]).toEqual({
       moduleName: 'foo',
       variants: ['default'],
       symbols: ['*'],
     });
-    expect(pluginOpts.emitter.emit.mock.calls[1][0]).toEqual('dependency');
+    expect(pluginOpts.emitter.emit.mock.calls[1][0]).toEqual('import');
     expect(pluginOpts.emitter.emit.mock.calls[1][1]).toEqual({
       moduleName: 'baz',
       variants: ['default'],

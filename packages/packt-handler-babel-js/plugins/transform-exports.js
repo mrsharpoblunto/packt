@@ -32,6 +32,13 @@ function findExports(babel) {
               ]
             )
           );
+          if (this.exportedSymbols.length) {
+            this.emitter.emit('exports', {
+              moduleName: path.node.source.value,
+              variants: this.opts.variants,
+              symbols: this.exportedSymbols,
+            });
+          }
         },
       },
       VariableDeclaration: function(path) {
@@ -92,7 +99,7 @@ function findExports(babel) {
         }
       },
       ExportAllDeclaration: function(path) {
-        this.opts.emitter.emit('dependency',{
+        this.opts.emitter.emit('import',{
           moduleName: path.node.source.value,
           variants: this.opts.variants,
           symbols: ['*'],
@@ -114,34 +121,39 @@ function findExports(babel) {
       ExportDefaultDeclaration: function(path) {
         if (path.node.declaration) {
           const decl = path.node.declaration;
-          if (decl.type === 'FunctionDeclaration') {
-            if (!decl.id) {
-              decl.type = 'FunctionExpression';
-            } else {
-              path.insertBefore(decl);
-              path.replaceWith(
-                t.assignmentExpression(
-                  '=',
-                  t.memberExpression(
-                    this.exportAlias,
-                    t.identifier('default')
-                  ),
-                  decl.id
-                )
-              );
-              return;
-            }
-          }
-          path.replaceWith(
-            t.assignmentExpression(
-              '=',
-              t.memberExpression(
-                this.exportAlias,
-                t.identifier('default')
-              ),
-              decl
+          if (
+            decl.id &&
+            (
+              decl.type === 'FunctionDeclaration' ||
+              decl.type === 'ClassDeclaration'
             )
-          );
+          ) {
+            path.replaceWithMultiple([
+              decl,
+              t.assignmentExpression(
+                '=',
+                t.memberExpression(
+                  this.exportAlias,
+                  t.identifier('default')
+                ),
+                decl.id
+              )
+            ]);
+          } else {
+            if (decl.type === 'FunctionDeclaration') {
+              decl.type = 'FunctionExpression';
+            }
+            path.replaceWith(
+              t.assignmentExpression(
+                '=',
+                t.memberExpression(
+                  this.exportAlias,
+                  t.identifier('default')
+                ),
+                decl
+              )
+            );
+          }
         }
       },
       ExportNamedDeclaration: function(path) {
@@ -188,7 +200,7 @@ function findExports(babel) {
             symbols.push(spec.exported.name);
           }
 
-          this.opts.emitter.emit('dependency',{
+          this.opts.emitter.emit('import',{
             moduleName: path.node.source.value,
             variants: this.opts.variants,
             symbols: symbols,

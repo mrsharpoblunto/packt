@@ -1,4 +1,4 @@
-const findExports = require('../find-exports');
+const transformExports = require('../transform-exports');
 const babel = require('babel-core');
 
 describe('Finds all exports & hoists scopes',() => {
@@ -19,7 +19,7 @@ describe('Finds all exports & hoists scopes',() => {
     {
       plugins: [
         [
-          findExports,
+          transformExports,
           pluginOpts,
         ],
       ],
@@ -47,7 +47,7 @@ describe('Finds all exports & hoists scopes',() => {
     {
       plugins: [
         [
-          findExports,
+          transformExports,
           pluginOpts,
         ]
       ]
@@ -72,7 +72,7 @@ describe('Finds all exports & hoists scopes',() => {
     {
       plugins: [
         [
-          findExports,
+          transformExports,
           pluginOpts,
         ]
       ]
@@ -103,7 +103,7 @@ describe('Finds all exports & hoists scopes',() => {
     {
       plugins: [
         [
-          findExports,
+          transformExports,
           pluginOpts,
         ]
       ]
@@ -137,7 +137,7 @@ describe('Finds all exports & hoists scopes',() => {
     {
       plugins: [
         [
-          findExports,
+          transformExports,
           pluginOpts,
         ]
       ]
@@ -166,7 +166,7 @@ describe('Finds all exports & hoists scopes',() => {
     {
       plugins: [
         [
-          findExports,
+          transformExports,
           pluginOpts,
         ]
       ]
@@ -189,7 +189,7 @@ describe('Finds all exports & hoists scopes',() => {
     {
       plugins: [
         [
-          findExports,
+          transformExports,
           pluginOpts,
         ]
       ]
@@ -211,7 +211,7 @@ describe('Finds all exports & hoists scopes',() => {
     {
       plugins: [
         [
-          findExports,
+          transformExports,
           pluginOpts,
         ]
       ]
@@ -220,11 +220,11 @@ describe('Finds all exports & hoists scopes',() => {
     expect(result.code).toEqual(
       'var _exports$ = {};\n' +
       'function _foo$() {}\n' +
-      '_exports$.default = _foo$;'
+      '_exports$.default = _foo$'
     );
   });
 
-  it('Rewrites default named function exports', () => {
+  it('Rewrites default named class exports', () => {
     const pluginOpts = {
       scope: '$',
     };
@@ -234,7 +234,7 @@ describe('Finds all exports & hoists scopes',() => {
     {
       plugins: [
         [
-          findExports,
+          transformExports,
           pluginOpts,
         ]
       ]
@@ -242,8 +242,8 @@ describe('Finds all exports & hoists scopes',() => {
 
     expect(result.code).toEqual(
       'var _exports$ = {};\n' +
-      'function _foo$() {}\n' +
-      '_exports$.default = _foo$;'
+      'class _foo$ {}\n' +
+      '_exports$.default = _foo$'
     );
   });
 
@@ -261,7 +261,7 @@ describe('Finds all exports & hoists scopes',() => {
     {
       plugins: [
         [
-          findExports,
+          transformExports,
           pluginOpts,
         ]
       ]
@@ -272,7 +272,7 @@ describe('Finds all exports & hoists scopes',() => {
       'Object.assign(_exports$, __packt_import__("module"));'
     );
     expect(pluginOpts.emitter.emit.mock.calls.length).toBe(1);
-    expect(pluginOpts.emitter.emit.mock.calls[0][0]).toEqual('dependency');
+    expect(pluginOpts.emitter.emit.mock.calls[0][0]).toEqual('import');
     expect(pluginOpts.emitter.emit.mock.calls[0][1]).toEqual({
       moduleName: 'module',
       variants: ['default'],
@@ -294,7 +294,7 @@ describe('Finds all exports & hoists scopes',() => {
     {
       plugins: [
         [
-          findExports,
+          transformExports,
           pluginOpts,
         ]
       ]
@@ -308,7 +308,7 @@ describe('Finds all exports & hoists scopes',() => {
       '});'
     );
     expect(pluginOpts.emitter.emit.mock.calls.length).toBe(1);
-    expect(pluginOpts.emitter.emit.mock.calls[0][0]).toEqual('dependency');
+    expect(pluginOpts.emitter.emit.mock.calls[0][0]).toEqual('import');
     expect(pluginOpts.emitter.emit.mock.calls[0][1]).toEqual({
       moduleName: 'module',
       variants: ['default'],
@@ -330,7 +330,7 @@ describe('Finds all exports & hoists scopes',() => {
     {
       plugins: [
         [
-          findExports,
+          transformExports,
           pluginOpts,
         ]
       ]

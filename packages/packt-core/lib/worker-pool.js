@@ -34,8 +34,8 @@ class WorkerPool extends EventEmitter {
           )
         });
       });
-      w.on(messageTypes.DEPENDENCY,(m) => {
-        this.emit(messageTypes.DEPENDENCY,m);
+      w.on(messageTypes.IMPORT,(m) => {
+        this.emit(messageTypes.IMPORT,m);
       });
       w.on(messageTypes.STATUS_CHANGE,(s) => {
         switch (s.status) {

@@ -125,13 +125,14 @@ class JsHandler extends EventEmitter {
     );
     // TODO pass in moduleScope (get this from main process...)
     opts.plugins.push([
-      require('./plugins/find-exports'),
+      require('./plugins/transform-exports'),
       {
-        
+        emitter: this,
+        variants: [variant],
       },
     ]);
     opts.plugins.push([
-      require('./plugins/find-dependencies'),
+      require('./plugins/transform-imports'),
       {
         emitter: this,
         variants: [variant],

@@ -10,6 +10,7 @@ const ContentMap = require('./content-map');
 const DependencyGraph = require('./dependency-graph');
 const errors = require('./packt-errors');
 const bundleTypes = require('./bundle-types');
+const scopeIdGenerator = require('./scope-id-generator');
 
 class Packt {
   constructor(workingDirectory,options,reporter) {
@@ -155,6 +156,14 @@ class Packt {
           m.context.variants,
           m.context.bundle
         );
+        // TODO need to pass in a unique scope ID - this also needs
+        // to be consistent, so that unchanged builds don't have different
+        // content & hashes.
+        // so a hash seems like the right answer here
+        // but it would be nice not to blow out the length of identifiers
+        // too much. Perhaps an incrementing base64 ID with a stored lookup
+        // between builds would work. store the lookup in a file on disk
+        // which can be passed back in for consistent builds (optional)
         this._contentMap.addIfNotPresent(
           m.resolvedModule,
           () => this._workers.process(m.resolvedModule, m.context)
@@ -185,7 +194,7 @@ class Packt {
       this._workers.on(messageTypes.CONTENT_ERROR,(m) => {
         cleanup(m.error);
       });
-      this._workers.on(messageTypes.DEPENDENCY,(m) => {
+      this._workers.on(messageTypes.IMPORT,(m) => {
         this._resolvers.resolve(
           m.moduleName,
           m.resolvedParentModule,

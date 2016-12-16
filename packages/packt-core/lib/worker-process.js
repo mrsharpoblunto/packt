@@ -116,9 +116,9 @@ class WorkerProcess {
       return;
     }
 
-    handler.handler.on(messageTypes.DEPENDENCY,(d) => {
+    handler.handler.on(messageTypes.IMPORT,(d) => {
       process.send({
-        type: messageTypes.DEPENDENCY,
+        type: messageTypes.IMPORT,
         moduleName: d.moduleName,
         variants: d.variants,
         resolvedParentModule: resolved,

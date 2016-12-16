@@ -58,8 +58,8 @@ class Worker extends EventEmitter {
         }
         break;
 
-      case messageTypes.DEPENDENCY:
-        this.emit(messageTypes.DEPENDENCY,{
+      case messageTypes.IMPORT:
+        this.emit(messageTypes.IMPORT,{
           moduleName: m.moduleName,
           variants: m.variants,
           resolvedParentModule: m.resolvedParentModule,

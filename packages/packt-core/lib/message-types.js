@@ -5,7 +5,7 @@ module.exports = {
   STATUS_CHANGE: 'status_change',
   CONTENT: 'content',
   CONTENT_ERROR: 'content_error',
-  DEPENDENCY: 'dependency',
+  IMPORT: 'import',
   ERROR: 'error',
   PROCESS: 'process',
   CONFIG: 'config',
