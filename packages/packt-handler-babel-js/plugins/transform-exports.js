@@ -77,7 +77,7 @@ function findExports(babel) {
       },
       Identifier: function(path) {
         if (
-          this.exportedByValue[path.node.name] && 
+          this.exportedByValue.hasOwnProperty(path.node.name) && 
           (!path.scope.parent || !path.scope.hasOwnBinding(path.node.name)) &&
           (!path.parentPath || path.parentPath.node.type !== 'MemberExpression')
         ) {
@@ -113,13 +113,19 @@ function findExports(babel) {
             this.exportAlias,
             t.callExpression(
               t.identifier(constants.PACKT_IMPORT_PLACEHOLDER),
-              [path.node.source],
+              [path.node.source]
             ),
           ]
         ));
       },
       ExportDefaultDeclaration: function(path) {
-        if (path.node.declaration) {
+        if (path.node.declaration &&
+          (
+            path.node.declaration.type === 'FunctionDeclaration' ||
+            path.node.declaration.type === 'ClassDeclaration' ||
+            path.node.declaration.type === 'VariableDeclaration'
+          )
+        ) {
           const decl = path.node.declaration;
           if (
             decl.id &&
@@ -157,9 +163,18 @@ function findExports(babel) {
         }
       },
       ExportNamedDeclaration: function(path) {
-        if (path.node.declaration) {
+        if (path.node.declaration &&
+          (
+            path.node.declaration.type === 'FunctionDeclaration' ||
+            path.node.declaration.type === 'ClassDeclaration' ||
+            path.node.declaration.type === 'VariableDeclaration'
+          )
+        ) {
           const assignments = [];
-          for (let decl of path.node.declaration.declarations) {
+          const declarations = 
+            path.node.declaration.declarations || 
+            [path.node.declaration];
+          for (let decl of declarations) {
             this.exportedByValue[decl.id.name] = true;
             if (decl.init) {
               assignments.push(

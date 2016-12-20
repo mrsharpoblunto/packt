@@ -5,7 +5,7 @@ const DIGITS =
   '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz+-'.split('');
 const DIGITS_MAP = {};
 for (let i = 0; i < DIGITS.length; ++i) {
-  DIGITS_MAP[digits[i]] = i;
+  DIGITS_MAP[DIGITS[i]] = i;
 }
 
 class ScopeIdGenerator {
@@ -23,7 +23,7 @@ class ScopeIdGenerator {
   }
 
   getId(resolvedModuleName) {
-    let result = _map[resolvedModuleName];
+    let result = this._map[resolvedModuleName];
     if (result) {
       return result;
     }
@@ -41,7 +41,7 @@ class ScopeIdGenerator {
         break;
       }
     }
-    _map[resolvedModuleName] = result;
+    this._map[resolvedModuleName] = result;
     return result;
   }
 

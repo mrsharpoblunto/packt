@@ -9,7 +9,7 @@ class CssHandler extends EventEmitter {
     callback();
   }
 
-  process(resolved, variants, callback) {
+  process(resolved, scopeId, variants, callback) {
     const stats = {};
     let start = Date.now();
     fs.readFile(resolved,'utf8',(err,source) => {

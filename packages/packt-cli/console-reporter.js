@@ -9,10 +9,11 @@ const LEFT_COL_WIDTH = 15;
 const MIN_RIGHT_COL_WIDTH = 5;
 
 class ConsoleReporter {
-  constructor() {
+  constructor(showProgress) {
     this._isTTY = process.stdout.isTTY;
     this._hasUpdated = false;
     this._eraseCount = 0;
+    this._showProgress = showProgress;
   }
 
   onInit(packtVersion, options) {
@@ -33,11 +34,11 @@ class ConsoleReporter {
 
   // TODO need summary info about bundles built, module count etc.
   onUpdateBuildStatus(workers, buildStats) {
-    if (this._isTTY) {
+    if (this._isTTY && this._showProgress) {
       if (this._eraseCount) {
         process.stdout.write(escapes.cursorUp(this._eraseCount));
       } else {
-        this._eraseCount = workers.length + 4;
+        this._eraseCount = workers.length + 5;
       }
 
       const windowSize = process.stdout.getWindowSize();
@@ -76,14 +77,13 @@ class ConsoleReporter {
         console.log(message);
       }
       console.log('+' + S('-').repeat(LEFT_COL_WIDTH) + '+' + S('-').repeat(rightColWidth) + '+');
-      process.stdout.write(escapes.cursorRestorePosition);
+      console.log();
     }
   }
 
   // TODO need summary data around modules built etc.
   // need to pass through stats on each compiled module as well
   onFinishBuild(buildTimings, moduleTimings, dependencyGraph) {
-    console.log(moduleTimings);
     if (this._eraseCount) {
       process.stdout.write(escapes.eraseLines(this._eraseCount + 1));
     }
@@ -113,7 +113,6 @@ class ConsoleReporter {
 
 
   onError(err) {
-    console.log();
     try {
       if (err instanceof errors.PacktConfigError) {
         printConfigError(err);
@@ -126,12 +125,14 @@ class ConsoleReporter {
       } else if (err instanceof errors.PacktError) {
         printGeneralError(err);
       }
+      console.log();
       console.log(chalk.bold.red('Build failed'));
       return;
     } catch (ex) {
     }
 
     console.log(chalk.red(err.stack));
+    console.log();
     console.log(chalk.bold.red('Build failed'));
   }
 }

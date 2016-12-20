@@ -26,7 +26,7 @@ class JsHandler extends EventEmitter {
     return JSON.parse(JSON.stringify(ast));
   }
 
-  process(resolved, variants, callback) {
+  process(resolved, scopeId, variants, callback) {
     const stats = {};
     let start = Date.now();
 
@@ -84,6 +84,7 @@ class JsHandler extends EventEmitter {
             source,
             this._injectHandlerOptions(
               resolved,
+              scopeId,
               key,
               ignore ? {} : variant.handler
             )
@@ -113,7 +114,7 @@ class JsHandler extends EventEmitter {
     });
   }
 
-  _injectHandlerOptions(resolved, variant, options) {
+  _injectHandlerOptions(resolved, scopeId, variant, options) {
     const opts = Object.assign(
       {
         plugins: [],
@@ -123,18 +124,20 @@ class JsHandler extends EventEmitter {
         filename: resolved,
       }
     );
-    // TODO pass in moduleScope (get this from main process...)
-    opts.plugins.push([
+
+    opts.plugins.unshift([
       require('./plugins/transform-exports'),
       {
         emitter: this,
+        scope: scopeId,
         variants: [variant],
       },
     ]);
-    opts.plugins.push([
+    opts.plugins.unshift([
       require('./plugins/transform-imports'),
       {
         emitter: this,
+        scope: scopeId,
         variants: [variant],
       },
     ]);

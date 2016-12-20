@@ -56,10 +56,11 @@ class WorkerPool extends EventEmitter {
     });
   }
 
-  process(resolved, context) {
+  process(resolved, scopeId, context) {
     this._queue.push({
       type: messageTypes.PROCESS,
       resolved: resolved,
+      scopeId: scopeId,
       context: context,
     });
     this._dequeue();

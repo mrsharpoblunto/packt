@@ -32,6 +32,7 @@ class WorkerProcess {
         case messageTypes.PROCESS:
           this._processContent(
             msg.resolved,
+            msg.scopeId,
             msg.context
           );
           break;
@@ -102,7 +103,7 @@ class WorkerProcess {
     }
   }
 
-  _processContent(resolved, context) {
+  _processContent(resolved, scopeId, context) {
     const handler = this._matchHandler(resolved);
     if (!handler) {
       process.send({
@@ -129,6 +130,7 @@ class WorkerProcess {
     let remaining = this._allVariants.slice(0);
     handler.handler.process(
       resolved,
+      scopeId,
       handler.options,
       (err, variants, response) => {
         if (err) {

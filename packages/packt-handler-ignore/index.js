@@ -8,7 +8,7 @@ class IgnoreHandler extends EventEmitter {
     callback();
   }
 
-  process(resolved, variants, callback) {
+  process(resolved, scopeId, variants, callback) {
     callback(
       null,
       Object.keys(variants),

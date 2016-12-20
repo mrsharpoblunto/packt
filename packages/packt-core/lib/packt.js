@@ -10,7 +10,7 @@ const ContentMap = require('./content-map');
 const DependencyGraph = require('./dependency-graph');
 const errors = require('./packt-errors');
 const bundleTypes = require('./bundle-types');
-const scopeIdGenerator = require('./scope-id-generator');
+const ScopeIdGenerator = require('./scope-id-generator');
 
 class Packt {
   constructor(workingDirectory,options,reporter) {
@@ -84,6 +84,15 @@ class Packt {
   }
 
   _loadBuildData() {
+    try {
+      this._scopeGenerator = new ScopeIdGenerator(this._options.moduleScopes);
+    } catch (ex) {
+      return Promise.reject(new errors.PacktError(
+        'Failed to load module scopes map at ' + this._options.moduleScopes,
+        ex
+      ));
+    }
+
     // TODO load from cache configured in config
     // TODO need the dependency map here too
     // TODO should have one content map per dependency tree - lazy load
@@ -166,7 +175,10 @@ class Packt {
         // which can be passed back in for consistent builds (optional)
         this._contentMap.addIfNotPresent(
           m.resolvedModule,
-          () => this._workers.process(m.resolvedModule, m.context)
+          () => {
+            const scopeId = this._scopeGenerator.getId(m.resolvedModule);
+            this._workers.process(m.resolvedModule, scopeId, m.context)
+          }
         );
       });
       this._resolvers.on(messageTypes.RESOLVED_ERROR,(m) => {
@@ -185,6 +197,8 @@ class Packt {
         this._buildStats[m.resolved] = m.perfStats;
         this._handlerTimer.accumulate(m.handler,m.perfStats);
         this._handlerTimer.accumulate(m.handler,{ modules: m.variants.length });
+
+        console.log(m.content);
         this._contentMap.setContent(
           m.resolved,
           m.variants,

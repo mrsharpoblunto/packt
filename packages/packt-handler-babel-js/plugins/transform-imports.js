@@ -40,7 +40,7 @@ function findDependencies(babel) {
                 t.memberExpression(
                   t.callExpression(
                     t.identifier(constants.PACKT_IMPORT_PLACEHOLDER),
-                    [t.stringLiteral(moduleName)],
+                    [t.stringLiteral(moduleName)]
                   ),
                   t.identifier(symbol)
                 )
@@ -51,7 +51,7 @@ function findDependencies(babel) {
                 newAlias,
                 t.callExpression(
                   t.identifier(constants.PACKT_IMPORT_PLACEHOLDER),
-                  [t.stringLiteral(moduleName)],
+                  [t.stringLiteral(moduleName)]
                 )
               )
             );
