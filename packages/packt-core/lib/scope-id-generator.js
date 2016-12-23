@@ -2,7 +2,7 @@
 const fs = require('fs');
 
 const DIGITS = 
-  '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz+-'.split('');
+  '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz$_'.split('');
 const DIGITS_MAP = {};
 for (let i = 0; i < DIGITS.length; ++i) {
   DIGITS_MAP[DIGITS[i]] = i;

@@ -116,25 +116,16 @@ class JsHandler extends EventEmitter {
 
   _injectHandlerOptions(resolved, scopeId, variant, options) {
     const opts = Object.assign(
-      {
-        plugins: [],
-      },
+      {},
       options,
       {
         filename: resolved,
+        plugins: options.plugins ? options.plugins.slice(0) : []
       }
     );
 
     opts.plugins.unshift([
-      require('./plugins/transform-exports'),
-      {
-        emitter: this,
-        scope: scopeId,
-        variants: [variant],
-      },
-    ]);
-    opts.plugins.unshift([
-      require('./plugins/transform-imports'),
+      require('./scopify-and-process-dependencies'),
       {
         emitter: this,
         scope: scopeId,

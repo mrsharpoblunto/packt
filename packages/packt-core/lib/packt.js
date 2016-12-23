@@ -193,12 +193,16 @@ class Packt {
       this._workers.on(messageTypes.ERROR,(m) => {
         cleanup(m.error);
       });
+      var logged = 0;
       this._workers.on(messageTypes.CONTENT,(m) => {
         this._buildStats[m.resolved] = m.perfStats;
         this._handlerTimer.accumulate(m.handler,m.perfStats);
         this._handlerTimer.accumulate(m.handler,{ modules: m.variants.length });
 
-        console.log(m.content);
+        if (logged < 10) {
+              console.log(m.content);
+        logged++;
+        }
         this._contentMap.setContent(
           m.resolved,
           m.variants,
