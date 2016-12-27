@@ -9,7 +9,7 @@ function transform(babel) {
     pre() {
       this.exportedSymbols = [];
       this.exportedByValue = {};
-      this.hoistedClass = {};
+      this.hoistedIdentifier = {};
       this.moduleScope = '_' + this.opts.scope + '_';
     },
     post() {
@@ -51,7 +51,7 @@ function transform(babel) {
         if (!path.scope.parent) {
           for (let decl of path.node.declarations) {
             if (
-              this.hoistedClass[decl.id.name] ||
+              this.hoistedIdentifier[decl.id.name] ||
               this.exportedByValue[decl.id.name]
             ) {
               continue;
@@ -68,7 +68,7 @@ function transform(babel) {
         // inserting the unique scope id for this module - an exception to
         // this is if the function used to be a class that was already
         // hoisted prior to being transformed into a function declaration
-        if (!path.scope.parent.parent && !this.hoistedClass[path.node.id.name]) {
+        if (!path.scope.parent.parent && !this.hoistedIdentifier[path.node.id.name]) {
           const alias = path.scope.generateUidIdentifier(
             this.moduleScope + path.node.id.name
           );
@@ -85,7 +85,7 @@ function transform(babel) {
           );
           path.scope.rename(path.node.id.name,alias.name);
           path.node.id = alias;
-          this.hoistedClass[alias.name] = true;
+          this.hoistedIdentifier[alias.name] = true;
         }
       },
       Identifier: function(path) {
@@ -126,6 +126,7 @@ function transform(babel) {
           variants: this.opts.variants,
           symbols: ['*'],
         });
+        this.exportedSymbols.push('*');
         path.replaceWith(t.callExpression(
           t.memberExpression(
             t.identifier('Object'),
@@ -141,13 +142,7 @@ function transform(babel) {
         ));
       },
       ExportDefaultDeclaration: function(path) {
-        if (path.node.declaration &&
-          (
-            path.node.declaration.type === 'FunctionDeclaration' ||
-            path.node.declaration.type === 'ClassDeclaration' ||
-            path.node.declaration.type === 'VariableDeclaration'
-          )
-        ) {
+        if (path.node.declaration) {
           this.exportedSymbols.push('default');
           const decl = path.node.declaration;
           const defaultMember = t.memberExpression(
@@ -156,12 +151,14 @@ function transform(babel) {
           );
           if (
             decl.type === 'FunctionDeclaration' ||
-            decl.type === 'ClassDeclaration'
+            decl.type === 'ClassDeclaration' ||
+            decl.type === 'VariableDeclaration'
           ) {
             if (!decl.id) {
               decl.id = path.scope.generateUidIdentifier(
                 this.moduleScope
               );
+              this.hoistedIdentifier[decl.id.name] = true;
             }
             path.replaceWithMultiple([
               decl,
@@ -171,11 +168,19 @@ function transform(babel) {
                 decl.id
               )
             ]);
+          } else {
+            path.replaceWith(
+              t.assignmentExpression(
+                '=',
+                defaultMember,
+                decl
+              )
+            );
           }
         }
       },
       ExportNamedDeclaration: function(path) {
-        if (path.node.exportKind !== 'value') {
+        if (path.node.exportKind === 'type') {
           return;
         }
 
