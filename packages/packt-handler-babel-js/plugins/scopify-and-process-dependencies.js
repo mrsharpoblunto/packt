@@ -1,7 +1,9 @@
 'use strict';
 
 const babel = require('babel-core');
-const constants = require('./constants');
+const constants = require('../constants');
+const helpers = require('./helpers');
+const evaluateExpression = require('./evaluate-expression-visitor');
 const t = babel.types;
 
 function transform(babel) {
@@ -109,13 +111,13 @@ function transform(babel) {
         // on the export container value
         if (
           path.node.object.name === 'exports' &&
-          !path.scope.hasBinding(path.node.object.name)
+          !path.scope.hasBinding('exports')
         ) {
           path.node.object = this.exportAlias;
         } else if (
           path.node.object.name === 'module' &&
           path.node.property.name === 'exports' &&
-          !path.scope.hasBinding(path.node.object.name)
+          !path.scope.hasBinding('module')
         ) {
           path.replaceWith(this.exportAlias);
         }
@@ -321,24 +323,60 @@ function transform(babel) {
           declarators
         ));
       },
-      CallExpression: function(path) {
-        if (path.node.callee.name === 'require') {
-          if (path.node.arguments.length !== 1 ||
-              path.node.arguments[0].type !== 'StringLiteral') {
-            // TODO need to evaluate constant expressions of string concatinations
-            console.log("Expected string literal as argument to require");
-          } else {
+      CallExpression: {
+        exit: function(path) {
+          if (
+            path.node.callee.name === 'require' && 
+              !path.scope.hasBinding('require') && 
+              !isUnreachable(path)
+          ) {
+            if (path.node.arguments.length !== 1) {
+              throw path.buildCodeFrameError("Expected a single argument to require");
+            } else if (path.node.arguments[0].type !== 'StringLiteral') {
+              path.traverse(evaluateExpression,{
+                skipIdentifier: 'require',
+              });
+              if (path.node.arguments[0].type !== 'StringLiteral') {
+                throw path.buildCodeFrameError(
+                  "Argument to require must be a string literal, or expression that can be evaluated statically at build time"
+                );
+              }
+            }
+            const required = path.node.arguments[0].value;
+
             path.node.callee.name = constants.PACKT_IMPORT_PLACEHOLDER;
             this.opts.emitter.emit('import',{
-              moduleName: path.node.arguments[0].value,
+              moduleName: required,
               variants: this.opts.variants,
               symbols: ['*'],
             });
           }
-        }
+        },
       },
     },
   };
+}
+
+function isUnreachable(path) {
+  // if any if statement/conditional statically evaluates to false 
+  // anywhere from the path in question to the root scope, then the
+  // code is unreachable
+  while (path) {
+    path = path.findParent((path) => 
+      path.isConditionalExpression() ||
+      path.isIfStatement()
+    );
+    if (path) {
+      path.traverse(evaluateExpression);
+      const result = helpers.getLiteralOrConst(path.node.test, path.scope);
+      if (result && !result.value) {
+        return true;
+      }
+      // if the result is true, or inconclusive, we need to go up the tree
+      // to see if theres any definitive false conditionals
+    }
+  }
+  return false;
 }
 
 module.exports = transform;

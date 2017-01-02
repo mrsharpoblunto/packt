@@ -372,6 +372,48 @@ function _$_bar() {
     });
   });
 
+  it('Records requires with resolvable expressions',() => {
+    const result = transform(
+`const x = require((!false ? "foo" : 0) + "bar");
+function bar() {
+  const az = "az";
+  const y = require(true ? ("b"+az) : "goo");
+  if (false) {
+    require('unneeded');
+  }
+  x();
+}`,
+    );
+
+    expect(result.code).toEqual(
+`let _$_exports = {};
+const _$_x = __packt_import__("foobar");
+function _$_bar() {
+  const az = "az";
+  const y = __packt_import__("baz");
+  if (false) {
+    require('unneeded');
+  }
+  _$_x();
+}`
+    );
+    // Note the unneeded import is not transformed, or registered due 
+    // to it being unreachable
+    expect(result.opts.emitter.emit.mock.calls.length).toBe(2);
+    expect(result.opts.emitter.emit.mock.calls[0][0]).toEqual('import');
+    expect(result.opts.emitter.emit.mock.calls[0][1]).toEqual({
+      moduleName: 'foobar',
+      variants: ['default'],
+      symbols: ['*'],
+    });
+    expect(result.opts.emitter.emit.mock.calls[1][0]).toEqual('import');
+    expect(result.opts.emitter.emit.mock.calls[1][1]).toEqual({
+      moduleName: 'baz',
+      variants: ['default'],
+      symbols: ['*'],
+    });
+  });
+
   /**
    * TODO
    * import default, { } from 'module';

@@ -73,14 +73,21 @@ module.exports = {
       require: 'packt-handler-babel-js',
       options: {
         base: {
-          plugins: [
-            "transform-flow-strip-types",
-          ],
-          presets: [
-            "es2015",
-            "stage-0",
-          ],
-          compact: false,
+          transformOpts: {
+            plugins: [
+              "transform-flow-strip-types",
+            ],
+            presets: [
+              "es2015",
+              "stage-0",
+            ],
+            compact: false,
+          },
+          defines: {
+            "foo": "bar",
+            "__DEV__": false,
+            "baz": 1,
+          }
         },
         variants: {
         },

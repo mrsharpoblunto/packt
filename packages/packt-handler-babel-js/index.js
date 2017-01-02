@@ -115,17 +115,25 @@ class JsHandler extends EventEmitter {
   }
 
   _injectHandlerOptions(resolved, scopeId, variant, options) {
+    const transformOpts = options.transformOpts || {};
     const opts = Object.assign(
       {},
-      options,
+      transformOpts,
       {
         filename: resolved,
-        plugins: options.plugins ? options.plugins.slice(0) : []
+        plugins: transformOpts.plugins ? transformOpts.plugins.slice(0) : []
       }
     );
 
     opts.plugins.unshift([
-      require('./scopify-and-process-dependencies'),
+      require('./plugins/replace-defines'),
+      {
+        defines: options.defines,
+      }
+    ]);
+    opts.plugins.unshift(require('./plugins/dead-code-removal'));
+    opts.plugins.unshift([
+      require('./plugins/scopify-and-process-dependencies'),
       {
         emitter: this,
         scope: scopeId,
