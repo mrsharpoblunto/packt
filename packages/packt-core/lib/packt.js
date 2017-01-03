@@ -200,6 +200,7 @@ class Packt {
         this._handlerTimer.accumulate(m.handler,{ modules: m.variants.length });
 
         if (logged < 10) {
+              console.log(m.resolved);
               console.log(m.content);
         logged++;
         }

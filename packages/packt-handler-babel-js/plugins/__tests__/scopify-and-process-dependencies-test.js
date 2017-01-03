@@ -42,8 +42,7 @@ new foobar()`
     );
 
     expect(result.code).toEqual(
-`let _$_exports = {};
-var _$_foo = "bar";
+`var _$_foo = "bar";
 function _$_baz() {
   var foobar = "foobar";
 }
@@ -64,6 +63,21 @@ Object.assign(_$_exports, {
   foo: foo,
   bar: bar
 });`
+    );
+  });
+
+  it('Rewrites named class & function exports', () => {
+    const result = transform(
+`export class foo {}
+export function bar() {}`
+    );
+
+    expect(result.code).toEqual(
+`let _$_exports = {};
+class _$_foo {}
+_$_exports.foo = _$_foo
+function _$_bar() {}
+_$_exports.bar = _$_bar`
     );
   });
 
@@ -247,17 +261,16 @@ function _$_x() {
 }`
     );
   });
+
   it('Records all named default imports',() => {
     const result = transform(
-'import foo from "bar";\nfoo();',
+`import foo from "bar";
+foo();`,
     );
 
     expect(result.code).toEqual(
-`let _$_exports = {};
-
-const _$_foo = __packt_import__("bar").default;
-
-_$_foo();`
+`
+__packt_import__("bar").default();`
     );
     expect(result.opts.emitter.emit.mock.calls.length).toBe(1);
     expect(result.opts.emitter.emit.mock.calls[0][0]).toEqual('import');
@@ -268,6 +281,22 @@ _$_foo();`
     });
   });
 
+  it('Imports can be assigned as shorthand object properties',() => {
+    const result = transform(
+`import foo from "bar";
+export {
+  foo,
+};`,
+    );
+
+    expect(result.code).toEqual(
+`let _$_exports = {};
+Object.assign(_$_exports, {
+  foo: __packt_import__("bar").default
+});`
+    );
+  });
+
   it('Records all named imports',() => {
     const result = transform(
 `import {foo,baz} from "bar";
@@ -276,13 +305,9 @@ baz();`
     );
 
     expect(result.code).toEqual(
-`let _$_exports = {};
-
-const _$_foo = __packt_import__("bar").foo,
-      _$_baz = __packt_import__("bar").baz;
-
-_$_foo();
-_$_baz();`
+`
+__packt_import__("bar").foo();
+__packt_import__("bar").baz();`
     );
     expect(result.opts.emitter.emit.mock.calls.length).toBe(1);
     expect(result.opts.emitter.emit.mock.calls[0][0]).toEqual('import');
@@ -301,13 +326,9 @@ bar();`,
     );
 
     expect(result.code).toEqual(
-`let _$_exports = {};
-
-const _$__ = __packt_import__("bar").foo,
-      _$_bar = __packt_import__("bar").baz;
-
-_$__();
-_$_bar();`
+`
+__packt_import__("bar").foo();
+__packt_import__("bar").baz();`
     );
     expect(result.opts.emitter.emit.mock.calls.length).toBe(1);
     expect(result.opts.emitter.emit.mock.calls[0][0]).toEqual('import');
@@ -325,11 +346,8 @@ foobar.baz();`,
     );
 
     expect(result.code).toEqual(
-`let _$_exports = {};
-
-const _$_foobar = __packt_import__("bar");
-
-_$_foobar.baz();`
+`
+__packt_import__("bar").baz();`
     );
     expect(result.opts.emitter.emit.mock.calls.length).toBe(1);
     expect(result.opts.emitter.emit.mock.calls[0][0]).toEqual('import');
@@ -350,8 +368,7 @@ function bar() {
     );
 
     expect(result.code).toEqual(
-`let _$_exports = {};
-const _$_x = __packt_import__("foo");
+`const _$_x = __packt_import__("foo");
 function _$_bar() {
   const y = __packt_import__("baz");
   _$_x();
@@ -386,8 +403,7 @@ function bar() {
     );
 
     expect(result.code).toEqual(
-`let _$_exports = {};
-const _$_x = __packt_import__("foobar");
+`const _$_x = __packt_import__("foobar");
 function _$_bar() {
   const az = "az";
   const y = __packt_import__("baz");
@@ -414,10 +430,63 @@ function _$_bar() {
     });
   });
 
-  /**
-   * TODO
-   * import default, { } from 'module';
-   * import default, * as name from 'module';
-   * import 'module';
-   */
+  it('allows default and named imports in a single statement',() => {
+    const result = transform(
+`import foo, {bar} from 'module'
+foo();
+bar();`
+    );
+
+    expect(result.code).toBe(
+`
+__packt_import__('module').default();
+__packt_import__('module').bar();`
+    );
+  });
+
+  it('allows default and wildcard imports in a single statement',() => {
+    const result = transform(
+`import foo, * as bar from 'module'
+foo();
+bar.baz();`
+    );
+
+    expect(result.code).toBe(
+`
+__packt_import__('module').default();
+__packt_import__('module').baz();`
+    );
+  });
+
+  it('rewrites usages of imported identifiers',() => {
+    const result = transform(
+`import * as barz from 'module'
+
+class foo {
+  constructor() {
+    this.func(barz.someMember);
+  }
+  func() {}
+}`
+    );
+
+    expect(result.code).toBe(
+`
+
+class _$_foo {
+  constructor() {
+    this.func(__packt_import__('module').someMember);
+  }
+  func() {}
+}`
+    );
+  });
+
+  it('anonymous import is a noop',() => {
+    const result = transform(
+`import 'module'`
+    );
+
+    expect(result.code).toBe('');
+  });
 });

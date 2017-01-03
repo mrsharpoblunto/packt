@@ -12,6 +12,7 @@ function transform(babel) {
       this.exportedSymbols = [];
       this.exportedByValue = {};
       this.hoistedIdentifier = {};
+      this.localImports = {};
       this.moduleScope = '_' + this.opts.scope + '_';
     },
     post() {
@@ -27,25 +28,30 @@ function transform(babel) {
       }
     },
     visitor: {
-      Program: function(path) {
-        this.exportAlias = path.scope.generateUidIdentifier(
-          this.moduleScope + 'exports'
-        );
-        this.moduleExport = this.exportAlias.name;
-
-        // create top level export object
-        path.unshiftContainer(
-          'body',
-          t.variableDeclaration(
-            'let',
-            [
-              t.variableDeclarator(
-                this.exportAlias,
-                t.objectExpression([])
+      Program: {
+        enter: function(path) {
+          this.exportAlias = path.scope.generateUidIdentifier(
+            this.moduleScope + 'exports'
+          );
+          this.moduleExport = this.exportAlias.name;
+        },
+        exit: function(path) {
+          if (this.exportedSymbols.length) {
+            // create top level export object
+            path.unshiftContainer(
+              'body',
+              t.variableDeclaration(
+                'let',
+                [
+                  t.variableDeclarator(
+                    this.exportAlias,
+                    t.objectExpression([])
+                  )
+                ]
               )
-            ]
-          )
-        );
+            );
+          }
+        },
       },
       VariableDeclaration: function(path) {
         // hoist top level variable declarations to the global scope
@@ -70,12 +76,14 @@ function transform(babel) {
         // inserting the unique scope id for this module - an exception to
         // this is if the function used to be a class that was already
         // hoisted prior to being transformed into a function declaration
-        if (!path.scope.parent.parent && !this.hoistedIdentifier[path.node.id.name]) {
+        if (
+          !path.scope.parent.parent && 
+          !this.hoistedIdentifier[path.node.id.name]
+        ) {
           const alias = path.scope.generateUidIdentifier(
             this.moduleScope + path.node.id.name
           );
           path.scope.rename(path.node.id.name,alias.name);
-          path.node.id = alias;
         }
       },
       ClassDeclaration: function(path) {
@@ -86,8 +94,25 @@ function transform(babel) {
             this.moduleScope + path.node.id.name
           );
           path.scope.rename(path.node.id.name,alias.name);
-          path.node.id = alias;
           this.hoistedIdentifier[alias.name] = true;
+        }
+      },
+      ObjectProperty: function(path) {
+        if (
+          path.node.shorthand &&
+          this.localImports.hasOwnProperty(path.node.key.name) &&
+          // TODO change this to check for no binding, or root only
+          (!path.scope.parent || !path.scope.hasBinding(path.node.key.name))
+        ) {
+          const localImport = getImportPlaceholder(
+            path.node.key.name,
+            this.localImports
+          );
+          path.replaceWith(t.objectProperty(
+            path.node.key,
+            localImport
+          ));
+          path.skip();
         }
       },
       Identifier: function(path) {
@@ -104,6 +129,16 @@ function transform(babel) {
               path.node
             )
           );
+        } else if (
+          this.localImports.hasOwnProperty(path.node.name)
+          // TODO change this to check for no binding, or root only
+        ) {
+          const localImport = getImportPlaceholder(
+            path.node.name,
+            this.localImports
+          );
+          path.replaceWith(localImport);
+          path.skip();
         }
       },
       MemberExpression: function(path) {
@@ -114,12 +149,14 @@ function transform(babel) {
           !path.scope.hasBinding('exports')
         ) {
           path.node.object = this.exportAlias;
+          exportSymbol(this.exportedSymbols, '*');
         } else if (
           path.node.object.name === 'module' &&
           path.node.property.name === 'exports' &&
           !path.scope.hasBinding('module')
         ) {
           path.replaceWith(this.exportAlias);
+          exportSymbol(this.exportedSymbols, '*');
         }
       },
       ExportAllDeclaration: function(path) {
@@ -128,7 +165,7 @@ function transform(babel) {
           variants: this.opts.variants,
           symbols: ['*'],
         });
-        this.exportedSymbols.push('*');
+        exportSymbol(this.exportedSymbols, '*');
         path.replaceWith(t.callExpression(
           t.memberExpression(
             t.identifier('Object'),
@@ -142,10 +179,11 @@ function transform(babel) {
             ),
           ]
         ));
+        path.skip();
       },
       ExportDefaultDeclaration: function(path) {
         if (path.node.declaration) {
-          this.exportedSymbols.push('default');
+          exportSymbol(this.exportedSymbols, 'default');
           const decl = path.node.declaration;
           const defaultMember = t.memberExpression(
             this.exportAlias,
@@ -191,14 +229,25 @@ function transform(babel) {
             path.node.declaration.type === 'FunctionDeclaration' ||
             path.node.declaration.type === 'ClassDeclaration'
           ) {
-            this.exportedSymbols.push(path.node.declaration.id.name);
-            path.remove();
+            exportSymbol(this.exportedSymbols, path.node.declaration.id.name);
+            const namedMember = t.memberExpression(
+              this.exportAlias,
+              t.identifier(path.node.declaration.id.name)
+            );
+            path.replaceWithMultiple([
+              path.node.declaration,
+              t.assignmentExpression(
+                '=',
+                namedMember,
+                path.node.declaration.id
+              )
+            ]);
           } else if (path.node.declaration.type === 'VariableDeclaration') {
             const assignments = [];
             const declarations = path.node.declaration.declarations;
             for (let decl of declarations) {
               this.exportedByValue[decl.id.name] = true;
-              this.exportedSymbols.push(decl.id.name);
+              exportSymbol(this.exportedSymbols, decl.id.name);
               if (decl.init) {
                 assignments.push(
                   t.expressionStatement(
@@ -225,6 +274,18 @@ function transform(babel) {
           const symbols = [];
 
           for (let spec of path.node.specifiers) {
+            let local = spec.local;
+            if (
+              spec.local &&
+              this.localImports.hasOwnProperty(spec.local.name) &&
+              // TODO change this to check for no binding, or root only
+              (!path.scope.parent || !path.scope.hasBinding(spec.local.name))
+            ) {
+              local = getImportPlaceholder(
+                spec.local.name,
+                this.localImports
+              );
+            }
             if (path.node.source) {
               objectProps.push(
                 t.objectProperty(
@@ -234,17 +295,17 @@ function transform(babel) {
                       t.identifier(constants.PACKT_IMPORT_PLACEHOLDER),
                       [path.node.source]
                     ),
-                    spec.local || spec.exported
+                    local || spec.exported
                   )
                 )
               );
               symbols.push(spec.exported.name);
             } else {
               objectProps.push(
-                t.objectProperty(spec.exported,spec.local)
+                t.objectProperty(spec.exported,local)
               );
             }
-            this.exportedSymbols.push(spec.exported.name);
+            exportSymbol(this.exportedSymbols, spec.exported.name);
           }
 
           if (symbols.length) {
@@ -267,6 +328,7 @@ function transform(babel) {
               ]
             )
           );
+          path.skip();
         }
       },
 
@@ -289,27 +351,10 @@ function transform(babel) {
               break;
           }
           symbols.push(symbol);
-
-          const importCall = t.callExpression(
-            t.identifier(constants.PACKT_IMPORT_PLACEHOLDER),
-            [t.stringLiteral(moduleName)]
-          );
-
-          if (symbol !== '*') {
-            declarators.push(t.variableDeclarator(
-                spec.local,
-                t.memberExpression(
-                  importCall,
-                  t.identifier(symbol)
-                )
-              )
-            );
-          } else {
-            declarators.push(t.variableDeclarator(
-              spec.local,
-              importCall
-            ));
-          }
+          this.localImports[spec.local.name] = {
+            moduleName: moduleName,
+            symbol: symbol,
+          };
         }
 
         this.opts.emitter.emit('import',{
@@ -318,17 +363,14 @@ function transform(babel) {
           symbols: symbols,
         });
 
-        path.replaceWith(t.variableDeclaration(
-          'const',
-          declarators
-        ));
+        path.remove();
       },
       CallExpression: {
         exit: function(path) {
           if (
             path.node.callee.name === 'require' && 
-              !path.scope.hasBinding('require') && 
-              !isUnreachable(path)
+            !path.scope.hasBinding('require') && 
+            !isUnreachable(path)
           ) {
             if (path.node.arguments.length !== 1) {
               throw path.buildCodeFrameError("Expected a single argument to require");
@@ -377,6 +419,33 @@ function isUnreachable(path) {
     }
   }
   return false;
+}
+
+function getImportPlaceholder(name,localImports) {
+  const localImport = localImports[name];
+  const importCall = t.callExpression(
+    t.identifier(constants.PACKT_IMPORT_PLACEHOLDER),
+    [t.stringLiteral(localImport.moduleName)]
+  );
+
+  if (localImport.symbol !== '*') {
+    return t.memberExpression(
+      importCall,
+      t.identifier(localImport.symbol)
+    );
+  } else {
+    return importCall;
+  }
+}
+
+function exportSymbol(exportedSymbols, symbol) {
+  if (symbol === '*') {
+    exportedSymbols.length = 0;
+    exportedSymbols.push('*');
+  }
+  if (!exportedSymbols.length || exportedSymbols[0]!=='*') {
+    exportedSymbols.push(symbol);
+  }
 }
 
 module.exports = transform;
