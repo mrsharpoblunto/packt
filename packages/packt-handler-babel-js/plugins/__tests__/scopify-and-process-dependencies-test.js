@@ -460,11 +460,14 @@ __packt_import__('module').baz();`
 
   it('rewrites usages of imported identifiers',() => {
     const result = transform(
-`import * as barz from 'module'
+`import * as bar from 'module'
+import * as baz from 'module'
 
 class foo {
   constructor() {
-    this.func(barz.someMember);
+    const baz = "baz";
+    this.func(baz.length);
+    this.func(bar.someMember);
   }
   func() {}
 }`
@@ -475,6 +478,8 @@ class foo {
 
 class _$_foo {
   constructor() {
+    const baz = "baz";
+    this.func(baz.length);
     this.func(__packt_import__('module').someMember);
   }
   func() {}

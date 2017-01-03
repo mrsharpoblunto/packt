@@ -11,8 +11,8 @@ function transform(babel) {
     pre() {
       this.exportedSymbols = [];
       this.exportedByValue = {};
-      this.hoistedIdentifier = {};
-      this.localImports = {};
+      this.hoisted = {};
+      this.importAliases = {};
       this.moduleScope = '_' + this.opts.scope + '_';
     },
     post() {
@@ -59,8 +59,8 @@ function transform(babel) {
         if (!path.scope.parent) {
           for (let decl of path.node.declarations) {
             if (
-              this.hoistedIdentifier[decl.id.name] ||
-              this.exportedByValue[decl.id.name]
+              this.hoisted.hasOwnProperty(decl.id.name) ||
+              this.exportedByValue.hasOwnProperty(decl.id.name)
             ) {
               continue;
             }
@@ -78,7 +78,7 @@ function transform(babel) {
         // hoisted prior to being transformed into a function declaration
         if (
           !path.scope.parent.parent && 
-          !this.hoistedIdentifier[path.node.id.name]
+          !this.hoisted.hasOwnProperty(path.node.id.name)
         ) {
           const alias = path.scope.generateUidIdentifier(
             this.moduleScope + path.node.id.name
@@ -94,19 +94,18 @@ function transform(babel) {
             this.moduleScope + path.node.id.name
           );
           path.scope.rename(path.node.id.name,alias.name);
-          this.hoistedIdentifier[alias.name] = true;
+          this.hoisted[alias.name] = true;
         }
       },
       ObjectProperty: function(path) {
         if (
           path.node.shorthand &&
-          this.localImports.hasOwnProperty(path.node.key.name) &&
-          // TODO change this to check for no binding, or root only
-          (!path.scope.parent || !path.scope.hasBinding(path.node.key.name))
+          this.importAliases.hasOwnProperty(path.node.key.name) &&
+          !path.scope.hasBinding(path.node.key.name)
         ) {
           const localImport = getImportPlaceholder(
             path.node.key.name,
-            this.localImports
+            this.importAliases
           );
           path.replaceWith(t.objectProperty(
             path.node.key,
@@ -116,12 +115,12 @@ function transform(babel) {
         }
       },
       Identifier: function(path) {
-        // if this is a top level identifier that was defined as an export
+        // if this is a program level identifier that was defined as an export
         // then rewrite this to a member expression on the export container value
         if (
           this.exportedByValue.hasOwnProperty(path.node.name) && 
-          (!path.scope.parent || !path.scope.hasOwnBinding(path.node.name)) &&
-          (!path.parentPath || path.parentPath.node.type !== 'MemberExpression')
+          path.parentPath.node.type !== 'MemberExpression' &&
+          hasProgramLevelBindingOnly(path, path.node.name)
         ) {
           path.replaceWith(
             t.memberExpression(
@@ -129,13 +128,14 @@ function transform(babel) {
               path.node
             )
           );
+          path.skip();
         } else if (
-          this.localImports.hasOwnProperty(path.node.name)
-          // TODO change this to check for no binding, or root only
+          this.importAliases.hasOwnProperty(path.node.name) &&
+          !path.scope.hasBinding(path.node.name)
         ) {
           const localImport = getImportPlaceholder(
             path.node.name,
-            this.localImports
+            this.importAliases
           );
           path.replaceWith(localImport);
           path.skip();
@@ -198,7 +198,7 @@ function transform(babel) {
               decl.id = path.scope.generateUidIdentifier(
                 this.moduleScope
               );
-              this.hoistedIdentifier[decl.id.name] = true;
+              this.hoisted[decl.id.name] = true;
             }
             path.replaceWithMultiple([
               decl,
@@ -277,13 +277,12 @@ function transform(babel) {
             let local = spec.local;
             if (
               spec.local &&
-              this.localImports.hasOwnProperty(spec.local.name) &&
-              // TODO change this to check for no binding, or root only
-              (!path.scope.parent || !path.scope.hasBinding(spec.local.name))
+              this.importAliases.hasOwnProperty(spec.local.name) &&
+              !path.scope.hasBinding(spec.local.name)
             ) {
               local = getImportPlaceholder(
                 spec.local.name,
-                this.localImports
+                this.importAliases
               );
             }
             if (path.node.source) {
@@ -351,10 +350,11 @@ function transform(babel) {
               break;
           }
           symbols.push(symbol);
-          this.localImports[spec.local.name] = {
+          this.importAliases[spec.local.name] = {
             moduleName: moduleName,
             symbol: symbol,
           };
+          path.scope.removeBinding(spec.local.name);
         }
 
         this.opts.emitter.emit('import',{
@@ -421,8 +421,8 @@ function isUnreachable(path) {
   return false;
 }
 
-function getImportPlaceholder(name,localImports) {
-  const localImport = localImports[name];
+function getImportPlaceholder(name,importAliases) {
+  const localImport = importAliases[name];
   const importCall = t.callExpression(
     t.identifier(constants.PACKT_IMPORT_PLACEHOLDER),
     [t.stringLiteral(localImport.moduleName)]
@@ -446,6 +446,17 @@ function exportSymbol(exportedSymbols, symbol) {
   if (!exportedSymbols.length || exportedSymbols[0]!=='*') {
     exportedSymbols.push(symbol);
   }
+}
+
+function hasProgramLevelBindingOnly(path, name) {
+  let scope = path.scope;
+  while (!scope.path.isProgram()) {
+    if (scope.hasOwnBinding(name)) {
+      return false;
+    }
+    scope = scope.parent;
+  }
+  return true;
 }
 
 module.exports = transform;

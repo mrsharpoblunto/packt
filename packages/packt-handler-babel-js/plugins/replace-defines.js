@@ -28,7 +28,7 @@ function transform(babel) {
       },
       Identifier: function(path) {
         if (
-          path.node.name in this.opts.defines && 
+          this.opts.defines.hasOwnProperty(path.node.name) && 
           !path.scope.hasBinding(path.node.name)
         ) {
           const d = this.opts.defines[path.node.name];
