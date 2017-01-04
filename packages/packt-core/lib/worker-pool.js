@@ -22,20 +22,24 @@ class WorkerPool extends EventEmitter {
   start() {
     this._workers.forEach((w, index) => {
       w.on(messageTypes.CONTENT,(m) => {
-        this.emit(messageTypes.CONTENT,m);
-      });
-      w.on(messageTypes.CONTENT_ERROR,(m) => {
-        this.emit(messageTypes.CONTENT_ERROR,{
-          error: new errors.PacktContentError(
-            m.handler,
-            m.variants,
-            m.error,
-            m.resolved
-          )
-        });
+        if (m.error) {
+          this.emit(messageTypes.CONTENT_ERROR,{
+            error: new errors.PacktContentError(
+              m.handler,
+              m.variants,
+              m.error,
+              m.resolved
+            )
+          });
+        } else {
+          this.emit(messageTypes.CONTENT,m);
+        }
       });
       w.on(messageTypes.IMPORT,(m) => {
         this.emit(messageTypes.IMPORT,m);
+      });
+      w.on(messageTypes.EXPORT,(m) => {
+        this.emit(messageTypes.EXPORT,m);
       });
       w.on(messageTypes.STATUS_CHANGE,(s) => {
         switch (s.status) {
@@ -56,10 +60,10 @@ class WorkerPool extends EventEmitter {
     });
   }
 
-  process(resolved, scopeId, context) {
+  process(resolvedModule, scopeId, context) {
     this._queue.push({
       type: messageTypes.PROCESS,
-      resolved: resolved,
+      resolvedModule: resolvedModule,
       scopeId: scopeId,
       context: context,
     });

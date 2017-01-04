@@ -31,7 +31,7 @@ class WorkerProcess {
 
         case messageTypes.PROCESS:
           this._processContent(
-            msg.resolved,
+            msg.resolvedModule,
             msg.scopeId,
             msg.context
           );
@@ -103,14 +103,14 @@ class WorkerProcess {
     }
   }
 
-  _processContent(resolved, scopeId, context) {
-    const handler = this._matchHandler(resolved);
+  _processContent(resolvedModule, scopeId, context) {
+    const handler = this._matchHandler(resolvedModule);
     if (!handler) {
       process.send({
         type: messageTypes.CONTENT,
         variants: this._allVariants,
         error: 'No handler matched resolved resource '+ resolved,
-        resolved: resolved,
+        source: resolved,
         context: context,
       });
       process.send({ type: messageTypes.TASK_COMPLETE });
@@ -118,18 +118,24 @@ class WorkerProcess {
     }
 
     handler.handler.on(messageTypes.IMPORT,(d) => {
-      process.send({
+      process.send(Object.assign({
         type: messageTypes.IMPORT,
-        moduleName: d.moduleName,
-        variants: d.variants,
-        resolvedParentModule: resolved,
+        resolvedModule: resolvedModule,
         context: context,
-      });
+      }, d));
+    });
+
+    handler.handler.on(messageTypes.EXPORT,(d) => {
+      process.send(Object.assign({
+        type: messageTypes.EXPORT,
+        resolvedModule: resolvedModule,
+        context: context,
+      }, d));
     });
 
     let remaining = this._allVariants.slice(0);
     handler.handler.process(
-      resolved,
+      resolvedModule,
       scopeId,
       handler.options,
       (err, variants, response) => {
@@ -139,7 +145,7 @@ class WorkerProcess {
             variants: variants || this._allVariants,
             type: messageTypes.CONTENT,
             error: typeof err === 'string' ? err : err.stack,
-            resolved: resolved,
+            resolvedModule: resolvedModule,
             context: context,
           });
         } else {
@@ -152,7 +158,7 @@ class WorkerProcess {
             type: messageTypes.CONTENT,
             content: response.content,
             perfStats: response.perfStats,
-            resolved: resolved,
+            resolvedModule: resolvedModule,
             context: context,
           });
         }

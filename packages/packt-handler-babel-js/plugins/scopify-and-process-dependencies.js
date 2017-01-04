@@ -20,9 +20,11 @@ function transform(babel) {
         // inform the dependency graph what exported symbols
         // this module provides, & under what identifier they are
         // associated in the global scope
-        this.opts.emitter.emit('exports', {
-          symbols: this.exportedSymbols,
-          exportIdentifier: this.moduleExport,
+        this.opts.emitter.emit('export', {
+          exported: {
+            identifier: this.moduleExport,
+            symbols: this.exportedSymbols,
+          },
           variants: this.opts.variants,
         });
       }
@@ -161,9 +163,11 @@ function transform(babel) {
       },
       ExportAllDeclaration: function(path) {
         this.opts.emitter.emit('import',{
-          moduleName: path.node.source.value,
+          imported: {
+            source: path.node.source.value,
+            symbols: ['*'],
+          },
           variants: this.opts.variants,
-          symbols: ['*'],
         });
         exportSymbol(this.exportedSymbols, '*');
         path.replaceWith(t.callExpression(
@@ -309,9 +313,11 @@ function transform(babel) {
 
           if (symbols.length) {
             this.opts.emitter.emit('import',{
-              moduleName: path.node.source.value,
+              imported: {
+                source: path.node.source.value,
+                symbols: symbols,
+              },
               variants: this.opts.variants,
-              symbols: symbols,
             });
           }
 
@@ -358,9 +364,11 @@ function transform(babel) {
         }
 
         this.opts.emitter.emit('import',{
-          moduleName: path.node.source.value,
+          imported: {
+            source: path.node.source.value,
+            symbols: symbols,
+          },
           variants: this.opts.variants,
-          symbols: symbols,
         });
 
         path.remove();
@@ -388,9 +396,11 @@ function transform(babel) {
 
             path.node.callee.name = constants.PACKT_IMPORT_PLACEHOLDER;
             this.opts.emitter.emit('import',{
-              moduleName: required,
+              imported: {
+                source: required,
+                symbols: ['*'],
+              },
               variants: this.opts.variants,
-              symbols: ['*'],
             });
           }
         },

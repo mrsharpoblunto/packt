@@ -3,92 +3,116 @@
 
 class DependencyNode {
   constructor(module) {
-    this._requiredBy = {};
-    this._requires = {};
+    this.importedBy = {};
+    this.imports = {};
+    this.importAliases = {};
+    this.exportsSymbols = [];
+    this.exportsIdentifier = '';
     this.module = module;
-    this.importedSymbols = [];
   }
 
   /**
-   * This module requires another module, and some (or all of its exported symbols
+   * This module imports another module, and some (or all of its exported symbols
    */
-  requires(node,symbols) {
-    let requires = this._requires[node.module];
-    if (!requires) {
-      requires = this._requires[node.module] = node;
+  importsNode(node, imported) {
+    let i = this.imports[node.module];
+    if (!i) {
+      i = this.imports[node.module] = {
+        node: node,
+        symbols: [],
+      };
     }
-    if (symbols === '*') {
-      node.importedSymbols = '*';
-    } else if (node.importedSymbols !== '*') {
-      Object.assign(
-        node.importedSymbols,
-        symbols.reduce((next, prev) => {
-          prev[next] = true;
-          return prev;
-        },{})
-      );
+    this.importAliases[imported.source] = i;
+
+    if (imported.symbols.length === 1 && imported.symbols[0] === '*') {
+      i.symbols = ['*'];
+    } else if (!i.symbols.length || i.symbols[0] !== '*') {
+      i.symbols.push.apply(i.symbols, imported.symbols);
     }
   }
 
   /**
    * a module requires this module, and some (or all of its exported symbols)
    */
-  requiredBy(node,symbols) {
-    let requiredBy = this._requiredBy[node.module];
-    if (!requiredBy) {
-      requiredBy = this._requiredBy[node.module] = node;
+  importedByNode(node) {
+    let importedBy = this.importedBy[node.module];
+    if (!importedBy) {
+      importedBy = this.importedBy[node.module] = node;
     }
-    if (symbols === '*') {
-      this.importedSymbols = '*';
-    } else {
-      Object.assign(
-        this.importedSymbols,
-        symbols.reduce((next, prev) => {
-          prev[next] = true;
-          return prev;
-        },{})
+  }
+
+  exports(exported) {
+    if (exported.symbols.length === 1 && exported.symbols[0] === '*') {
+      this.exportsSymbols = ['*'];
+    } else if (this.exportedSymbols !== '*') {
+      this.exportsSymbols.push.apply(
+        this.exportsSymbols, 
+        exported.symbols
       );
     }
+    this.exportsIdentifier = exported.identifier;
   }
 }
 
 class DependencyGraph {
   constructor() {
-    this._bundles = {};
+    this._variants = {};
   }
 
-  addDependency(module, parentModule, variants, bundle) {
-    let bundleTree = this._bundles[bundle];
-    if (!bundleTree) {
-      bundleTree = this._bundles[bundle] = {};
+  _getVariant(variant) {
+    let v = this._variants[variant];
+    if (!v) {
+      v = this._variants[variant] = {
+        lookups: {},
+        roots: {},
+      };
     }
+    return v;
+  }
 
-    for (let variant of variants) {
-      let bundleVariant = bundleTree[variant];
-      if (!bundleVariant) {
-        bundleVariant = bundleTree[variant] = {
-          lookups: {},
-          root: {},
-        };
-      }
+  _getNode(module, variant) {
+    let node = variant.lookups[module];
+    if (!node) {
+      node = variant.lookups[module] = new DependencyNode(module);
+    }
+    return node;
+  }
 
+  exports(
+    resolvedModule,
+    variants,
+    exported
+  ) {
+    for (let v of variants) {
+      const variant = this._getVariant(v);
+      const node = this._getNode(resolvedModule, variant);
+      node.exports(exported);
+    }
+  }
 
-      let childNode = bundleVariant.lookups[module];
-      if (!childNode) {
-        childNode = bundleVariant.lookups[module] = new DependencyNode(module);
-      }
+  entrypoint(
+    resolvedModule,
+    variants
+  ) {
+    for (let v of variants) {
+      const variant = this._getVariant(v);
+      const node = this._getNode(resolvedModule, variant);
+      variant.roots[resolvedModule] = node;
+    }
+  }
 
-      if (parentModule) {
-        let parentNode = bundleVariant.lookups[parentModule];
-        if (!parentNode) {
-          parentNode = bundleVariant.lookups[parentModule] = new DependencyNode(parentModule);
-        }
-        // TODO record actual symbols used in order to treeshake later
-        childNode.requiredBy(parentNode,'*');
-        parentNode.requires(childNode,'*');
-      } else {
-        bundleVariant.root[module] = childNode;
-      }
+  imports(
+    resolvedModule,
+    resolvedImportedModule,
+    variants,
+    imported
+  ) {
+    for (let v of variants) {
+      const variant = this._getVariant(v);
+      const node = this._getNode(resolvedModule, variant);
+      const importedNode = this._getNode(resolvedImportedModule, variant);
+      node.importsNode(importedNode, imported);
+      importedNode.importedByNode(node);
     }
   }
 }

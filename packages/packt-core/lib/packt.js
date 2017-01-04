@@ -142,42 +142,35 @@ class Packt {
         if (err) {
           reject(err);
         } else {
+          console.log(this._dependencyGraph._variants.default.lookups);
           resolve(result);
         }
       };
 
       this._resolvers.on(messageTypes.RESOLVED,(m) => {
-        // TODO need to keep old moduleName so we can associate this resolved
-        // import with the resolved value in the content imports list for re
-        // writing later - something like
-        // this._contentMap.resolvedDep(
-        //   m.resolvedParentModule,
-        //   m.moduleName,
-        //   m.resolvedModuleName
-        // );
         this._timer.accumulate('resolvers',m.perfStats);
-        if (m.resolvedParentModule === this._config.configFile) {
-          m.resolvedParentModule = null;
+
+        if (!m.context.imported) {
+          this._dependencyGraph.entrypoint(
+            m.resolvedModule,
+            m.context.variants
+          );
+        } else {
+          this._dependencyGraph.imports(
+            m.resolvedParentModule,
+            m.resolvedModule,
+            m.context.variants,
+            m.context.imported
+          );
         }
-        this._dependencyGraph.addDependency(
-          m.resolvedModule,
-          m.resolvedParentModule,
-          m.context.variants,
-          m.context.bundle
-        );
-        // TODO need to pass in a unique scope ID - this also needs
-        // to be consistent, so that unchanged builds don't have different
-        // content & hashes.
-        // so a hash seems like the right answer here
-        // but it would be nice not to blow out the length of identifiers
-        // too much. Perhaps an incrementing base64 ID with a stored lookup
-        // between builds would work. store the lookup in a file on disk
-        // which can be passed back in for consistent builds (optional)
+
         this._contentMap.addIfNotPresent(
           m.resolvedModule,
           () => {
             const scopeId = this._scopeGenerator.getId(m.resolvedModule);
-            this._workers.process(m.resolvedModule, scopeId, m.context)
+            this._workers.process(m.resolvedModule, scopeId, {
+              bundle: m.context.bundle,
+            })
           }
         );
       });
@@ -200,12 +193,12 @@ class Packt {
         this._handlerTimer.accumulate(m.handler,{ modules: m.variants.length });
 
         if (logged < 10) {
-              console.log(m.resolved);
-              console.log(m.content);
-        logged++;
+          console.log(m.resolved);
+          console.log(m.content);
+          logged++;
         }
         this._contentMap.setContent(
-          m.resolved,
+          m.resolvedModule,
           m.variants,
           m.content
         );
@@ -213,11 +206,21 @@ class Packt {
       this._workers.on(messageTypes.CONTENT_ERROR,(m) => {
         cleanup(m.error);
       });
+      this._workers.on(messageTypes.EXPORT,(m) => {
+        this._dependencyGraph.exports(
+          m.resolvedModule,
+          m.variants,
+          m.exported
+        );
+      });
       this._workers.on(messageTypes.IMPORT,(m) => {
         this._resolvers.resolve(
-          m.moduleName,
-          m.resolvedParentModule,
-          Object.assign({},m.context, { variants: m.variants })
+          m.imported.source,
+          m.resolvedModule,
+          { 
+            variants: m.variants,
+            imported: m.imported,
+          }
         );
       });
       this._workers.on(messageTypes.IDLE,() => {
@@ -228,10 +231,13 @@ class Packt {
       this._workers.start();
 
       modules.forEach((module) => {
-        this._resolvers.resolve(module.module,this._config.configFile,{
-          bundle: module.bundle,
-          variants: Object.keys(this._config.config.options),
-        });
+        this._resolvers.resolve(
+          module.module,
+          this._config.configFile,
+          {
+            variants: Object.keys(this._config.config.options),
+          }
+        );
       });
     });
   }

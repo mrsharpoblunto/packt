@@ -6,6 +6,7 @@ module.exports = {
   CONTENT: 'content',
   CONTENT_ERROR: 'content_error',
   IMPORT: 'import',
+  EXPORT: 'export',
   ERROR: 'error',
   PROCESS: 'process',
   CONFIG: 'config',

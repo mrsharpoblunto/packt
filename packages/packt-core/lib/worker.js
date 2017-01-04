@@ -32,39 +32,18 @@ class Worker extends EventEmitter {
   }
 
   _onMessage(m) {
-    switch (m.type) {
+    const messageType = m.type;
+    delete m.type;
+
+    switch (messageType) {
+      case messageTypes.CONTENT:
+      case messageTypes.IMPORT:
+      case messageTypes.EXPORT:
+        this.emit(messageType,m);
+        break;
+
       case messageTypes.TASK_COMPLETE:
         this._setStatus(workerStatus.IDLE);
-        break;
-
-      case messageTypes.CONTENT:
-        if (m.error) {
-          this.emit(messageTypes.CONTENT_ERROR,{
-            handler: m.handler,
-            variants: m.variants,
-            error: m.error,
-            resolved: m.resolved,
-            context: m.context,
-          });
-        } else {
-          this.emit(messageTypes.CONTENT,{
-            handler: m.handler,
-            variants: m.variants,
-            content: m.content,
-            perfStats: m.perfStats,
-            resolved: m.resolved,
-            context: m.context,
-          });
-        }
-        break;
-
-      case messageTypes.IMPORT:
-        this.emit(messageTypes.IMPORT,{
-          moduleName: m.moduleName,
-          variants: m.variants,
-          resolvedParentModule: m.resolvedParentModule,
-          context: m.context,
-        });
         break;
 
       case messageTypes.ERROR:
@@ -109,7 +88,7 @@ class Worker extends EventEmitter {
       case messageTypes.PROCESS:
         this._setStatus(
           workerStatus.PROCESSING,
-          message.resolved
+          message.resolvedModule
         );
         break;
       case messageTypes.BUNDLING:

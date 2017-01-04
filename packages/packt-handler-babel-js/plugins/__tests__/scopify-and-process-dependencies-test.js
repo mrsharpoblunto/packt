@@ -204,15 +204,19 @@ Object.assign(_$_exports, __packt_import__("module"));`
     expect(result.opts.emitter.emit.mock.calls.length).toBe(2);
     expect(result.opts.emitter.emit.mock.calls[0][0]).toEqual('import');
     expect(result.opts.emitter.emit.mock.calls[0][1]).toEqual({
-      moduleName: 'module',
+      imported: {
+        source: 'module',
+        symbols: ['*'],
+      },
       variants: ['default'],
-      symbols: ['*'],
     });
-    expect(result.opts.emitter.emit.mock.calls[1][0]).toEqual('exports');
+    expect(result.opts.emitter.emit.mock.calls[1][0]).toEqual('export');
     expect(result.opts.emitter.emit.mock.calls[1][1]).toEqual({
-      exportIdentifier: "_$_exports",
+      exported: {
+        identifier: "_$_exports",
+        symbols: ['*'],
+      },
       variants: ['default'],
-      symbols: ['*'],
     });
   });
 
@@ -231,15 +235,19 @@ Object.assign(_$_exports, {
     expect(result.opts.emitter.emit.mock.calls.length).toBe(2);
     expect(result.opts.emitter.emit.mock.calls[0][0]).toEqual('import');
     expect(result.opts.emitter.emit.mock.calls[0][1]).toEqual({
-      moduleName: 'module',
+      imported: {
+        source: 'module',
+        symbols: ['foo','baz'],
+      },
       variants: ['default'],
-      symbols: ['foo','baz'],
     });
-    expect(result.opts.emitter.emit.mock.calls[1][0]).toEqual('exports');
+    expect(result.opts.emitter.emit.mock.calls[1][0]).toEqual('export');
     expect(result.opts.emitter.emit.mock.calls[1][1]).toEqual({
-      exportIdentifier: "_$_exports",
+      exported: {
+        identifier: "_$_exports",
+        symbols: ['foo','baz'],
+      },
       variants: ['default'],
-      symbols: ['foo','baz'],
     });
   });
 
@@ -275,9 +283,11 @@ __packt_import__("bar").default();`
     expect(result.opts.emitter.emit.mock.calls.length).toBe(1);
     expect(result.opts.emitter.emit.mock.calls[0][0]).toEqual('import');
     expect(result.opts.emitter.emit.mock.calls[0][1]).toEqual({
-      moduleName: 'bar',
+      imported: {
+        source: 'bar',
+        symbols: ['default'],
+      },
       variants: ['default'],
-      symbols: ['default'],
     });
   });
 
@@ -312,9 +322,11 @@ __packt_import__("bar").baz();`
     expect(result.opts.emitter.emit.mock.calls.length).toBe(1);
     expect(result.opts.emitter.emit.mock.calls[0][0]).toEqual('import');
     expect(result.opts.emitter.emit.mock.calls[0][1]).toEqual({
-      moduleName: 'bar',
+      imported: {
+        source: 'bar',
+        symbols: ['foo','baz'],
+      },
       variants: ['default'],
-      symbols: ['foo','baz'],
     });
   });
   
@@ -333,9 +345,11 @@ __packt_import__("bar").baz();`
     expect(result.opts.emitter.emit.mock.calls.length).toBe(1);
     expect(result.opts.emitter.emit.mock.calls[0][0]).toEqual('import');
     expect(result.opts.emitter.emit.mock.calls[0][1]).toEqual({
-      moduleName: 'bar',
+      imported: {
+        source: 'bar',
+        symbols: ['foo','baz'],
+      },
       variants: ['default'],
-      symbols: ['foo','baz'],
     });
   });
 
@@ -352,9 +366,11 @@ __packt_import__("bar").baz();`
     expect(result.opts.emitter.emit.mock.calls.length).toBe(1);
     expect(result.opts.emitter.emit.mock.calls[0][0]).toEqual('import');
     expect(result.opts.emitter.emit.mock.calls[0][1]).toEqual({
-      moduleName: 'bar',
+      imported: {
+        source: 'bar',
+        symbols: ['*'],
+      },
       variants: ['default'],
-      symbols: ['*'],
     });
   });
 
@@ -377,15 +393,19 @@ function _$_bar() {
     expect(result.opts.emitter.emit.mock.calls.length).toBe(2);
     expect(result.opts.emitter.emit.mock.calls[0][0]).toEqual('import');
     expect(result.opts.emitter.emit.mock.calls[0][1]).toEqual({
-      moduleName: 'foo',
+      imported: {
+        source: 'foo',
+        symbols: ['*'],
+      },
       variants: ['default'],
-      symbols: ['*'],
     });
     expect(result.opts.emitter.emit.mock.calls[1][0]).toEqual('import');
     expect(result.opts.emitter.emit.mock.calls[1][1]).toEqual({
-      moduleName: 'baz',
+      imported: {
+        source: 'baz',
+        symbols: ['*'],
+      },
       variants: ['default'],
-      symbols: ['*'],
     });
   });
 
@@ -418,15 +438,19 @@ function _$_bar() {
     expect(result.opts.emitter.emit.mock.calls.length).toBe(2);
     expect(result.opts.emitter.emit.mock.calls[0][0]).toEqual('import');
     expect(result.opts.emitter.emit.mock.calls[0][1]).toEqual({
-      moduleName: 'foobar',
+      imported: {
+        source: 'foobar',
+        symbols: ['*'],
+      },
       variants: ['default'],
-      symbols: ['*'],
     });
     expect(result.opts.emitter.emit.mock.calls[1][0]).toEqual('import');
     expect(result.opts.emitter.emit.mock.calls[1][1]).toEqual({
-      moduleName: 'baz',
+      imported: {
+        source: 'baz',
+        symbols: ['*'],
+      },
       variants: ['default'],
-      symbols: ['*'],
     });
   });
 
