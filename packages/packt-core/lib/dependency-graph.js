@@ -1,6 +1,5 @@
 'use strict';
 
-
 class DependencyNode {
   constructor(module) {
     this.importedBy = {};
@@ -9,6 +8,7 @@ class DependencyNode {
     this.exportsSymbols = [];
     this.exportsIdentifier = '';
     this.module = module;
+    this.metadata = {};
   }
 
   /**
@@ -56,13 +56,13 @@ class DependencyNode {
 
 class DependencyGraph {
   constructor() {
-    this._variants = {};
+    this.variants = {};
   }
 
   _getVariant(variant) {
-    let v = this._variants[variant];
+    let v = this.variants[variant];
     if (!v) {
-      v = this._variants[variant] = {
+      v = this.variants[variant] = {
         lookups: {},
         roots: {},
       };
@@ -92,12 +92,20 @@ class DependencyGraph {
 
   entrypoint(
     resolvedModule,
-    variants
+    variants,
+    bundle
   ) {
     for (let v of variants) {
       const variant = this._getVariant(v);
       const node = this._getNode(resolvedModule, variant);
-      variant.roots[resolvedModule] = node;
+      let root = variant.roots[resolvedModule];
+      if (!root) {
+        root = variant.roots[resolvedModule] = {
+          bundles: {},
+          module: node,
+        };
+      }
+      root.bundles[bundle] = true;
     }
   }
 
@@ -113,6 +121,16 @@ class DependencyGraph {
       const importedNode = this._getNode(resolvedImportedModule, variant);
       node.importsNode(importedNode, imported);
       importedNode.importedByNode(node);
+    }
+  }
+
+  resetMetadata() {
+    for (let v in this.variants) {
+      const variant = this.variants[v];
+      for (let l in variant.lookups) {
+        const node = variant.lookups[l];
+        node.metadata = {};
+      }
     }
   }
 }

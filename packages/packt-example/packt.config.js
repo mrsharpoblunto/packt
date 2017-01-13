@@ -40,12 +40,24 @@ module.exports = {
     'bundle.js': {
       type: 'entrypoint',
       requires: ['src/main.js'],
-      depends: ['vendor.js'],
+      depends: ['vendor.js','common.js'],
+      bundler: 'js',
+    },
+    'constants.js': {
+      type: 'entrypoint',
+      requires: ['src/constants.js'],
+      depends: ['common.js'],
       bundler: 'js',
     },
     'vendor.js': {
       type: 'library',
       requires: ['node_modules/twgl.js'],
+      bundler: 'js',
+    },
+    'common.js': {
+      type: 'common',
+      contentTypes: ['text/javascript'],
+      threshold: 1,
       bundler: 'js',
     },
   },

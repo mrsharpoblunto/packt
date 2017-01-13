@@ -21,10 +21,13 @@ if (!argv.help) {
     new ConsoleReporter(argv.progress)
   );
 
-  packt.build().then(() => {
-    return 0;
-  }).catch((err) => {
-    return 1;
-  });
+  packt.start()
+    .then(() => packt.build())
+    .then(() => packt.stop())
+    .then(() => {
+      return 0;
+    }).catch((err) => {
+      return 1;
+    });
 }
 

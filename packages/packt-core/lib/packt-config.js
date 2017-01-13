@@ -53,6 +53,38 @@ class PacktConfig {
           return reject(new PacktConfigError(err));
         }
         for (let b in value.bundles) {
+          if (value.bundles[b].type === bundleTypes.ENTRYPOINT) {
+            let commonCount = 0;
+            const dependencies = typeof(value.bundles[b].depends) === 'string'
+              ? [value.bundles[b].depends]
+              : value.bundles[b].depends;
+
+            for (let dep of dependencies) {
+              if (value.bundles[dep].type !== bundleTypes.ENTRYPOINT) {
+                if (!value.bundles[dep].dependedBy) {
+                  value.bundles[dep].dependedBy = {};
+                }
+                value.bundles[dep].dependedBy[b] = true;
+                value.bundles[dep].dependedByLength = Object.keys(
+                  value.bundles[dep].dependedBy
+                ).length;
+              }
+              if (value.bundles[dep].type === bundleTypes.COMMON) {
+                value.bundles[b].common = dep;
+                ++commonCount;
+              }
+              if (commonCount > 1) {
+                return reject(new PacktConfigError(
+                {
+                  details: [{
+                    path: 'bundles.' + dep + '.depends',
+                    message: 'An entrypoint bundle can\'t have dependencies on multiple common bundles',
+                  }],
+                }
+                ));
+              }
+            }
+          }
           if (typeof(value.bundles[b].requires) === 'string') {
             value.bundles[b].requires = [value.bundles[b].requires];
           }

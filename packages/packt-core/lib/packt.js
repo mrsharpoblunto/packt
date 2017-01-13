@@ -8,6 +8,7 @@ const ResolverChain = require('./resolver-chain');
 const Timer = require('./timer');
 const ContentMap = require('./content-map');
 const DependencyGraph = require('./dependency-graph');
+const sortBundles = require('./dependency-graph-sort');
 const errors = require('./packt-errors');
 const bundleTypes = require('./bundle-types');
 const ScopeIdGenerator = require('./scope-id-generator');
@@ -26,39 +27,52 @@ class Packt {
     this._reporter.onInit(version, this._options);
   }
 
-  build() {
+  start() {
     return this._loadConfig()
       .then((config) => {
-
         this._reporter.onLoadConfig(config);
         this._resolvers = new ResolverChain(
           this._config.config.resolvers
         );
         this._workers = new WorkerPool(this._config);
         return this._loadBuildData()
+      }).then(() => {
+        return this;
       })
-      .then(() => this._determineBuildable())
-      .then((modules) => {
-        this._reporter.onStartBuild();
-        return this._buildModules(modules);
-       })
-      .then(() => this._bundleModules())
+      .catch((err) => this._fatalError(err));
+  }
+
+  stop() {
+    return this._workers.stop()
       .then(() => {
-        this._reporter.onFinishBuild({
-          global: this._timer,
-          handlers: this._handlerTimer,
-        },
-        this._buildStats,
-        this._dependencyGraph);
-        return this._workers.stop()
-      })
-      .catch((err) => {
-        if (this._workers) {
-          this._workers.stop();
-        }
-        this._reporter.onError(err);
-        return Promise.reject(err);
+        return this;
       });
+  }
+
+  build() {
+    return this._determineWorkingSet()
+      .then(set => {
+        this._reporter.onStartBuild();
+        return this._buildModules(set)
+          .then(() => this._bundleModules(set))
+          .then(() => {
+            this._reporter.onFinishBuild({
+              global: this._timer,
+              handlers: this._handlerTimer,
+            },
+            this._buildStats,
+            this._dependencyGraph);
+          });
+      })
+      .catch((err) => this._fatalError(err));
+  }
+
+  _fatalError(err) {
+    if (this._workers) {
+      this._workers.stop();
+    }
+    this._reporter.onError(err);
+    return Promise.reject(err);
   }
 
   _loadConfig() {
@@ -102,29 +116,39 @@ class Packt {
     return Promise.resolve(this._contentMap);
   }
 
-  _determineBuildable() {
+  _determineWorkingSet() {
     // TODO determine files which changed from last build using filesystem
     // search or watchman if available. if empty, use config entrypoints as inputs
     //  also determine all the chunks where a changed input occurred, so once
     //  we've rebuilt the inputs, we can regenerate the output chunks
 
-    const modules = [];
+    const set = {
+      bundles: {},
+      commonBundles: {},
+    };
+
     for (let key in this._config.config.bundles) {
       const bundle = this._config.config.bundles[key];
-      if (bundle.type !== bundleTypes.COMMON) {
-        modules.push.apply(
-          modules,
-          bundle.requires.map((r) => ({
-            module: r,
-            bundle: key,
-          }))
-        );
+      if (bundle.type === bundleTypes.COMMON) {
+        continue;
+      }
+      if (bundle.common) {
+        // if a changing bundle has a common module, then all the bundles
+        // that common module depends on might also have to change
+        const commonBundle = this._config.config.bundles[bundle.common];
+        Object.keys(commonBundle.dependedBy).forEach(dep => {
+          set.bundles[dep] = set.bundles[dep] || [];
+        });
+        set.commonBundles[bundle.common] = true;
+      }
+      if (bundle.requires) {
+        set.bundles[key] = bundle.requires;
       }
     }
-    return Promise.resolve(modules);
+    return Promise.resolve(set);
   }
 
-  _buildModules(modules) {
+  _buildModules(workingSet) {
     const start = Date.now();
     return new Promise((resolve,reject) => {
       const updateReporter = this._reporter ? setInterval(() => {
@@ -142,8 +166,7 @@ class Packt {
         if (err) {
           reject(err);
         } else {
-          console.log(this._dependencyGraph._variants.default.lookups);
-          resolve(result);
+          resolve();
         }
       };
 
@@ -153,7 +176,8 @@ class Packt {
         if (!m.context.imported) {
           this._dependencyGraph.entrypoint(
             m.resolvedModule,
-            m.context.variants
+            m.context.variants,
+            m.context.bundle
           );
         } else {
           this._dependencyGraph.imports(
@@ -168,9 +192,7 @@ class Packt {
           m.resolvedModule,
           () => {
             const scopeId = this._scopeGenerator.getId(m.resolvedModule);
-            this._workers.process(m.resolvedModule, scopeId, {
-              bundle: m.context.bundle,
-            })
+            this._workers.process(m.resolvedModule, scopeId)
           }
         );
       });
@@ -186,17 +208,12 @@ class Packt {
       this._workers.on(messageTypes.ERROR,(m) => {
         cleanup(m.error);
       });
-      var logged = 0;
       this._workers.on(messageTypes.CONTENT,(m) => {
+        // TODO content type - necessary for common bundles
         this._buildStats[m.resolved] = m.perfStats;
         this._handlerTimer.accumulate(m.handler,m.perfStats);
         this._handlerTimer.accumulate(m.handler,{ modules: m.variants.length });
 
-        if (logged < 10) {
-          console.log(m.resolved);
-          console.log(m.content);
-          logged++;
-        }
         this._contentMap.setContent(
           m.resolvedModule,
           m.variants,
@@ -225,26 +242,45 @@ class Packt {
       });
       this._workers.on(messageTypes.IDLE,() => {
         if (this._resolvers.idle()) {
-          cleanup(null);
+          cleanup();
         }
       });
       this._workers.start();
 
-      modules.forEach((module) => {
-        this._resolvers.resolve(
-          module.module,
-          this._config.configFile,
-          {
-            variants: Object.keys(this._config.config.options),
-          }
-        );
-      });
+      for (let bundle in workingSet.bundles) {
+        const modules = workingSet.bundles[bundle];
+        modules.forEach((m) => {
+          this._resolvers.resolve(
+            m,
+            this._config.configFile,
+            {
+              variants: Object.keys(this._config.config.options),
+              bundle: bundle,
+            }
+          );
+        });
+      }
     });
   }
 
-  _bundleModules() {
-    // TODO
-    return Promise.resolve();
+  _bundleModules(workingSet) {
+
+    const start = Date.now();
+    const bundles = sortBundles(
+      this._dependencyGraph,
+      this._config,
+      workingSet
+    );
+    this._timer.accumulate('build',{ 'bundle-sort': Date.now() - start });
+
+    return Promise.resolve(bundles);
+  }
+
+  _getBundleContent(rawBundle) {
+    const bundle = [];
+
+    // TODO get the list of bundles & match up with content.
+    // any modules in this bundle which belong
   }
 }
 

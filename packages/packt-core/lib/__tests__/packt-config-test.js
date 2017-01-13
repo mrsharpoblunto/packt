@@ -97,6 +97,53 @@ describe('Config',() => {
     });
   });
 
+  it('fails when an entrypoint has multiple common chunks',()=> {
+    const config = new PacktConfig();
+
+    MockDefaultResolver.__resolvableDirectories = {
+      './bundler-js': '/path/to/bundler.js',
+      './handler-js': '/path/to/handler.js',
+    };
+
+    return config.load(path.join(__dirname,'packt.config.js'),{
+      bundles: {
+        'entry.js': {
+          type: 'entrypoint',
+          requires: ['./index.js'],
+          depends: ['common1.js','common2.js'],
+          bundler: 'js',
+        },
+        'common1.js': {
+          type: 'common',
+          contentTypes: ['text/javascript'],
+          threshold: 1,
+          bundler: 'js',
+        },
+        'common2.js': {
+          type: 'common',
+          contentTypes: ['text/javascript'],
+          threshold: 1,
+          bundler: 'js',
+        },
+      },
+      bundlers: {
+        'js': {
+          require: './bundler-js',
+        },
+      },
+      handlers: [
+        {
+          pattern: '^\\.js$',
+          require: './handler-js',
+        }
+      ]
+    }).then((config) => {
+      return Promise.reject();
+    },() => {
+      return Promise.resolve();
+    });
+  });
+
   it('fails with unresolved handlers',()=> {
     const config = new PacktConfig();
 

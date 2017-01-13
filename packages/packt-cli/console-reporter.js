@@ -93,6 +93,7 @@ class ConsoleReporter {
 
     console.log(chalk.bold('Timing information:'));
 
+    console.log('  Bundle Sort: ' + (buildTimings.global.get('build','bundle-sort')/1000).toFixed(2) + 's');
     const resolvers = buildTimings.global.getSubcategories('resolvers');
     for (let i = 0;i < resolvers.length - 1; ++i) {
       const r = resolvers[i];
@@ -113,6 +114,7 @@ class ConsoleReporter {
 
 
   onError(err) {
+    let defaultError = false;
     try {
       if (err instanceof errors.PacktConfigError) {
         printConfigError(err);
@@ -124,14 +126,16 @@ class ConsoleReporter {
         printContentError(err);
       } else if (err instanceof errors.PacktError) {
         printGeneralError(err);
+      } else {
+        defaultError = true;
       }
-      console.log();
-      console.log(chalk.bold.red('Build failed'));
-      return;
     } catch (ex) {
+      defaultError = true;
     }
 
-    console.log(chalk.red(err.stack));
+    if (defaultError) {
+      console.log(chalk.red(err.stack));
+    }
     console.log();
     console.log(chalk.bold.red('Build failed'));
   }
