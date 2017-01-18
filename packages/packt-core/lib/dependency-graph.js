@@ -7,8 +7,10 @@ class DependencyNode {
     this.importAliases = {};
     this.exportsSymbols = [];
     this.exportsIdentifier = '';
+    this.exportsEsModule = false;
     this.module = module;
     this.metadata = {};
+    this.contentType = null;
   }
 
   /**
@@ -51,6 +53,7 @@ class DependencyNode {
       );
     }
     this.exportsIdentifier = exported.identifier;
+    this.exportsEsModule = exported.esModule;
   }
 }
 
@@ -65,6 +68,7 @@ class DependencyGraph {
       v = this.variants[variant] = {
         lookups: {},
         roots: {},
+        usages: {},
       };
     }
     return v;
@@ -87,6 +91,18 @@ class DependencyGraph {
       const variant = this._getVariant(v);
       const node = this._getNode(resolvedModule, variant);
       node.exports(exported);
+    }
+  }
+
+  setContentType(
+    resolvedModule,
+    variants,
+    contentType
+  ) {
+    for (let v of variants) {
+      const variant = this._getVariant(v);
+      const node = this._getNode(resolvedModule, variant);
+      node.contentType = contentType;
     }
   }
 

@@ -8,8 +8,20 @@ function sortBundles(graph, config, workingSet) {
   for (let v in graph.variants) {
     const variant = graph.variants[v];
 
+    // TODO only do this when treeshaking enabled as this can result
+    // in re-bundling otherwise unchanged bundles apart from possible
+    // tree-shake related changes (i.e. adding/removing symbols int eh
+    // current bundle build)
+    /*Object.assign(
+      workingSet.bundles,
+      updateSymbolUsage(variant)
+      );*/
+
     for (let r in variant.roots) {
       const entryPoint = variant.roots[r];
+      // TODO do this for all bundles & make bundle belonging a 
+      // core piece of metedata, computing this is unlikely to be
+      // a perf bottleneck.
       // find all the changed bundles this entrypoint belongs to
       const inBundles = Object.keys(workingSet.bundles).filter((b) => {
         return entryPoint.bundles[b];
@@ -29,18 +41,23 @@ function sortBundles(graph, config, workingSet) {
         }
         for (let c in workingSet.commonBundles) {
           const common = config.config.bundles[c];
-          // TODO need to check if bundle has matching content type
-          const frequency = Object
-            .keys(module.metadata.bundles)
-            .reduce((prev, next) => {
-              return prev + (common.dependedBy[next] ? 1 : 0);
-            }, 0);
-            if (frequency / common.dependedByLength >= common.threshold) {
-              module.metadata.bundles[c] = true;
-            }
+          if (
+            !common.contentTypes.length || 
+            common.contentTypes.indexOf(module.contentType) >= 0
+          ) {
+            const frequency = Object
+              .keys(module.metadata.bundles)
+              .reduce((prev, next) => {
+                return prev + (common.dependedBy[next] ? 1 : 0);
+              }, 0);
+              if (frequency / common.dependedByLength >= common.threshold) {
+                module.metadata.bundles[c] = true;
+              }
+          }
         }
       }
     }
+
 
     const sorted = [];
     for (let l in variant.lookups) {
@@ -78,6 +95,57 @@ function sortBundles(graph, config, workingSet) {
   }
 
   return result;
+}
+
+function updateSymbolUsage(variant) {
+  const bundles = {};
+  for (let l in variant.lookups) {
+    const node = variant.lookups[l];
+    const oldUsages = node.exportsSymbolsUsed;
+    const usages = determineUsedSymbols(node);
+    usages.sort();
+    node.exportsSymbolsUsed = usages;
+    if (
+      !oldUsages || 
+      oldUsages.length !== usages.length) {
+      Object.assign(
+        bundles,
+        node.metadata.bundles
+      );
+    } else {
+      for (let i = 0;i < usages.length; ++i) {
+        if (usages[i] !== oldUsages[i]) {
+          Object.assign(
+            bundles,
+            node.metadata.bundles
+          );
+          break;
+        }
+      }
+    }
+  }
+  return bundles;
+}
+
+function determineUsedSymbols(module) {
+  if (!module.exportsEsModule) {
+    return ['*'];
+  }
+
+  const usedSymbols = {};
+  for (let i in module.importedBy) {
+    const dependentModule = module.importedBy[i];
+    const importsSymbols = dependentModule.imports[module.module].symbols;
+    if (
+      importsSymbols.length === 1 && 
+      importsSymbols[0] === '*'
+    ) {
+      return module.exportsSymbols.slice(0);
+    } else {
+      importsSymbols.forEach(is => usedSymbols[is] = true);
+    }
+  }
+  return Object.keys(usedSymbols);
 }
 
 function setBundles(module, bundles) {

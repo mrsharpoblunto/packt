@@ -35,6 +35,7 @@ class Packt {
           this._config.config.resolvers
         );
         this._workers = new WorkerPool(this._config);
+        this._workers.start();
         return this._loadBuildData()
       }).then(() => {
         return this;
@@ -127,25 +128,31 @@ class Packt {
       commonBundles: {},
     };
 
-    for (let key in this._config.config.bundles) {
-      const bundle = this._config.config.bundles[key];
-      if (bundle.type === bundleTypes.COMMON) {
-        continue;
+    try {
+      for (let key in this._config.config.bundles) {
+        const bundle = this._config.config.bundles[key];
+        if (bundle.type === bundleTypes.COMMON) {
+          continue;
+        }
+        if (bundle.commons) {
+          for (let common in bundle.commons) {
+            // if a changing bundle has a common module, then all the bundles
+            // that common module depends on might also have to change
+            const commonBundle = this._config.config.bundles[common];
+            Object.keys(commonBundle.dependedBy).forEach(dep => {
+              set.bundles[dep] = set.bundles[dep] || [];
+            });
+            set.commonBundles[common] = true;
+          }
+        }
+        if (bundle.requires) {
+          set.bundles[key] = bundle.requires;
+        }
       }
-      if (bundle.common) {
-        // if a changing bundle has a common module, then all the bundles
-        // that common module depends on might also have to change
-        const commonBundle = this._config.config.bundles[bundle.common];
-        Object.keys(commonBundle.dependedBy).forEach(dep => {
-          set.bundles[dep] = set.bundles[dep] || [];
-        });
-        set.commonBundles[bundle.common] = true;
-      }
-      if (bundle.requires) {
-        set.bundles[key] = bundle.requires;
-      }
+      return Promise.resolve(set);
+    } catch (err) {
+      return Promise.reject(err);
     }
-    return Promise.resolve(set);
   }
 
   _buildModules(workingSet) {
@@ -209,11 +216,15 @@ class Packt {
         cleanup(m.error);
       });
       this._workers.on(messageTypes.CONTENT,(m) => {
-        // TODO content type - necessary for common bundles
         this._buildStats[m.resolved] = m.perfStats;
         this._handlerTimer.accumulate(m.handler,m.perfStats);
         this._handlerTimer.accumulate(m.handler,{ modules: m.variants.length });
 
+        this._dependencyGraph.setContentType(
+          m.resolvedModule,
+          m.variants,
+          m.contentType
+        );
         this._contentMap.setContent(
           m.resolvedModule,
           m.variants,
@@ -245,7 +256,6 @@ class Packt {
           cleanup();
         }
       });
-      this._workers.start();
 
       for (let bundle in workingSet.bundles) {
         const modules = workingSet.bundles[bundle];
@@ -266,17 +276,37 @@ class Packt {
   _bundleModules(workingSet) {
 
     const start = Date.now();
+
+    // TODO compute bundle belonging & symbol usage
+    // update working set bundles with symbol usage related changes
+    // THEN do bundle sort
     const bundles = sortBundles(
       this._dependencyGraph,
       this._config,
       workingSet
     );
+
     this._timer.accumulate('build',{ 'bundle-sort': Date.now() - start });
+
+    for (let v in bundles) {
+      for (let b in bundles[v]) {
+        const bundle = bundles[v][b];
+
+        for (let module of bundle) {
+          console.log(module.module);
+          console.log(module.exportsSymbols);
+          console.log(module.exportsEsModule);
+          //console.log(module.exportsSymbols);
+          //console.log(module.importedBy);
+          //console.log(this._contentMap.get(module.module,v));
+        }
+      }
+    }
 
     return Promise.resolve(bundles);
   }
 
-  _getBundleContent(rawBundle) {
+  _prepareBundle(rawBundle) {
     const bundle = [];
 
     // TODO get the list of bundles & match up with content.

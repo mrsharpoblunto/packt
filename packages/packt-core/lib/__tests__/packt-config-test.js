@@ -97,7 +97,7 @@ describe('Config',() => {
     });
   });
 
-  it('fails when an entrypoint has multiple common chunks',()=> {
+  it('fails when an entrypoint has multiple common chunks with the same content type',()=> {
     const config = new PacktConfig();
 
     MockDefaultResolver.__resolvableDirectories = {

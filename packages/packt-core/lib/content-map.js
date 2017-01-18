@@ -5,8 +5,8 @@ class ContentMap {
     this._content = {};
   }
 
-  get(resolved) {
-    return this._content[resolved];
+  get(resolved,variant) {
+    return this._content[resolved].variants[variant];
   }
 
   addIfNotPresent(resolved,ifNotPresent) {

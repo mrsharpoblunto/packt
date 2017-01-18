@@ -14,6 +14,11 @@ class IgnoreHandler extends EventEmitter {
       Object.keys(variants),
       {
         content: '',
+        contentType: 'text/javascript',
+        metadata: {
+          sourceLength: 0,
+          transformedLength: 0,
+        },
         perfStats: {
           diskIO: 0,
           transform: 0,

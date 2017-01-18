@@ -14,19 +14,37 @@ class RawHandler extends EventEmitter {
     fs.readFile(resolved,'utf8',(err,source) => {
       stats.diskIO = Date.now() - start;
       if (err) {
-        callback(err);
+        callback(
+          err,
+          Object.keys(variants)
+        );
         return;
       }
 
       try {
         start = Date.now();
-        const content = 'module.exports = "' + JSON.stringify(source) + '";';
+        const transformed = 'var ' + scopeId + '="' + JSON.stringify(source) + '";';
         stats.transform = Date.now() - start;
+
+        this.emit('export', {
+          exported: {
+            identifier: scopeId,
+            symbols: ['*'],
+            esModule: false,
+          },
+          variants: Object.keys(variants),
+        });
+
         callback(
           null,
           Object.keys(variants),
           {
-            content: content,
+            content: transformed,
+            contentType: 'text/javascript',
+            metadata: {
+              sourceLength: source.length,
+              transformedLength: transformed.length,
+            },
             perfStats: stats,
           }
         );

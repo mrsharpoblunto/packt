@@ -23,7 +23,8 @@ function transform(babel) {
         this.opts.emitter.emit('export', {
           exported: {
             identifier: this.moduleExport,
-            symbols: this.exportedSymbols,
+            symbols: this.exportedSymbols.slice(0),
+            esModule: this.exportedSymbols.esModule,
           },
           variants: this.opts.variants,
         });
@@ -151,14 +152,14 @@ function transform(babel) {
           !path.scope.hasBinding('exports')
         ) {
           path.node.object = this.exportAlias;
-          exportSymbol(this.exportedSymbols, '*');
+          exportSymbol(this.exportedSymbols, '*', false);
         } else if (
           path.node.object.name === 'module' &&
           path.node.property.name === 'exports' &&
           !path.scope.hasBinding('module')
         ) {
           path.replaceWith(this.exportAlias);
-          exportSymbol(this.exportedSymbols, '*');
+          exportSymbol(this.exportedSymbols, '*', false);
         }
       },
       ExportAllDeclaration: function(path) {
@@ -169,7 +170,7 @@ function transform(babel) {
           },
           variants: this.opts.variants,
         });
-        exportSymbol(this.exportedSymbols, '*');
+        exportSymbol(this.exportedSymbols, '*', true);
         path.replaceWith(t.callExpression(
           t.memberExpression(
             t.identifier('Object'),
@@ -187,7 +188,7 @@ function transform(babel) {
       },
       ExportDefaultDeclaration: function(path) {
         if (path.node.declaration) {
-          exportSymbol(this.exportedSymbols, 'default');
+          exportSymbol(this.exportedSymbols, 'default', true);
           const decl = path.node.declaration;
           const defaultMember = t.memberExpression(
             this.exportAlias,
@@ -233,7 +234,7 @@ function transform(babel) {
             path.node.declaration.type === 'FunctionDeclaration' ||
             path.node.declaration.type === 'ClassDeclaration'
           ) {
-            exportSymbol(this.exportedSymbols, path.node.declaration.id.name);
+            exportSymbol(this.exportedSymbols, path.node.declaration.id.name, true);
             const namedMember = t.memberExpression(
               this.exportAlias,
               t.identifier(path.node.declaration.id.name)
@@ -251,7 +252,7 @@ function transform(babel) {
             const declarations = path.node.declaration.declarations;
             for (let decl of declarations) {
               this.exportedByValue[decl.id.name] = true;
-              exportSymbol(this.exportedSymbols, decl.id.name);
+              exportSymbol(this.exportedSymbols, decl.id.name, true);
               if (decl.init) {
                 assignments.push(
                   t.expressionStatement(
@@ -308,7 +309,7 @@ function transform(babel) {
                 t.objectProperty(spec.exported,local)
               );
             }
-            exportSymbol(this.exportedSymbols, spec.exported.name);
+            exportSymbol(this.exportedSymbols, spec.exported.name, true);
           }
 
           if (symbols.length) {
@@ -448,7 +449,8 @@ function getImportPlaceholder(name,importAliases) {
   }
 }
 
-function exportSymbol(exportedSymbols, symbol) {
+function exportSymbol(exportedSymbols, symbol, esModule) {
+  exportedSymbols.esModule = esModule;
   if (symbol === '*') {
     exportedSymbols.length = 0;
     exportedSymbols.push('*');

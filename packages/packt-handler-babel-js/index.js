@@ -96,8 +96,8 @@ class JsHandler extends EventEmitter {
             [key],
             {
               content: result.code,
+              contentType: 'text/javascript',
               metadata: {
-                exports: {},
                 sourceLength: source.length,
                 transformedLength: result.code.length,
               },

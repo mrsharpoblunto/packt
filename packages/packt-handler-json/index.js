@@ -21,11 +21,27 @@ class JsonHandler extends EventEmitter {
         start = Date.now();
         const result = JSON.parse(source);
         stats.transform = Date.now() - start;
+        const transformed = 'var ' + scopeId + '=' + source + ';';
+
+        this.emit('export', {
+          exported: {
+            identifier: scopeId,
+            symbols: ['*'],
+            esModule: false,
+          },
+          variants: Object.keys(variants),
+        });
+
         callback(
           null,
           Object.keys(variants),
           {
-            content: 'module.exports = ' + source,
+            content: transformed,
+            contentType: 'text/javascript',
+            metadata: {
+              sourceLength: source.length,
+              transformedLength: transformed.length,
+            }
             perfStats: stats,
           }
         );

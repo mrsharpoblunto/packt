@@ -15,7 +15,10 @@ class CssHandler extends EventEmitter {
     fs.readFile(resolved,'utf8',(err,source) => {
       stats.diskIO = Date.now() - start;
       if (err) {
-        callback(err);
+        callback(
+          err,
+          Object.keys(variants),
+        );
         return;
       }
 
@@ -30,6 +33,11 @@ class CssHandler extends EventEmitter {
           Object.keys(variants),
           {
             content: result.css,
+            contentType: 'text/css',
+            metadata: {
+              sourceLength: source.length,
+              transformedLength: result.css.length,
+            }
             perfStats: stats,
           }
         );

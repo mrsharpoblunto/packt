@@ -53,35 +53,42 @@ class PacktConfig {
           return reject(new PacktConfigError(err));
         }
         for (let b in value.bundles) {
-          if (value.bundles[b].type === bundleTypes.ENTRYPOINT) {
-            let commonCount = 0;
-            const dependencies = typeof(value.bundles[b].depends) === 'string'
-              ? [value.bundles[b].depends]
-              : value.bundles[b].depends;
+          const currentBundle = value.bundles[b];
+          if (currentBundle.type === bundleTypes.ENTRYPOINT) {
+            const commonTypes = {};
+            const dependencies = typeof(currentBundle.depends) === 'string'
+              ? [currentBundle.depends]
+              : currentBundle.depends;
 
             for (let dep of dependencies) {
-              if (value.bundles[dep].type !== bundleTypes.ENTRYPOINT) {
-                if (!value.bundles[dep].dependedBy) {
-                  value.bundles[dep].dependedBy = {};
+              const depBundle = value.bundles[dep];
+              if (depBundle.type !== bundleTypes.ENTRYPOINT) {
+                if (!depBundle.dependedBy) {
+                  depBundle.dependedBy = {};
                 }
-                value.bundles[dep].dependedBy[b] = true;
-                value.bundles[dep].dependedByLength = Object.keys(
-                  value.bundles[dep].dependedBy
+                depBundle.dependedBy[b] = true;
+                depBundle.dependedByLength = Object.keys(
+                  depBundle.dependedBy
                 ).length;
               }
-              if (value.bundles[dep].type === bundleTypes.COMMON) {
-                value.bundles[b].common = dep;
-                ++commonCount;
-              }
-              if (commonCount > 1) {
-                return reject(new PacktConfigError(
-                {
-                  details: [{
-                    path: 'bundles.' + dep + '.depends',
-                    message: 'An entrypoint bundle can\'t have dependencies on multiple common bundles',
-                  }],
+              if (depBundle.type === bundleTypes.COMMON) {
+                for (let contentType of depBundle.contentTypes) {
+                  if (commonTypes[contentType]) {
+                    return reject(new PacktConfigError(
+                    {
+                      details: [{
+                        path: 'bundles.' + dep + '.depends',
+                        message: 'An entrypoint bundle can\'t have dependencies on multiple common bundles that have the extract the same content types. Multiple common bundles are configured to extract "' + contentType  + '" resources.',
+                      }],
+                    }
+                    ));
+                  }
+                  commonTypes[contentType] = true;
                 }
-                ));
+                if (!currentBundle.commons) {
+                  currentBundle.commons = {};
+                }
+                currentBundle.commons[dep] = true;
               }
             }
           }
@@ -172,6 +179,7 @@ class PacktConfig {
       invariantOptions: joi.object({
         workers: joi.number().integer().min(1).default(os.cpus().length - 1),
         outputPath: joi.string().default(path.join(this.workingDirectory,'build')),
+        cachePath: joi.string().default(path.join(this.workingDirectory,'.packt-cache')),
         outputFormat: joi.string().default('${filename}_${hash}.${ext}'),
         outputHash: joi.any().valid('md5','sha1','sha2').default('md5'),
         outputHashLength: joi.number().min(1).max(16).default(12),

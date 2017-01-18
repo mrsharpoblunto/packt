@@ -149,14 +149,12 @@ class WorkerProcess {
             context: context,
           });
         } else {
-          // TODO content requires a bunch of metadata such as
-          // exports & string offsets for doing tree shaking + top level
-          // declarations for doing scope hoisting
           process.send({
             handler: handler.pattern.toString(),
             variants: variants || this._allVariants,
             type: messageTypes.CONTENT,
             content: response.content,
+            contentType: response.contentType,
             perfStats: response.perfStats,
             resolvedModule: resolvedModule,
             context: context,
