@@ -133,6 +133,14 @@ class WorkerProcess {
       }, d));
     });
 
+    handler.handler.on(messageTypes.WARNING,(d) => {
+      process.send(Object.assign({
+        type: messageTypes.WARNING,
+        resolvedModule: resolvedModule,
+        context: context,
+      }, d));
+    });
+
     let remaining = this._allVariants.slice(0);
     handler.handler.process(
       resolvedModule,

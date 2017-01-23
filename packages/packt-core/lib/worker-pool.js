@@ -28,7 +28,7 @@ class WorkerPool extends EventEmitter {
               m.handler,
               m.variants,
               m.error,
-              m.resolved
+              m.resolvedModule
             )
           });
         } else {

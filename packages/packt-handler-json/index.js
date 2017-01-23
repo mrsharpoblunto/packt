@@ -41,7 +41,7 @@ class JsonHandler extends EventEmitter {
             metadata: {
               sourceLength: source.length,
               transformedLength: transformed.length,
-            }
+            },
             perfStats: stats,
           }
         );

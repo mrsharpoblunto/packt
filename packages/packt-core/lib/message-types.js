@@ -8,6 +8,7 @@ module.exports = {
   IMPORT: 'import',
   EXPORT: 'export',
   ERROR: 'error',
+  WARNING: 'warning',
   PROCESS: 'process',
   CONFIG: 'config',
   RESOLVED: 'resolved',

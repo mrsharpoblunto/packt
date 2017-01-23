@@ -1,29 +1,47 @@
 'use strict';
 const fs = require('fs');
+const mime = require('mime');
 const EventEmitter = require('events').EventEmitter;
+
+mime.default_type = 'text/plain';
 
 class RawHandler extends EventEmitter {
 
   init(invariants, resolver, callback) {
+    this._handlerInvariants = invariants.handler;
     callback();
   }
 
-  process(resolved, scopeId, variants, callback) {
+  process(resolvedModule, scopeId, variants, callback) {
     const stats = {};
     let start = Date.now();
-    fs.readFile(resolved,'utf8',(err,source) => {
+    fs.readFile(resolvedModule, (err,data) => {
       stats.diskIO = Date.now() - start;
       if (err) {
-        callback(
-          err,
-          Object.keys(variants)
-        );
-        return;
+        return callback(err);
       }
 
       try {
         start = Date.now();
-        const transformed = 'var ' + scopeId + '="' + JSON.stringify(source) + '";';
+        let contentType =
+          this._handlerInvariants.contentType || mime.lookup(resolvedModule);
+        let encoding = this._handlerInvariants.encoding || (
+          contentType === 'text/plain' ? 'utf8' : 'base64'
+        );
+
+        let source = new Buffer(data).toString(encoding);
+        if (encoding === 'utf8') {
+          source = JSON.stringify(source);
+        } else if (encoding === 'base64') {
+          source = '"' + contentType + ';base64,' + source + '"';
+        } else {
+          return callback(new Error(
+            'Unexpected encoding type - expected either ' +
+            '"base64" or "utf8".'
+          ));
+        }
+
+        const transformed = 'var ' + scopeId + '=' + source + ';';
         stats.transform = Date.now() - start;
 
         this.emit('export', {

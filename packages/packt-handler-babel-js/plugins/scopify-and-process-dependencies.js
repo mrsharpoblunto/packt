@@ -80,7 +80,7 @@ function transform(babel) {
         // this is if the function used to be a class that was already
         // hoisted prior to being transformed into a function declaration
         if (
-          !path.scope.parent.parent && 
+          !path.scope.parent.parent &&
           !this.hoisted.hasOwnProperty(path.node.id.name)
         ) {
           const alias = path.scope.generateUidIdentifier(
@@ -118,11 +118,23 @@ function transform(babel) {
         }
       },
       Identifier: function(path) {
+        const parentNodeType = path.parentPath.node.type;
+        if (
+          parentNodeType === 'MemberExpression' ||
+          parentNodeType === 'FunctionDeclaration' ||
+          parentNodeType === 'ClassMethod' ||
+          (
+            parentNodeType === 'ObjectProperty' &&
+            path.node === path.parentPath.node.key
+          )
+        ) {
+          return;
+        }
+
         // if this is a program level identifier that was defined as an export
         // then rewrite this to a member expression on the export container value
         if (
-          this.exportedByValue.hasOwnProperty(path.node.name) && 
-          path.parentPath.node.type !== 'MemberExpression' &&
+          this.exportedByValue.hasOwnProperty(path.node.name) &&
           hasProgramLevelBindingOnly(path, path.node.name)
         ) {
           path.replaceWith(
@@ -352,7 +364,7 @@ function transform(babel) {
             case 'ImportDefaultSpecifier':
               symbol = 'default';
               break;
-            default: 
+            default:
               symbol = spec.imported ? spec.imported.name : spec.local.name;
               break;
           }
@@ -377,8 +389,8 @@ function transform(babel) {
       CallExpression: {
         exit: function(path) {
           if (
-            path.node.callee.name === 'require' && 
-            !path.scope.hasBinding('require') && 
+            path.node.callee.name === 'require' &&
+            !path.scope.hasBinding('require') &&
             !isUnreachable(path)
           ) {
             if (path.node.arguments.length !== 1) {
@@ -411,11 +423,11 @@ function transform(babel) {
 }
 
 function isUnreachable(path) {
-  // if any if statement/conditional statically evaluates to false 
+  // if any if statement/conditional statically evaluates to false
   // anywhere from the path in question to the root scope, then the
   // code is unreachable
   while (path) {
-    path = path.findParent((path) => 
+    path = path.findParent((path) =>
       path.isConditionalExpression() ||
       path.isIfStatement()
     );

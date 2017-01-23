@@ -245,7 +245,7 @@ class Packt {
         this._resolvers.resolve(
           m.imported.source,
           m.resolvedModule,
-          { 
+          {
             variants: m.variants,
             imported: m.imported,
           }
@@ -289,13 +289,23 @@ class Packt {
     this._timer.accumulate('build',{ 'bundle-sort': Date.now() - start });
 
     for (let v in bundles) {
+      console.log(v);
+      console.log(
+        Object
+          .keys(this._dependencyGraph.variants[v].lookups)
+          //.filter(f => f.indexOf('.js') >=0)
+          .length
+      );
+
+
       for (let b in bundles[v]) {
         const bundle = bundles[v][b];
 
+
         for (let module of bundle) {
-          console.log(module.module);
-          console.log(module.exportsSymbols);
-          console.log(module.exportsEsModule);
+          //console.log(module.module);
+          //console.log(module.exportsSymbols);
+          //console.log(module.exportsEsModule);
           //console.log(module.exportsSymbols);
           //console.log(module.importedBy);
           //console.log(this._contentMap.get(module.module,v));

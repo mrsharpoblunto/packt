@@ -26,7 +26,7 @@ class ResolverChain extends EventEmitter {
   }
 
   resolve(moduleName,resolvedParentModule, context) {
-    this._resolvingQueue[module] = true;
+    this._resolvingQueue[moduleName] = true;
     ++this._resolving;
     const perfStats = {};
 
@@ -54,7 +54,7 @@ class ResolverChain extends EventEmitter {
               delete this._resolvingQueue[moduleName];
               this.emit(messageTypes.RESOLVED_ERROR, {
                 error: new Error(
-                  'No resolvers left to resolve ' + unresolved + 
+                  'No resolvers left to resolve ' + unresolved +
                   (context ? (' (' + context + ')') : '')
                 ),
                 moduleName: moduleName,

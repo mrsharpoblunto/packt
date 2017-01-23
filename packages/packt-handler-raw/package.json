@@ -10,5 +10,8 @@
   "license": "MIT",
   "devDependencies": {
     "jest": "^17.0.0"
+  },
+  "dependencies": {
+    "node-mime": "^1.0.0"
   }
 }
