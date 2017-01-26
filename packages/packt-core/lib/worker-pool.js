@@ -41,6 +41,12 @@ class WorkerPool extends EventEmitter {
       w.on(messageTypes.EXPORT,(m) => {
         this.emit(messageTypes.EXPORT,m);
       });
+      w.on(messageTypes.WARNING,(m) => {
+        this.emit(messageTypes.WARNING,m);
+      });
+      w.on(messageTypes.GENERATED,(m) => {
+        this.emit(messageTypes.GENERATED,m);
+      });
       w.on(messageTypes.STATUS_CHANGE,(s) => {
         switch (s.status) {
           case workerStatus.IDLE:

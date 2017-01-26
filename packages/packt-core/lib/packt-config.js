@@ -23,12 +23,12 @@ class PacktConfig {
   }
 
   _validate(json) {
-    const resolvers = Array.isArray(json.resolvers && json.resolvers.custom) ? 
+    const resolvers = Array.isArray(json.resolvers && json.resolvers.custom) ?
       json.resolvers.custom : [];
     const handlers = Array.isArray(json.handlers) ? json.handlers : [];
     const bundlers = (json.bundlers && typeof(json.bundlers) === 'object') ?
       Object.keys(json.bundlers) : [];
-    
+
     return Promise.all(
       resolvers.map(c => this._resolveRequire(c))
         .concat(handlers.map(h => this._resolveRequire(h)))
@@ -36,7 +36,7 @@ class PacktConfig {
     ).then((resolved) => new Promise((resolve,reject) => {
       const libraries = (json.bundles && typeof(json.bundles) === 'object') ?
         Object.keys(json.bundles).filter(
-          (b) => json.bundles[b].type === bundleTypes.LIBRARY || 
+          (b) => json.bundles[b].type === bundleTypes.LIBRARY ||
                  json.bundles[b].type === bundleTypes.COMMON
         ) : []
 
@@ -48,7 +48,7 @@ class PacktConfig {
 
       joi.validate(json, schema, {
         abortEarly: false,
-      }, (err, value) => { 
+      }, (err, value) => {
         if (err) {
           return reject(new PacktConfigError(err));
         }
@@ -122,9 +122,9 @@ class PacktConfig {
           },
           validate(params, value, state, options) {
             if (!params.libraries.find((b) => value === b)) {
-              return this.createError('string.library',{ 
-                value: value, 
-                libraries: params.libraries 
+              return this.createError('string.library',{
+                value: value,
+                libraries: params.libraries
               }, state, options);
             }
             return value;
@@ -137,9 +137,9 @@ class PacktConfig {
           },
           validate(params, value, state, options) {
             if (!params.bundlers.find((b) => value === b)) {
-              return this.createError('string.bundler',{ 
-                value: value, 
-                bundlers: params.bundlers 
+              return this.createError('string.bundler',{
+                value: value,
+                bundlers: params.bundlers
               }, state, options);
             }
             return value;
@@ -152,8 +152,8 @@ class PacktConfig {
               const regex = new RegExp(value);
               return value;
             } catch (err) {
-              return this.createError('string.regex',{ 
-                value: value, 
+              return this.createError('string.regex',{
+                value: value,
               }, state, options);
             }
           }
@@ -165,8 +165,8 @@ class PacktConfig {
           },
           validate(params, value, state, options) {
             if (!params.resolved.find((r) => r === value)) {
-              return this.createError('string.resolvable',{ 
-                value: value 
+              return this.createError('string.resolvable',{
+                value: value
               }, state, options);
             }
             return value;
@@ -180,7 +180,7 @@ class PacktConfig {
         workers: joi.number().integer().min(1).default(os.cpus().length - 1),
         outputPath: joi.string().default(path.join(this.workingDirectory,'build')),
         cachePath: joi.string().default(path.join(this.workingDirectory,'.packt-cache')),
-        outputFormat: joi.string().default('${filename}_${hash}.${ext}'),
+        outputPublicPath: joi.string().default('/'),
         outputHash: joi.any().valid('md5','sha1','sha2').default('md5'),
         outputHashLength: joi.number().min(1).max(16).default(12),
       }).default(),
@@ -194,29 +194,39 @@ class PacktConfig {
           bundleTypes.LIBRARY,
           bundleTypes.COMMON
         ).required(),
-        requires: joi.when('type', { 
-          is: bundleTypes.COMMON, 
+        requires: joi.when('type', {
+          is: bundleTypes.COMMON,
           then: joi.forbidden(),
           otherwise: joi.alternatives().try(
-            joi.array().items(joi.string()),
+            joi.array().items(joi.alternatives().try(
+              joi.string(),
+              joi.object({
+                name: joi.string().required(),
+                folder: joi.boolean().required()
+              })
+            )),
+            joi.object({
+              name: joi.string().required(),
+              folder: joi.boolean().required()
+            }),
             joi.string()
           ).required()
         }),
-        depends: joi.when('type', { 
-          is: bundleTypes.ENTRYPOINT, 
+        depends: joi.when('type', {
+          is: bundleTypes.ENTRYPOINT,
           then: joi.alternatives().try(
             joi.array().items(customJoi.string().library(libraries)),
             customJoi.string().library(libraries)
           ).default([]),
           otherwise: joi.forbidden(),
         }),
-        contentTypes: joi.when('type', { 
-          is: bundleTypes.COMMON, 
+        contentTypes: joi.when('type', {
+          is: bundleTypes.COMMON,
           then: joi.array().items(joi.string().regex(/[a-z]+\/[a-z]+/)).required(),
           otherwise: joi.forbidden(),
         }),
-        threshold: joi.when('type', { 
-          is: bundleTypes.COMMON, 
+        threshold: joi.when('type', {
+          is: bundleTypes.COMMON,
           then: joi.number().min(0).max(1).required(),
           otherwise: joi.forbidden(),
         }),
@@ -224,7 +234,14 @@ class PacktConfig {
       })).min(1).required(),
       bundlers: joi.object({}).pattern(/.*/,joi.object({
         require: customJoi.string().resolvable(resolved).required(),
-        invariantOptions: joi.object({}).default().unknown(),
+        invariantOptions: joi.object({
+          outputPathFormat: joi.string().default('/bundles/${name}_${hash}${ext}'),
+          assetNameFormat: joi.string().default('${name}${ext}'),
+        }).default().unknown(),
+        options: joi.object({
+          base: joi.object({}).default().unknown(),
+          variants: joi.object({}).default().unknown(),
+        }).default(),
       })).min(1).required(),
       resolvers: joi.object({
         custom: joi.array().items(joi.object({
@@ -265,6 +282,7 @@ class PacktConfig {
       this._resolver.resolve(
         entry.require,
         this.configFile,
+        false,
         (err,resolved) => {
           if (err) {
             resolve({
@@ -286,8 +304,18 @@ class PacktConfig {
   _buildVariants(config) {
     const variants = Object.keys(config.options.variants);
     for (let handler of config.handlers) {
-      const extraVariants = 
+      const extraVariants =
         Object.keys(handler.options.variants);
+      for (let extra of extraVariants) {
+        if (!variants.find((v) => v === extra)) {
+          variants.push(extra);
+        }
+      }
+    }
+    for (let b in config.bundlers) {
+      const bundler = config.bundlers[b];
+      const extraVariants =
+        Object.keys(bundler.options.variants);
       for (let extra of extraVariants) {
         if (!variants.find((v) => v === extra)) {
           variants.push(extra);
@@ -299,6 +327,10 @@ class PacktConfig {
     config.options = this._varyOptions(variants, config.options);
     for (let handler of config.handlers) {
       handler.options = this._varyOptions(variants, handler.options);
+    }
+    for (let b in config.bundlers) {
+      const bundler = config.bundlers[b];
+      bundler.options = this._varyOptions(variants, bundler.options);
     }
     return Promise.resolve(config);
   }

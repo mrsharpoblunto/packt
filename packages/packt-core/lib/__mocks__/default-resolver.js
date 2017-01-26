@@ -1,7 +1,7 @@
 'use strict';
 
 class MockDefaultResolver {
-  resolve(module,resolvedParentModule,cb) {
+  resolve(module,resolvedParentModule,expectFolder,cb) {
     const resolved = MockDefaultResolver.__resolvableDirectories[module];
     if (resolved) {
       cb(null,resolved);

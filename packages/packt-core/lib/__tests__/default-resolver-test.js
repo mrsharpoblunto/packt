@@ -1,7 +1,8 @@
+'use strict';
 jest.mock('fs');
 
 const fs = require('fs');
-const DefaultResolver = require('../default-resolver.js');
+const DefaultResolver = require('../default-resolver');
 
 describe('default resolver',() => {
   let resolver;
@@ -33,7 +34,7 @@ describe('default resolver',() => {
         }
       });
 
-      resolver.resolve('/my-project/modules/foobar.js','/my-project/modules/foo.js',(err,resolved) => {
+      resolver.resolve('/my-project/modules/foobar.js','/my-project/modules/foo.js',false,(err,resolved) => {
         try {
           expect(err).toBeFalsy();
           expect(resolved).toEqual('/my-project/modules/foobar.js');
@@ -60,7 +61,7 @@ describe('default resolver',() => {
         }
       });
 
-      resolver.resolve('/my-project/modules/foobar','/my-project/modules/foo.js',(err,resolved) => {
+      resolver.resolve('/my-project/modules/foobar','/my-project/modules/foo.js',false,(err,resolved) => {
         try {
           expect(err).toBeFalsy();
           expect(resolved).toEqual('/my-project/modules/foobar.jsx');
@@ -87,7 +88,7 @@ describe('default resolver',() => {
         }
       });
 
-      resolver.resolve('./foobar.js','/my-project/modules/foo.js',(err,resolved) => {
+      resolver.resolve('./foobar.js','/my-project/modules/foo.js',false,(err,resolved) => {
         try {
           expect(err).toBeFalsy();
           expect(resolved).toEqual('/my-project/modules/foobar.js');
@@ -115,7 +116,7 @@ describe('default resolver',() => {
         }
       });
 
-      resolver.resolve('./foobar','/my-project/modules/foo.js',(err,resolved) => {
+      resolver.resolve('./foobar','/my-project/modules/foo.js',false,(err,resolved) => {
         try {
           expect(err).toBeFalsy();
           expect(resolved).toEqual('/my-project/modules/foobar.jsx');
@@ -161,7 +162,7 @@ describe('default resolver',() => {
 
       });
 
-      resolver.resolve('foobar','/my-project/modules/foo.js',(err,resolved) => {
+      resolver.resolve('foobar','/my-project/modules/foo.js',false,(err,resolved) => {
         try {
           expect(err).toBeFalsy();
           expect(resolved).toEqual('/my-project/node_modules/foobar/lib/index.js');
@@ -195,7 +196,7 @@ describe('default resolver',() => {
         }
       });
 
-      resolver.resolve('./foobar','/my-project/modules/foo.js',(err,resolved) => {
+      resolver.resolve('./foobar','/my-project/modules/foo.js',false,(err,resolved) => {
         try {
           expect(err).toBeFalsy();
           expect(resolved).toEqual('/my-project/modules/foobar/index.js');
@@ -229,7 +230,7 @@ describe('default resolver',() => {
         }
       });
 
-      resolver.resolve('foobar.js','/my-project/modules/foo.js',(err,resolved) => {
+      resolver.resolve('foobar.js','/my-project/modules/foo.js',false,(err,resolved) => {
         try {
           expect(err).toBeFalsy();
           expect(resolved).toEqual('/my-project/node_modules/foobar.js');
@@ -257,14 +258,14 @@ describe('default resolver',() => {
         }
       });
 
-      resolver.resolve('foobar.js','/my-project/modules/foo.js',(err,resolved) => {
+      resolver.resolve('foobar.js','/my-project/modules/foo.js',false,(err,resolved) => {
         try {
           expect(err).toBeTruthy();
           expect(err.attempts).toEqual([
             '/my-project/modules/node_modules/foobar.js',
             '/my-project/node_modules/foobar.js',
             '/my-project/node_modules/foobar.js/index.js',
-            '/my-project/node_modules/foobar.js/index.jsx' 
+            '/my-project/node_modules/foobar.js/index.jsx'
           ])
           resolve();
         } catch (ex) {
@@ -283,7 +284,7 @@ describe('default resolver',() => {
         callback(new Error('not found'));
       });
 
-      resolver.resolve('foobar.js','/my-project/modules/foo.js',(err,resolved) => {
+      resolver.resolve('foobar.js','/my-project/modules/foo.js',false,(err,resolved) => {
         try {
           expect(err).toBeTruthy();
           expect(err.attempts).toEqual([
@@ -307,7 +308,7 @@ describe('default resolver',() => {
         callback(new Error('not found'));
       });
 
-      resolver.resolve('foobar.react','/my-project/modules/foo.js',(err,resolved) => {
+      resolver.resolve('foobar.react','/my-project/modules/foo.js',false,(err,resolved) => {
         try {
           expect(err).toBeTruthy();
           expect(err.attempts).toEqual([

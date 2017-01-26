@@ -25,7 +25,7 @@ class ResolverChain extends EventEmitter {
     this._resolvingQueue = {};
   }
 
-  resolve(moduleName,resolvedParentModule, context) {
+  resolve(moduleName, resolvedParentModule, expectFolder, context) {
     this._resolvingQueue[moduleName] = true;
     ++this._resolving;
     const perfStats = {};
@@ -34,49 +34,54 @@ class ResolverChain extends EventEmitter {
       const resolver = this._resolvers[resolverIndex];
       const start = Date.now();
       try {
-        resolver.resolve(moduleName,resolvedParentModule,(err,resolved) => {
-          const end = Date.now();
-          perfStats[resolverIndex] = end - start;
-          if (err) {
-            --this._resolving;
-            delete this._resolvingQueue[moduleName];
-            this.emit(messageTypes.RESOLVED_ERROR,{
-              error: err,
-              moduleName: moduleName,
-              context: context,
-              perfStats: perfStats,
-            });
-          } else if (!resolved) {
-            if (++resolverIndex < this._resolvers.length) {
-              tryResolve(resolverIndex);
-            } else {
+        resolver.resolve(
+          moduleName,
+          resolvedParentModule,
+          expectFolder,
+          (err,resolved) => {
+            const end = Date.now();
+            perfStats[resolverIndex] = end - start;
+            if (err) {
               --this._resolving;
               delete this._resolvingQueue[moduleName];
-              this.emit(messageTypes.RESOLVED_ERROR, {
-                error: new Error(
-                  'No resolvers left to resolve ' + unresolved +
-                  (context ? (' (' + context + ')') : '')
-                ),
+              this.emit(messageTypes.RESOLVED_ERROR,{
+                error: err,
                 moduleName: moduleName,
                 context: context,
                 perfStats: perfStats,
               });
+            } else if (!resolved) {
+              if (++resolverIndex < this._resolvers.length) {
+                tryResolve(resolverIndex);
+              } else {
+                --this._resolving;
+                delete this._resolvingQueue[moduleName];
+                this.emit(messageTypes.RESOLVED_ERROR, {
+                  error: new Error(
+                    'No resolvers left to resolve ' + unresolved +
+                    (context ? (' (' + context + ')') : '')
+                  ),
+                  moduleName: moduleName,
+                  context: context,
+                  perfStats: perfStats,
+                });
+              }
+            } else {
+              --this._resolving;
+              delete this._resolvingQueue[moduleName];
+              this.emit(messageTypes.RESOLVED, {
+                moduleName: moduleName,
+                resolvedModule: resolved,
+                resolvedParentModule: resolvedParentModule,
+                context: context,
+                perfStats: perfStats,
+              });
             }
-          } else {
-            --this._resolving;
-            delete this._resolvingQueue[moduleName];
-            this.emit(messageTypes.RESOLVED, {
-              moduleName: moduleName,
-              resolvedModule: resolved,
-              resolvedParentModule: resolvedParentModule,
-              context: context,
-              perfStats: perfStats,
-            });
+            if (!this._resolving) {
+              this.emit(messageTypes.IDLE);
+            }
           }
-          if (!this._resolving) {
-            this.emit(messageTypes.IDLE);
-          }
-        });
+        );
       } catch (ex) {
         const end = Date.now();
         perfStats[resolverIndex] = end - start;

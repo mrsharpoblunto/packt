@@ -7,7 +7,7 @@ mime.default_type = 'text/plain';
 
 class RawHandler extends EventEmitter {
 
-  init(invariants, resolver, callback) {
+  init(invariants, utils, callback) {
     this._handlerInvariants = invariants.handler;
     callback();
   }

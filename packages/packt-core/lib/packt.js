@@ -140,13 +140,17 @@ class Packt {
             // that common module depends on might also have to change
             const commonBundle = this._config.config.bundles[common];
             Object.keys(commonBundle.dependedBy).forEach(dep => {
-              set.bundles[dep] = set.bundles[dep] || [];
+              set.bundles[dep] = (set.bundles[dep] || []).map((m) =>
+                typeof(m) === 'string' ? { name: m, folder: false } : m
+              ) || [];
             });
             set.commonBundles[common] = true;
           }
         }
         if (bundle.requires) {
-          set.bundles[key] = bundle.requires;
+          set.bundles[key] = bundle.requires.map((m) =>
+            typeof(m) === 'string' ? { name: m, folder: false } : m
+          );
         }
       }
       return Promise.resolve(set);
@@ -231,6 +235,23 @@ class Packt {
           m.content
         );
       });
+      this._workers.on(messageTypes.GENERATED,(m) => {
+        this._dependencyGraph.addGenerated(
+          m.resolvedModule,
+          m.variants,
+          m.assetName,
+          m.outputPath
+        );
+      });
+      this._workers.on(messageTypes.WARNING,(m) => {
+        if (this._reporter) {
+          this._reporter.onBuildWarning(
+            m.resolvedModule,
+            m.variants,
+            m.warning
+          );
+        }
+      });
       this._workers.on(messageTypes.CONTENT_ERROR,(m) => {
         cleanup(m.error);
       });
@@ -245,6 +266,7 @@ class Packt {
         this._resolvers.resolve(
           m.imported.source,
           m.resolvedModule,
+          false,
           {
             variants: m.variants,
             imported: m.imported,
@@ -261,8 +283,9 @@ class Packt {
         const modules = workingSet.bundles[bundle];
         modules.forEach((m) => {
           this._resolvers.resolve(
-            m,
+            m.name,
             this._config.configFile,
+            m.folder,
             {
               variants: Object.keys(this._config.config.options),
               bundle: bundle,

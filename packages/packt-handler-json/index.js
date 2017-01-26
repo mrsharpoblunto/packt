@@ -3,7 +3,7 @@ const fs = require('fs');
 const EventEmitter = require('events').EventEmitter;
 
 class JsonHandler extends EventEmitter {
-  init(invariants, resolver, callback) {
+  init(invariants, utils, callback) {
     callback();
   }
 

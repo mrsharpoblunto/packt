@@ -17,9 +17,10 @@ class DefaultResolver {
     this._packageCache = {};
   }
 
-  resolve(moduleName,resolvedParentModule,cb) {
+  resolve(moduleName, resolvedParentModule, expectFolder, cb) {
     const context = {
       attempts: [],
+      expectFolder: expectFolder,
     };
 
     const callback = (err,resolved) => {
@@ -136,24 +137,30 @@ class DefaultResolver {
           callback(new Error('Unable to resolve ' + modulePath));
         }
       } else if (!isFile) {
-        // modulePath is a folder, check for package.json then index[+extensions]
-        this._readPackageMain(modulePath,(err,packageMain) => {
-          if (err) {
-            // no package.json present - see if an index file is
-            this._searchExtensions(path.join(modulePath,'index'),0,context,callback);
-            return;
-          }
-
-          this._stat(packageMain,(err,isFile) => {
-            if (err || !isFile) {
-              context.attempts.push(packageMain);
-              this._searchExtensions(packageMain,0,context,callback);
-            } else {
-              context.attempts.pop();
-              callback(null,packageMain);
+        if (context.expectFolder) {
+          context.attempts.pop();
+          callback(null, modulePath);
+        } else {
+          // modulePath is a folder, check for package.json
+          // then index[+extensions]
+          this._readPackageMain(modulePath,(err,packageMain) => {
+            if (err) {
+              // no package.json present - see if an index file is
+              this._searchExtensions(path.join(modulePath,'index'),0,context,callback);
+              return;
             }
+
+            this._stat(packageMain,(err,isFile) => {
+              if (err || !isFile) {
+                context.attempts.push(packageMain);
+                this._searchExtensions(packageMain,0,context,callback);
+              } else {
+                context.attempts.pop();
+                callback(null,packageMain);
+              }
+            });
           });
-        });
+        }
       } else {
         // modulePath is a file, but it has to have an extension matching one of
         // our configured extensions for it to count as a resolution

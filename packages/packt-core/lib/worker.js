@@ -40,6 +40,7 @@ class Worker extends EventEmitter {
       case messageTypes.IMPORT:
       case messageTypes.EXPORT:
       case messageTypes.WARNING:
+      case messageTypes.GENERATED:
         this.emit(messageType,m);
         break;
 

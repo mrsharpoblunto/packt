@@ -7,6 +7,7 @@ module.exports = {
   CONTENT_ERROR: 'content_error',
   IMPORT: 'import',
   EXPORT: 'export',
+  GENERATED: 'generated',
   ERROR: 'error',
   WARNING: 'warning',
   PROCESS: 'process',

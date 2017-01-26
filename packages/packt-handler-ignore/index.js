@@ -4,7 +4,7 @@ const EventEmitter = require('events').EventEmitter;
 
 class IgnoreHandler extends EventEmitter {
 
-  init(invariants, resolver, callback) {
+  init(invariants, utils, callback) {
     callback();
   }
 

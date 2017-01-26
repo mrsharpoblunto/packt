@@ -1,3 +1,4 @@
+'use strict';
 jest.mock('../default-resolver');
 const PacktConfig = require('../packt-config');
 const path = require('path');
@@ -64,7 +65,6 @@ describe('Config',() => {
       expect(invariant).toBeTruthy();
       expect(invariant.workers).toBeGreaterThan(0);
       expect(invariant.outputPath).toContain('build');
-      expect(invariant.outputFormat).toBe('${filename}_${hash}.${ext}');
       expect(invariant.outputHash).toBe('md5');
       expect(invariant.outputHashLength).toBe(12);
 
@@ -88,7 +88,9 @@ describe('Config',() => {
       expect(Object.keys(config.bundlers).length).toBe(1);
       expect(config.bundlers['js'].invariantOptions).toBeTruthy();
       expect(config.bundlers['js'].require).toBe('/path/to/bundler.js');
-      
+      expect(config.bundlers['js'].invariantOptions.outputPathFormat).toBe('/bundles/${name}_${hash}${ext}');
+      expect(config.bundlers['js'].options).toBeTruthy();
+
       expect(Object.keys(config.bundles).length).toBe(5);
       expect(config.bundles['entry2.js'].requires.length).toBe(1);
       expect(config.bundles['entry2.js'].depends.length).toBe(1);
@@ -378,6 +380,9 @@ describe('Config',() => {
 
       expect(config.handlers[0].invariantOptions).toBeTruthy();
       expect(config.handlers[0].invariantOptions.strict).toBe(false);
+
+      expect(Object.keys(config.bundlers['js'].options)).toEqual(
+        ['en_US','en_GB','prod','dev']);
 
       expect(Object.keys(config.handlers[0].options)).toEqual(
         ['en_US','en_GB','prod','dev']);

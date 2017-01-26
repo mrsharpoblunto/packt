@@ -3,6 +3,7 @@
 const path = require('path');
 const messageTypes = require('./message-types');
 const DefaultResolver = require('./default-resolver');
+const OutputPathUtils = require('./output-path-utils');
 
 class WorkerProcess {
   constructor() {
@@ -43,12 +44,26 @@ class WorkerProcess {
     });
   }
 
-  _processConfig(msg) {
-    const config = msg.config;
-    const configFile = msg.configFile;
+  _createHandlerUtils(msg) {
+    const pathUtils = new OutputPathUtils(
+      msg.config
+    );
     const resolver = new DefaultResolver(
       DefaultResolver.defaultOptions(msg.workingDirectory)
     );
+    pathUtils.resolve = (path, cb) => resolver.resolve(
+      path,
+      msg.configFile,
+      false,
+      cb
+    );
+    return pathUtils;
+  }
+
+  _processConfig(msg) {
+    const config = msg.config;
+    const configFile = msg.configFile;
+    const utils = this._createHandlerUtils(msg);
 
     this._allVariants = Object.keys(config.options);
 
@@ -76,7 +91,7 @@ class WorkerProcess {
         try {
           h.handler.init(
             h.invariantOptions,
-            (path, cb) => resolver.resolve(path, configFile, cb),
+            utils,
             (err) => err ? reject(err) : resolve()
           );
         } catch (ex) {
@@ -95,9 +110,9 @@ class WorkerProcess {
     });
   }
 
-  _matchHandler(resolved) {
+  _matchHandler(resolvedModule) {
     for (let i = 0;i < this._handlers.length; ++i) {
-      if (this._handlers[i].pattern.test(resolved)) {
+      if (this._handlers[i].pattern.test(resolvedModule)) {
         return this._handlers[i];
       }
     }
@@ -109,8 +124,8 @@ class WorkerProcess {
       process.send({
         type: messageTypes.CONTENT,
         variants: this._allVariants,
-        error: 'No handler matched resolved resource '+ resolved,
-        source: resolved,
+        error: 'No handler matched resolved resource '+ resolvedModule,
+        source: resolvedModule,
         context: context,
       });
       process.send({ type: messageTypes.TASK_COMPLETE });
@@ -136,6 +151,14 @@ class WorkerProcess {
     handler.handler.on(messageTypes.WARNING,(d) => {
       process.send(Object.assign({
         type: messageTypes.WARNING,
+        resolvedModule: resolvedModule,
+        context: context,
+      }, d));
+    });
+
+    handler.handler.on(messageTypes.GENERATED,(d) => {
+      process.send(Object.assign({
+        type: messageTypes.GENERATED,
         resolvedModule: resolvedModule,
         context: context,
       }, d));

@@ -11,6 +11,7 @@ class DependencyNode {
     this.module = module;
     this.metadata = {};
     this.contentType = null;
+    this.generatedAssets = {};
   }
 
   /**
@@ -48,7 +49,7 @@ class DependencyNode {
       this.exportsSymbols = ['*'];
     } else if (this.exportedSymbols !== '*') {
       this.exportsSymbols.push.apply(
-        this.exportsSymbols, 
+        this.exportsSymbols,
         exported.symbols
       );
     }
@@ -103,6 +104,19 @@ class DependencyGraph {
       const variant = this._getVariant(v);
       const node = this._getNode(resolvedModule, variant);
       node.contentType = contentType;
+    }
+  }
+
+  addGenerated(
+    resolvedModule,
+    variants,
+    assetName,
+    outputPath
+  ) {
+    for (let v of variants) {
+      const variant = this._getVariant(v);
+      const node = this._getNode(resolvedModule, variant);
+      node.generatedAssets[assetName] = outputPath;
     }
   }
 

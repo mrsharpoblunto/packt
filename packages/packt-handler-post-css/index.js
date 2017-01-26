@@ -5,14 +5,14 @@ const postcss = require('postcss');
 
 class PostCssHandler extends EventEmitter {
 
-  init(invariants, resolver, callback) {
+  init(invariants, utils, callback) {
     this._invariants = invariants;
-    this._resolver = resolver;
+    this._resolve = utils.resolve;
     this._handlerInvariants = {
     };
     this._pluginCache = {};
     if (invariants.handler.optsProcessor) {
-      resolver(invariants.handler.optsProcessor, (err, resolved) => {
+      utils.resolve(invariants.handler.optsProcessor, (err, resolved) => {
         if (err) {
           return callback(err);
         }
@@ -146,7 +146,7 @@ class PostCssHandler extends EventEmitter {
         } else if (this._pluginCache[variant + '-' + p]) {
           resolve(this._pluginCache[variant + '-' + p]);
         } else {
-          this._resolver(p, (err, resolved) => {
+          this._resolve(p, (err, resolved) => {
             if (err) {
               return reject(err);
             }

@@ -14,6 +14,7 @@ class ConsoleReporter {
     this._hasUpdated = false;
     this._eraseCount = 0;
     this._showProgress = showProgress;
+    this._warnings = {};
   }
 
   onInit(packtVersion, options) {
@@ -23,7 +24,7 @@ class ConsoleReporter {
 
   onLoadConfig(config) {
     console.log(
-      chalk.bold('Building variants: ') + 
+      chalk.bold('Building variants: ') +
       '[' + Object.keys(config.options).join(',') + ']'
     );
     console.log();
@@ -81,6 +82,19 @@ class ConsoleReporter {
     }
   }
 
+  onBuildWarning(resolvedModule, variants, warning) {
+    let moduleWarnings = this._warnings[resolvedModule];
+    if (!moduleWarnings) {
+      moduleWarnings = this._warnings[resolvedModule] = [];
+    }
+    for (let v of variants) {
+      moduleWarnings.push({
+        variant: v,
+        warning: warning,
+      });
+    }
+  }
+
   // TODO need summary data around modules built etc.
   // need to pass through stats on each compiled module as well
   onFinishBuild(buildTimings, moduleTimings, dependencyGraph) {
@@ -88,8 +102,19 @@ class ConsoleReporter {
       process.stdout.write(escapes.eraseLines(this._eraseCount + 1));
     }
 
-    console.log(chalk.green('Build completed in ') + chalk.bold((buildTimings.global.get('build','modules')/1000).toFixed(2) + 's'));
-    console.log();
+    if (Object.keys(this._warnings).length) {
+      console.log(chalk.bold('Build Warnings:'));
+      console.log();
+      for (let source in this._warnings) {
+        console.log(chalk.yellow(source) + ':');
+        const warningList = this._warnings[source];
+        for (let w of warningList) {
+          console.log(chalk.bold(w.variant) + ': ' + w.warning);
+        }
+        console.log();
+      }
+      console.log();
+    }
 
     console.log(chalk.bold('Timing information:'));
 
@@ -110,6 +135,9 @@ class ConsoleReporter {
       console.log('  Handler ' + chalk.bold(h) + ': ' + total.toFixed(2) + 's ' +
         chalk.dim('(' + transform.toFixed(2) + 's Transform, ' + io.toFixed(2) + 's I/O)'));
     }
+
+    console.log();
+    console.log(chalk.green('Build completed in ') + chalk.bold((buildTimings.global.get('build','modules')/1000).toFixed(2) + 's'));
   }
 
 

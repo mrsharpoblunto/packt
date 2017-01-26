@@ -7,7 +7,7 @@ const EventEmitter = require('events').EventEmitter;
 
 class JsHandler extends EventEmitter {
 
-  init(invariants, resolver, cb) {
+  init(invariants, utils, cb) {
     this._invariants = invariants;
     this._handlerInvariants = {
       noParse: (invariants.handler.noParse || []).map((i) => new RegExp(i)),
@@ -18,7 +18,7 @@ class JsHandler extends EventEmitter {
       ),
     };
     if (invariants.handler.transformOptsProcessor) {
-      resolver(invariants.handler.transformOptsProcessor, (err, resolved) => {
+      utils.resolve(invariants.handler.transformOptsProcessor, (err, resolved) => {
         if (err) {
           return cb(err);
         }
