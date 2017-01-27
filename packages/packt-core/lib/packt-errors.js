@@ -47,10 +47,24 @@ class PacktContentError extends Error {
   }
 }
 
+class PacktBundleError extends Error {
+  constructor(
+    bundler,
+    error,
+    bundle
+  ) {
+    super('Error bundling: ' + bundle + ': ' + error);
+    this.bundler = bundler;
+    this.error = error;
+    this.bundle = bundle;
+  }
+}
+
 module.exports = {
   PacktError: PacktError,
   PacktConfigError: PacktConfigError,
   PacktResolverError: PacktResolverError,
   PacktWorkerError: PacktWorkerError,
   PacktContentError: PacktContentError,
+  PacktBundleError: PacktBundleError,
 };

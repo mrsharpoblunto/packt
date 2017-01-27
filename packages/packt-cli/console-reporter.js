@@ -135,9 +135,27 @@ class ConsoleReporter {
       console.log('  Handler ' + chalk.bold(h) + ': ' + total.toFixed(2) + 's ' +
         chalk.dim('(' + transform.toFixed(2) + 's Transform, ' + io.toFixed(2) + 's I/O)'));
     }
+    const bundlers = buildTimings.bundlers.getCategories();
+    for (let b of bundlers) {
+      const io = buildTimings.bundlers.get(b,'diskIO') / 1000;
+      const transform = buildTimings.bundlers.get(b,'transform') / 1000;
+      const total = io + transform;
+
+      console.log('  Bundler ' + chalk.bold(b) + ': ' + total.toFixed(2) + 's ' +
+        chalk.dim('(' + transform.toFixed(2) + 's Transform, ' + io.toFixed(2) + 's I/O)'));
+    }
 
     console.log();
-    console.log(chalk.green('Build completed in ') + chalk.bold((buildTimings.global.get('build','modules')/1000).toFixed(2) + 's'));
+    console.log(
+      chalk.green('Build completed in ') + 
+      chalk.bold(
+        ((
+          buildTimings.global.get('build','modules') +
+          buildTimings.global.get('build','bundle-sort') +
+          buildTimings.global.get('build','bundles')
+        ) /1000).toFixed(2) + 's'
+      )
+    );
   }
 
 

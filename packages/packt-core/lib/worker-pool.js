@@ -1,4 +1,4 @@
-'use strict';
+
 
 const EventEmitter = require('events').EventEmitter;
 const Worker = require('./worker');
@@ -33,6 +33,19 @@ class WorkerPool extends EventEmitter {
           });
         } else {
           this.emit(messageTypes.CONTENT,m);
+        }
+      });
+      w.on(messageTypes.BUNDLE,(m) => {
+        if (m.error) {
+          this.emit(messageTypes.BUNDLE_ERROR,{
+            error: new errors.PacktBundleError(
+              m.bundler,
+              m.error,
+              m.bundle
+            )
+          });
+        } else {
+          this.emit(messageTypes.BUNDLE,m);
         }
       });
       w.on(messageTypes.IMPORT,(m) => {
@@ -71,6 +84,17 @@ class WorkerPool extends EventEmitter {
       type: messageTypes.PROCESS,
       resolvedModule: resolvedModule,
       scopeId: scopeId,
+      context: context,
+    });
+    this._dequeue();
+  }
+
+  bundle(bundle, variant, data, context) {
+    this._queue.push({
+      type: messageTypes.BUNDLE,
+      bundle: bundle,
+      variant: variant,
+      data: data,
       context: context,
     });
     this._dequeue();

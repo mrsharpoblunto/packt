@@ -17,7 +17,6 @@ module.exports = {
   invariantOptions: {
     workers: os.cpus().length - 1,
     outputPath: path.join(__dirname,'_build'),
-    outputFormat: '${options.lang}_${filename}.${ext}/${hash}.${ext}',
     outputHash: 'md5',
     outputHashLength: 12,
   }, 

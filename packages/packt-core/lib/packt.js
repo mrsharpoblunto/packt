@@ -17,6 +17,7 @@ class Packt {
   constructor(workingDirectory,options,reporter) {
     this._timer = new Timer();
     this._handlerTimer = new Timer();
+    this._bundlerTimer = new Timer();
     this._reporter = reporter;
 
     this._options = Object.assign({},options);
@@ -60,6 +61,7 @@ class Packt {
             this._reporter.onFinishBuild({
               global: this._timer,
               handlers: this._handlerTimer,
+              bundlers: this._bundlerTimer,
             },
             this._buildStats,
             this._dependencyGraph);
@@ -297,8 +299,7 @@ class Packt {
   }
 
   _bundleModules(workingSet) {
-
-    const start = Date.now();
+    let start = Date.now();
 
     // TODO compute bundle belonging & symbol usage
     // update working set bundles with symbol usage related changes
@@ -311,39 +312,89 @@ class Packt {
 
     this._timer.accumulate('build',{ 'bundle-sort': Date.now() - start });
 
-    for (let v in bundles) {
-      console.log(v);
-      console.log(
-        Object
-          .keys(this._dependencyGraph.variants[v].lookups)
-          //.filter(f => f.indexOf('.js') >=0)
-          .length
-      );
+    start = Date.now();
+    return new Promise((resolve,reject) => {
+      const updateReporter = this._reporter ? setInterval(() => {
+        this._reporter.onUpdateBuildStatus(this._workers.status());
+      },100) : null;
+      this._buildStats = {};
 
+      const cleanup = (err,result) => {
+        this._timer.accumulate('build',{ 'bundles': Date.now() - start });
+        if (updateReporter) {
+          clearInterval(updateReporter);
+        }
+        this._workers.removeAllListeners();
+        this._resolvers.removeAllListeners();
+        if (err) {
+          reject(err);
+        } else {
+          resolve();
+        }
+      };
 
-      for (let b in bundles[v]) {
-        const bundle = bundles[v][b];
+      this._workers.on(messageTypes.ERROR,(m) => {
+        cleanup(m.error);
+      });
+      this._workers.on(messageTypes.BUNDLE,(m) => {
+        console.log(m.bundler);
+        this._bundlerTimer.accumulate(m.bundler,m.perfStats);
+        // TODO log timings for this specific bundle
+        //this._buildStats[m.resolved] = m.perfStats;
+        // TODO add entries to asset map.
+      });
+      this._workers.on(messageTypes.WARNING,(m) => {
+        if (this._reporter) {
+          this._reporter.onBuildWarning(
+            m.resolvedModule,
+            m.variants,
+            m.warning
+          );
+        }
+      });
+      this._workers.on(messageTypes.BUNDLE_ERROR,(m) => {
+        cleanup(m.error);
+      });
+      this._workers.on(messageTypes.IDLE,() => {
+        cleanup();
+      });
 
-
-        for (let module of bundle) {
-          //console.log(module.module);
-          //console.log(module.exportsSymbols);
-          //console.log(module.exportsEsModule);
-          //console.log(module.exportsSymbols);
-          //console.log(module.importedBy);
-          //console.log(this._contentMap.get(module.module,v));
+      for (let variant in bundles) {
+        for (let bundleName in bundles[variant]) {
+          this._workers.bundle(
+            bundleName,
+            variant,
+            this._prepareBundleData(
+              bundleName, 
+              variant, 
+              bundles[variant][bundleName]),
+            {}
+          );
         }
       }
-    }
-
-    return Promise.resolve(bundles);
+    });
   }
 
-  _prepareBundle(rawBundle) {
-    const bundle = [];
+  // TODO prepare bundle into a serializable object to pass
+  // to the bundler
+  // TODO get the list of bundles & match up with content.
+  // any modules in this bundle which belong
+  _prepareBundleData(bundleName, variant, bundleModules) {
 
-    // TODO get the list of bundles & match up with content.
-    // any modules in this bundle which belong
+    //for (let module of bundleModules) {
+      //console.log(module.module);
+      //console.log(module.exportsSymbols);
+      //console.log(module.exportsEsModule);
+      //console.log(module.exportsSymbols);
+      //console.log(module.importedBy);
+      //console.log(this._contentMap.get(module.module,v));
+    //}
+
+    return {
+      // TODO need to deal with dynamically created bundles from
+      // System.import etc.`
+      bundler: this._config.config.bundles[bundleName].bundler,
+    };
   }
 }
 

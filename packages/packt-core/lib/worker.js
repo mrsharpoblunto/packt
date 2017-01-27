@@ -37,6 +37,7 @@ class Worker extends EventEmitter {
 
     switch (messageType) {
       case messageTypes.CONTENT:
+      case messageTypes.BUNDLE:
       case messageTypes.IMPORT:
       case messageTypes.EXPORT:
       case messageTypes.WARNING:
@@ -93,7 +94,7 @@ class Worker extends EventEmitter {
           message.resolvedModule
         );
         break;
-      case messageTypes.BUNDLING:
+      case messageTypes.BUNDLE:
         this._setStatus(
           workerStatus.BUNDLING,
           message.bundle

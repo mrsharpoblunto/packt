@@ -8,6 +8,7 @@ const OutputPathUtils = require('./output-path-utils');
 class WorkerProcess {
   constructor() {
     this._handlers = [];
+    this._bundlers = {};
     this._allVariants = [];
   }
 
@@ -34,6 +35,15 @@ class WorkerProcess {
           this._processContent(
             msg.resolvedModule,
             msg.scopeId,
+            msg.context
+          );
+          break;
+
+        case messageTypes.BUNDLE:
+          this._bundleContent(
+            msg.bundle,
+            msg.variant,
+            msg.data,
             msg.context
           );
           break;
@@ -98,6 +108,39 @@ class WorkerProcess {
           reject(ex);
         }
       }));
+
+    for (let b in config.bundlers) {
+      const bundlerConfig = config.bundlers[b];
+      const bundler = {
+        bundler: new (require(bundlerConfig.require))(),
+        invariantOptions: {
+          global: config.invariantOptions,
+          handler: bundlerConfig.invariantOptions,
+        },
+        options: {},
+      }
+      for (let v in config.options) {
+        bundler.options[v] = {
+          global: config.options[v],
+          handler: bundlerConfig.options[v],
+        };
+      }
+      this._bundlers[b] = bundler;
+    }
+
+    initializing.push.apply(initializing, Object.keys(this._bundlers)
+      .map((b) => new Promise((resolve, reject) => {
+        try {
+          this._bundlers[b].bundler.init(
+            b.invariantOptions,
+            utils,
+            (err) => err ? reject(err) : resolve()
+          );
+        } catch (ex) {
+          reject(ex);
+        }
+      }))
+    );
 
     Promise.all(initializing).then(() => {
       process.send({ type: messageTypes.TASK_COMPLETE });
@@ -200,8 +243,43 @@ class WorkerProcess {
         }
       }
     );
+  }
 
+  _bundleContent(bundleName, variant, data, context) {
+    const bundler = this._bundlers[data.bundler];
+    if (!bundler) {
+      process.send({
+        type: messageTypes.BUNDLE,
+        error: 'No bundler matched the name '+ bundleName,
+        context: context,
+      });
+      process.send({ type: messageTypes.TASK_COMPLETE });
+      return;
+    }
 
+    bundler.bundler.process(
+      bundler.options[variant],
+      (err, response) => {
+        if (err) {
+          process.send({
+            bundle: bundleName,
+            bundler: data.bundler,
+            type: messageTypes.BUNDLE,
+            error: typeof err === 'string' ? err : err.stack,
+            context: context,
+          });
+        } else {
+          process.send({
+            bundle: bundleName,
+            bundler: data.bundler,
+            type: messageTypes.BUNDLE,
+            perfStats: response.perfStats,
+            context: context,
+          });
+        }
+        process.send({ type: messageTypes.TASK_COMPLETE });
+      }
+    );
   }
 }
 

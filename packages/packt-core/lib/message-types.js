@@ -11,6 +11,7 @@ module.exports = {
   ERROR: 'error',
   WARNING: 'warning',
   PROCESS: 'process',
+  BUNDLE: 'bundle',
   CONFIG: 'config',
   RESOLVED: 'resolved',
   RESOLVED_ERROR: 'resolved_error',
