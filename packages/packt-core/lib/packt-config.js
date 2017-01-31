@@ -230,7 +230,7 @@ class PacktConfig {
           then: joi.number().min(0).max(1).required(),
           otherwise: joi.forbidden(),
         }),
-        bundler: customJoi.string().bundler(bundlers).required(),
+        bundler: customJoi.string().bundler(bundlers).allow(null),
       })).min(1).required(),
       bundlers: joi.object({}).pattern(/.*/,joi.object({
         require: customJoi.string().resolvable(resolved).required(),

@@ -12,6 +12,7 @@ const sortBundles = require('./dependency-graph-sort');
 const errors = require('./packt-errors');
 const bundleTypes = require('./bundle-types');
 const ScopeIdGenerator = require('./scope-id-generator');
+const OutputPathUtils = require('./output-path-utils');
 
 class Packt {
   constructor(workingDirectory,options,reporter) {
@@ -23,6 +24,7 @@ class Packt {
     this._options = Object.assign({},options);
     this._options.config = path.resolve(workingDirectory, options.config);
     this._buildStats = {};
+    this._bundleStats = {};
 
     const version = require('../package.json').version;
     this._reporter.onInit(version, this._options);
@@ -31,6 +33,7 @@ class Packt {
   start() {
     return this._loadConfig()
       .then((config) => {
+        this._outputPathUtils = new OutputPathUtils(config);
         this._reporter.onLoadConfig(config);
         this._resolvers = new ResolverChain(
           this._config.config.resolvers
@@ -64,6 +67,7 @@ class Packt {
               bundlers: this._bundlerTimer,
             },
             this._buildStats,
+            this._bundleStats,
             this._dependencyGraph);
           });
       })
@@ -113,8 +117,12 @@ class Packt {
     // TODO load from cache configured in config
     // TODO need the dependency map here too
     // TODO should have one content map per dependency tree - lazy load
+    // reset contentMap if config has changed as the hashes will need
+    // to be recomputed.
     // if the tree requires changes
-    this._contentMap = new ContentMap();
+    this._contentMap = new ContentMap(
+      (c) => this._outputPathUtils.generateHash(c)
+    );
     this._dependencyGraph = new DependencyGraph();
     return Promise.resolve(this._contentMap);
   }
@@ -317,7 +325,7 @@ class Packt {
       const updateReporter = this._reporter ? setInterval(() => {
         this._reporter.onUpdateBuildStatus(this._workers.status());
       },100) : null;
-      this._buildStats = {};
+      this._bundleStats = {};
 
       const cleanup = (err,result) => {
         this._timer.accumulate('build',{ 'bundles': Date.now() - start });
@@ -337,11 +345,8 @@ class Packt {
         cleanup(m.error);
       });
       this._workers.on(messageTypes.BUNDLE,(m) => {
-        console.log(m.bundler);
         this._bundlerTimer.accumulate(m.bundler,m.perfStats);
-        // TODO log timings for this specific bundle
-        //this._buildStats[m.resolved] = m.perfStats;
-        // TODO add entries to asset map.
+        this._bundleStats[m.bundle] = m.perfStats;
       });
       this._workers.on(messageTypes.WARNING,(m) => {
         if (this._reporter) {
@@ -359,18 +364,36 @@ class Packt {
         cleanup();
       });
 
+      const assetMap = {};
+      const preparedData = [];
       for (let variant in bundles) {
         for (let bundleName in bundles[variant]) {
-          this._workers.bundle(
-            bundleName,
-            variant,
-            this._prepareBundleData(
-              bundleName, 
-              variant, 
-              bundles[variant][bundleName]),
-            {}
+          const data = this._prepareBundleData(
+            bundleName, 
+            variant, 
+            bundles[variant][bundleName],
+            assetMap
           );
+          // can't bundle yet because we need the complete
+          // asset map in order to do replacements of asset paths
+          // if required.
+          if (data) {
+            preparedData.push({
+              data: data,
+              bundleName: bundleName,
+              variant, variant,
+            });
+          }
         }
+      }
+
+      for (let pd of preparedData) {
+        this._workers.bundle(
+          pd.bundleName,
+          pd.variant,
+          Object.assign(pd.data, { assetMap: assetMap }),
+          {}
+        );
       }
     });
   }
@@ -379,22 +402,61 @@ class Packt {
   // to the bundler
   // TODO get the list of bundles & match up with content.
   // any modules in this bundle which belong
-  _prepareBundleData(bundleName, variant, bundleModules) {
+  _prepareBundleData(bundleName, variant, bundleModules, assetMap) {
 
-    //for (let module of bundleModules) {
-      //console.log(module.module);
-      //console.log(module.exportsSymbols);
-      //console.log(module.exportsEsModule);
-      //console.log(module.exportsSymbols);
-      //console.log(module.importedBy);
-      //console.log(this._contentMap.get(module.module,v));
-    //}
+    for (let module of bundleModules) {
+      for (let asset in module.generatedAssets) {
+        assetMap[asset] = module.generatedAssets[asset].ouputPublicPath;
+      }
+    }
+    // TODO need to deal with dynamically created bundles from
+    // System.import etc.`
+    const bundler = this._config.config.bundles[bundleName].bundler;
+    if (!bundler) {
+      return null;
+    }
 
-    return {
-      // TODO need to deal with dynamically created bundles from
-      // System.import etc.`
-      bundler: this._config.config.bundles[bundleName].bundler,
+    const moduleMap = {};
+    let dependentHashes = '';
+
+    const modules = bundleModules.map(m => {
+      moduleMap[m.module] = {
+        exportsIdentifer: m.exportsIdentifer,
+        importAliases: Object.keys(m.importAliases).reduce((p,n) => {
+          p[n] = m.importAliases[n].node.module;
+          return p;
+        },{})
+      };
+
+      const entry =  this._contentMap.get(m.module, variant);
+      dependentHashes += entry.hash;
+      return {
+        content: entry.content,
+        contentHash: entry.hash,
+        contentType: m.contentType,
+      }
+    });
+
+    const paths = this._outputPathUtils.getBundlerOutputPaths(
+      bundleName, 
+      // the hash of a bundle must be deterministic based on the content
+      // that makes up the module and the complete hash of the current
+      // config. This allows us to determine all the output names of the 
+      // bundles before computing the bundle content themselves
+      this._outputPathUtils.generateHash(dependentHashes), 
+      bundler, 
+      variant
+    );
+    assetMap[paths.assetName] = paths.outputPublicPath;
+
+    const result = {
+      moduleMap: moduleMap,
+      modules: modules,
+      bundler: bundler,
+      outputPath: paths.outputPath,
+      outputParentPath: paths.outputParentPath,
     };
+    return result;
   }
 }
 

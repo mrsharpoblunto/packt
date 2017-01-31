@@ -1,8 +1,9 @@
 'use strict';
 
 class ContentMap {
-  constructor() {
+  constructor(hasher) {
     this._content = {};
+    this._hasher = hasher;
   }
 
   get(resolved,variant) {
@@ -23,7 +24,10 @@ class ContentMap {
     Object.assign(
       this._content[resolved].variants,
       variants.reduce((prev, next) => {
-        prev[next] = content;
+        prev[next] = {
+          content: content,
+          hash: this._hasher(content),
+        };
         return prev;
       },{})
     );

@@ -42,6 +42,12 @@ module.exports = {
       depends: ['vendor.js','common.js'],
       bundler: 'js',
     },
+    'bundle1.js': {
+      type: 'entrypoint',
+      requires: ['src/main.js'],
+      depends: ['vendor.js','common.js'],
+      bundler: null,
+    },
     'constants.js': {
       type: 'entrypoint',
       requires: ['src/constants.js'],

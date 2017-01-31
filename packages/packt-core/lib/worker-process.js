@@ -259,6 +259,7 @@ class WorkerProcess {
 
     bundler.bundler.process(
       bundler.options[variant],
+      data,
       (err, response) => {
         if (err) {
           process.send({

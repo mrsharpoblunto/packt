@@ -7,7 +7,7 @@ class RawBundler {
   init(invariants, utils, cb) {
     cb();
   }
-  process(options, cb) {
+  process(options, data, cb) {
     cb(null,{
       perfStats: {
         transform: 0,
