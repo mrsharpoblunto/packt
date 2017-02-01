@@ -350,9 +350,9 @@ class Packt {
       });
       this._workers.on(messageTypes.WARNING,(m) => {
         if (this._reporter) {
-          this._reporter.onBuildWarning(
-            m.resolvedModule,
-            m.variants,
+          this._reporter.onBundleWarning(
+            m.bundleName,
+            m.variant,
             m.warning
           );
         }
@@ -421,7 +421,7 @@ class Packt {
 
     const modules = bundleModules.map(m => {
       moduleMap[m.module] = {
-        exportsIdentifer: m.exportsIdentifer,
+        exportsIdentifier: m.exportsIdentifier,
         importAliases: Object.keys(m.importAliases).reduce((p,n) => {
           p[n] = m.importAliases[n].node.module;
           return p;
@@ -431,6 +431,7 @@ class Packt {
       const entry =  this._contentMap.get(m.module, variant);
       dependentHashes += entry.hash;
       return {
+        resolvedModule: m.module,
         content: entry.content,
         contentHash: entry.hash,
         contentType: m.contentType,

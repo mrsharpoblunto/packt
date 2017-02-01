@@ -95,6 +95,17 @@ class ConsoleReporter {
     }
   }
 
+  onBundleWarning(bundleName, variant, warning) {
+    let bundleWarnings = this._warnings[resolvedModule];
+    if (!bundleWarnings) {
+      bundleWarnings = this._warnings[bundleName] = [];
+    }
+    bundleWarnings.push({
+      variant: v,
+      warning: warning,
+    });
+  }
+
   // TODO need summary data around modules built etc.
   // need to pass through stats on each compiled module as well
   onFinishBuild(buildTimings, moduleTimings, dependencyGraph) {

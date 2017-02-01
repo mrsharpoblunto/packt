@@ -257,6 +257,15 @@ class WorkerProcess {
       return;
     }
 
+    bundler.bundler.on(messageTypes.WARNING,(d) => {
+      process.send(Object.assign({
+        type: messageTypes.WARNING,
+        bundleName: bundleName,
+        variant: variant,
+        context: context,
+      }, d));
+    });
+
     bundler.bundler.process(
       bundler.options[variant],
       data,

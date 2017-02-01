@@ -10,5 +10,8 @@
   "license": "MIT",
   "devDependencies": {
     "jest": "^17.0.0"
+  },
+  "dependencies": {
+    "mkdirp": "^0.5.1"
   }
 }
