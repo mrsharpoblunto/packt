@@ -422,15 +422,15 @@ class Packt {
     const modules = bundleModules.map(m => {
       moduleMap[m.module] = {
         exportsIdentifier: m.exportsIdentifier,
-        importAliases: Object.keys(m.importAliases).reduce((p,n) => {
-          p[n] = m.importAliases[n].node.module;
-          return p;
-        },{})
       };
 
       const entry =  this._contentMap.get(m.module, variant);
       dependentHashes += entry.hash;
       return {
+        importAliases: Object.keys(m.importAliases).reduce((p,n) => {
+          p[n] = m.importAliases[n].node.module;
+          return p;
+        },{}),
         resolvedModule: m.module,
         content: entry.content,
         contentHash: entry.hash,
@@ -456,6 +456,8 @@ class Packt {
       bundler: bundler,
       outputPath: paths.outputPath,
       outputParentPath: paths.outputParentPath,
+      outputPublicPath: paths.outputPublicPath,
+      assetName: paths.assetName,
     };
     return result;
   }
