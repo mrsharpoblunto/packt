@@ -9,6 +9,7 @@ const JS_INDEX = 0;
 const CSS_INDEX = 1;
 class JsBundler extends EventEmitter {
   init(invariants, utils, cb) {
+    this._minify = invariants.minify;
     cb();
   }
 
@@ -19,6 +20,9 @@ class JsBundler extends EventEmitter {
     const content = [];
     content[JS_INDEX] = '';
     content[CSS_INDEX] = '';
+
+    const aliasMap = {};
+    const identifierMap = {};
 
     for (let module of data.modules) {
       try {
@@ -35,56 +39,75 @@ class JsBundler extends EventEmitter {
           );
         }
 
-        content[index] += module.content.replace(
-          PACKT_PLACEHOLDER_PATTERN,
-          (match, type, args) => {
-            args = JSON.parse('[' + args.replace(/\'/g,'"') + ']');
-            switch (type) {
-              case 'import': {
-                // replace imports with the imported modules 
-                // exported identifier
-                const resoledAlias = module.importAliases[args[0]];
-                if (!resolvedAlias) {
-                  throw new Error(
-                    'No import alias "' + args[0] + '" found in module "' + 
-                    module.resolvedModule
-                  );
+        if (!this._minify) {
+          // to avoid having to regex replace packt placeholders
+          // we can add some lookup tables into the bundle and have the
+          // placeholder functions look these values up
+          const exportsIdentifier = data.moduleMap[module.resolvedModule].exportsIdentifier;
+          identifierMap[module.resolvedModule] = exportsIdentifier;
+          aliasMap[exportsIdentifier] = module.importAliases;
+          content[index] += module.content +';\n';
+        } else {
+          // TODO custom parser for packt placeholders
+          // regex replace out the packt placeholder functions
+          content[index] += module.content.replace(
+            PACKT_PLACEHOLDER_PATTERN,
+            (match, type, args) => {
+              args = JSON.parse('[' + args.replace(/\'/g,'"') + ']');
+              switch (type) {
+                case 'import': {
+                  // replace imports with the imported modules 
+                  // exported identifier
+                  const resolvedAlias = module.importAliases[args[0]];
+                  if (!resolvedAlias) {
+                    throw new Error(
+                      'No import alias "' + args[0] + '" found in module "' + 
+                      module.resolvedModule
+                    );
+                  }
+                  const importedModule = data.moduleMap[resolvedAlias];
+                  if (!importedModule) {
+                    throw new Error(
+                      'No module "' + resolvedAlias + 
+                      '" found in this bundle'
+                    );
+                  }
+                  console.log(match);
+                  console.log(importedModule.exportsIdentifier);
+                  return importedModule.exportsIdentifier;
+                  break;
                 }
-                const importedModule = data.moduleMap[resolvedAlias];
-                if (!importedModule) {
-                  throw new Error(
-                    'No module "' + resolvedAlias + 
-                    '" found in this bundle'
-                  );
+                case 'asset': {
+                  // replace asset paths with their hashed public paths
+                  const asset = data.assetMap[args[0]];
+                  if (!asset) {
+                    throw new Error(
+                      'No asset named "' + asset + ' found'
+                    );
+                  }
+                  return asset;
+                  break;
                 }
-                return importedModule.exportsIdentifier;
-                break;
+                default:
+                  this.emit('warning', {
+                    warning: 'Unknown packt placeholder type "' + 
+                      type + '" found in module',
+                  });
+                  return match;
               }
-              case 'asset': {
-                // replace asset paths with their hashed public paths
-                const asset = data.assetMap[args[0]];
-                if (!asset) {
-                  throw new Error(
-                    'No asset named "' + asset + ' found'
-                  );
-                }
-                return asset;
-                break;
-              }
-              default:
-                this.emit('warning', {
-                  warning: 'Unknown packt placeholder type "' + 
-                    type + '" found in module',
-                });
-                return match;
-            }
 
-            return type;
-          }
-        ) + '\n';
+              return type;
+            }
+          ) + ';\n';
+        }
       } catch (ex) {
         return cb(ex);
       }
+    }
+
+    let runtime = '';
+    if (!this._minify) {
+      runtime = this._bundleRuntime(aliasMap, identifierMap);
     }
 
     if (content[CSS_INDEX]) {
@@ -94,12 +117,7 @@ class JsBundler extends EventEmitter {
       + '\');';
     }
 
-    if (content[JS_INDEX]) {
-      // TODO do some treeshake preprocessing if needed
-      // TODO if minify set, run uglify over js content
-    }
-
-    const bundleContent = content[CSS_INDEX] + content[JS_INDEX];
+    const bundleContent = runtime + content[CSS_INDEX] + content[JS_INDEX];
 
     perfStats.transform = Date.now() - start;
     start = Date.now();
@@ -126,9 +144,31 @@ class JsBundler extends EventEmitter {
   _styleLoader(minify) {
     if (!this._styleLoaderContent) {
       this._styleLoaderContent = fs.readFileSync(path.join(__dirname, 'style-loader.js'),'utf8');
-      // TODO minify this loader if required.
+      if (this._minify) {
+        this._styleLoaderContent = this._minifyJS(this._styleLoaderContent);
+      }
     }
-    return _styleLoaderContent;
+    return this._styleLoaderContent;
+  }
+
+  _bundleRuntime(aliasMap, identifierMap) {
+    return (
+      'window.__packt_alias_map__=' +
+      'Object.assign(window.__packt_alias_map__||{},' + 
+      JSON.stringify(aliasMap)+');' +
+      'window.__packt_identifier_map__=' + 
+      'Object.assign(window.__packt_identifier_map__||{},' + 
+      JSON.stringify(identifierMap)+');' +
+      'window.__packt_import__=function(exportsIdentifier,alias){' +
+      'return window[window.__packt_identifier_map__[' +
+      'window.__packt_alias_map__[exportsIdentifier][alias]' +
+      ']];' +
+      '};'
+    );
+  }
+
+  _minifyJS(content) {
+    return content;
   }
 }
 

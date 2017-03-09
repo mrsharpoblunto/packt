@@ -1,7 +1,7 @@
 {
-  "name": "packt-handler-hash-static",
+  "name": "packt-handler-raw-to-js",
   "version": "1.0.0",
-  "description": "Packt handler for adding hashes to static assets",
+  "description": "Packt handler for loading any file from disk unprocessed into a javascript string",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -12,7 +12,6 @@
     "jest": "^17.0.0"
   },
   "dependencies": {
-    "node-glob": "^1.2.0",
-    "node-mkdirp": "0.0.1"
+    "node-mime": "^1.0.0"
   }
 }

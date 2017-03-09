@@ -115,14 +115,14 @@ class WorkerProcess {
         bundler: new (require(bundlerConfig.require))(),
         invariantOptions: {
           global: config.invariantOptions,
-          handler: bundlerConfig.invariantOptions,
+          bundler: bundlerConfig.invariantOptions,
         },
         options: {},
       }
       for (let v in config.options) {
         bundler.options[v] = {
           global: config.options[v],
-          handler: bundlerConfig.options[v],
+          bundler: bundlerConfig.options[v],
         };
       }
       this._bundlers[b] = bundler;
@@ -132,7 +132,7 @@ class WorkerProcess {
       .map((b) => new Promise((resolve, reject) => {
         try {
           this._bundlers[b].bundler.init(
-            b.invariantOptions,
+            this._bundlers[b].invariantOptions,
             utils,
             (err) => err ? reject(err) : resolve()
           );

@@ -5,7 +5,7 @@ const EventEmitter = require('events').EventEmitter;
 
 mime.default_type = 'text/plain';
 
-class RawHandler extends EventEmitter {
+class RawToJSHandler extends EventEmitter {
 
   init(invariants, utils, callback) {
     this._handlerInvariants = invariants.handler;
@@ -29,7 +29,13 @@ class RawHandler extends EventEmitter {
         );
 
         let source = new Buffer(data).toString(encoding);
+        if (encoding === 'utf8') {
+          source = JSON.stringify(source);
+        } else {
+          source = '"' + contentType + ';base64,' + source + '"';
+        }
 
+        const transformed = 'var ' + scopeId + '=' + source + ';';
         stats.transform = Date.now() - start;
 
         this.emit('export', {
@@ -45,11 +51,11 @@ class RawHandler extends EventEmitter {
           null,
           Object.keys(variants),
           {
-            content: source,
-            contentType: contentType,
+            content: transformed,
+            contentType: 'text/javascript',
             metadata: {
               sourceLength: source.length,
-              transformedLength: source.length,
+              transformedLength: transformed.length,
             },
             perfStats: stats,
           }
@@ -65,4 +71,4 @@ class RawHandler extends EventEmitter {
   }
 }
 
-module.exports = RawHandler;
+module.exports = RawToJSHandler;

@@ -108,6 +108,7 @@ function transform(babel) {
         ) {
           const localImport = getImportPlaceholder(
             path.node.key.name,
+            this.exportAlias,
             this.importAliases
           );
           path.replaceWith(t.objectProperty(
@@ -120,7 +121,10 @@ function transform(babel) {
       Identifier: function(path) {
         const parentNodeType = path.parentPath.node.type;
         if (
-          parentNodeType === 'MemberExpression' ||
+          (
+            parentNodeType === 'MemberExpression' &&
+            path.node === path.parentPath.node.property
+          ) ||
           parentNodeType === 'FunctionDeclaration' ||
           parentNodeType === 'ClassMethod' ||
           (
@@ -150,6 +154,7 @@ function transform(babel) {
         ) {
           const localImport = getImportPlaceholder(
             path.node.name,
+            this.exportAlias,
             this.importAliases
           );
           path.replaceWith(localImport);
@@ -192,7 +197,10 @@ function transform(babel) {
             this.exportAlias,
             t.callExpression(
               t.identifier(constants.PACKT_IMPORT_PLACEHOLDER),
-              [path.node.source]
+              [
+                t.stringLiteral(this.exportAlias.name),
+                path.node.source,
+              ]
             ),
           ]
         ));
@@ -299,6 +307,7 @@ function transform(babel) {
             ) {
               local = getImportPlaceholder(
                 spec.local.name,
+                this.exportAlias,
                 this.importAliases
               );
             }
@@ -309,7 +318,10 @@ function transform(babel) {
                   t.memberExpression(
                     t.callExpression(
                       t.identifier(constants.PACKT_IMPORT_PLACEHOLDER),
-                      [path.node.source]
+                      [
+                        t.stringLiteral(this.exportAlias.name),
+                        path.node.source,
+                      ]
                     ),
                     local || spec.exported
                   )
@@ -408,6 +420,7 @@ function transform(babel) {
             const required = path.node.arguments[0].value;
 
             path.node.callee.name = constants.PACKT_IMPORT_PLACEHOLDER;
+            path.node.arguments.unshift(t.stringLiteral(this.exportAlias.name));
             this.opts.emitter.emit('import',{
               imported: {
                 source: required,
@@ -444,11 +457,14 @@ function isUnreachable(path) {
   return false;
 }
 
-function getImportPlaceholder(name,importAliases) {
+function getImportPlaceholder(name,exportAlias,importAliases) {
   const localImport = importAliases[name];
   const importCall = t.callExpression(
     t.identifier(constants.PACKT_IMPORT_PLACEHOLDER),
-    [t.stringLiteral(localImport.moduleName)]
+    [
+      t.stringLiteral(exportAlias.name),
+      t.stringLiteral(localImport.moduleName),
+    ]
   );
 
   if (localImport.symbol !== '*') {

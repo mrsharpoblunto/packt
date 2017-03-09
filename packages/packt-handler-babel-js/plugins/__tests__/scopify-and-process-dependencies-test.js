@@ -199,7 +199,7 @@ _$_exports.default = _$_foo`
 
     expect(result.code).toEqual(
 `let _$_exports = {};
-Object.assign(_$_exports, __packt_import__("module"));`
+Object.assign(_$_exports, __packt_import__("_$_exports", "module"));`
     );
     expect(result.opts.emitter.emit.mock.calls.length).toBe(2);
     expect(result.opts.emitter.emit.mock.calls[0][0]).toEqual('import');
@@ -214,6 +214,7 @@ Object.assign(_$_exports, __packt_import__("module"));`
     expect(result.opts.emitter.emit.mock.calls[1][1]).toEqual({
       exported: {
         identifier: "_$_exports",
+        esModule: true,
         symbols: ['*'],
       },
       variants: ['default'],
@@ -228,8 +229,8 @@ Object.assign(_$_exports, __packt_import__("module"));`
     expect(result.code).toEqual(
 `let _$_exports = {};
 Object.assign(_$_exports, {
-  foo: __packt_import__("module").foo,
-  baz: __packt_import__("module").bar
+  foo: __packt_import__("_$_exports", "module").foo,
+  baz: __packt_import__("_$_exports", "module").bar
 });`
     );
     expect(result.opts.emitter.emit.mock.calls.length).toBe(2);
@@ -245,6 +246,7 @@ Object.assign(_$_exports, {
     expect(result.opts.emitter.emit.mock.calls[1][1]).toEqual({
       exported: {
         identifier: "_$_exports",
+        esModule: true,
         symbols: ['foo','baz'],
       },
       variants: ['default'],
@@ -278,7 +280,7 @@ foo();`,
 
     expect(result.code).toEqual(
 `
-__packt_import__("bar").default();`
+__packt_import__("_$_exports", "bar").default();`
     );
     expect(result.opts.emitter.emit.mock.calls.length).toBe(1);
     expect(result.opts.emitter.emit.mock.calls[0][0]).toEqual('import');
@@ -302,7 +304,7 @@ export {
     expect(result.code).toEqual(
 `let _$_exports = {};
 Object.assign(_$_exports, {
-  foo: __packt_import__("bar").default
+  foo: __packt_import__("_$_exports", "bar").default
 });`
     );
   });
@@ -316,8 +318,8 @@ baz();`
 
     expect(result.code).toEqual(
 `
-__packt_import__("bar").foo();
-__packt_import__("bar").baz();`
+__packt_import__("_$_exports", "bar").foo();
+__packt_import__("_$_exports", "bar").baz();`
     );
     expect(result.opts.emitter.emit.mock.calls.length).toBe(1);
     expect(result.opts.emitter.emit.mock.calls[0][0]).toEqual('import');
@@ -339,8 +341,8 @@ bar();`,
 
     expect(result.code).toEqual(
 `
-__packt_import__("bar").foo();
-__packt_import__("bar").baz();`
+__packt_import__("_$_exports", "bar").foo();
+__packt_import__("_$_exports", "bar").baz();`
     );
     expect(result.opts.emitter.emit.mock.calls.length).toBe(1);
     expect(result.opts.emitter.emit.mock.calls[0][0]).toEqual('import');
@@ -361,7 +363,7 @@ foobar.baz();`,
 
     expect(result.code).toEqual(
 `
-__packt_import__("bar").baz();`
+__packt_import__("_$_exports", "bar").baz();`
     );
     expect(result.opts.emitter.emit.mock.calls.length).toBe(1);
     expect(result.opts.emitter.emit.mock.calls[0][0]).toEqual('import');
@@ -384,9 +386,9 @@ function bar() {
     );
 
     expect(result.code).toEqual(
-`const _$_x = __packt_import__("foo");
+`const _$_x = __packt_import__("_$_exports", "foo");
 function _$_bar() {
-  const y = __packt_import__("baz");
+  const y = __packt_import__("_$_exports", "baz");
   _$_x();
 }`
     );
@@ -423,10 +425,10 @@ function bar() {
     );
 
     expect(result.code).toEqual(
-`const _$_x = __packt_import__("foobar");
+`const _$_x = __packt_import__("_$_exports", "foobar");
 function _$_bar() {
   const az = "az";
-  const y = __packt_import__("baz");
+  const y = __packt_import__("_$_exports", "baz");
   if (false) {
     require('unneeded');
   }
@@ -463,8 +465,8 @@ bar();`
 
     expect(result.code).toBe(
 `
-__packt_import__('module').default();
-__packt_import__('module').bar();`
+__packt_import__('_$_exports', 'module').default();
+__packt_import__('_$_exports', 'module').bar();`
     );
   });
 
@@ -477,8 +479,8 @@ bar.baz();`
 
     expect(result.code).toBe(
 `
-__packt_import__('module').default();
-__packt_import__('module').baz();`
+__packt_import__('_$_exports', 'module').default();
+__packt_import__('_$_exports', 'module').baz();`
     );
   });
 
@@ -504,7 +506,7 @@ class _$_foo {
   constructor() {
     const baz = "baz";
     this.func(baz.length);
-    this.func(__packt_import__('module').someMember);
+    this.func(__packt_import__('_$_exports', 'module').someMember);
   }
   func() {}
 }`
