@@ -10,13 +10,14 @@ function transform(babel) {
   return {
     pre() {
       this.exportedSymbols = [];
+      this.exportedSymbols.esModule = false;
       this.exportedByValue = {};
       this.hoisted = {};
       this.importAliases = {};
       this.moduleScope = '_' + this.opts.scope + '_';
     },
     post() {
-      if (this.exportedSymbols.length) {
+      //if (this.exportedSymbols.length) {
         // inform the dependency graph what exported symbols
         // this module provides, & under what identifier they are
         // associated in the global scope
@@ -28,7 +29,7 @@ function transform(babel) {
           },
           variants: this.opts.variants,
         });
-      }
+      //}
     },
     visitor: {
       Program: {
@@ -464,6 +465,7 @@ function getImportPlaceholder(name,exportAlias,importAliases) {
     [
       t.stringLiteral(exportAlias.name),
       t.stringLiteral(localImport.moduleName),
+      t.booleanLiteral(localImport.symbol === 'default'),
     ]
   );
 

@@ -422,6 +422,7 @@ class Packt {
     const modules = bundleModules.map(m => {
       moduleMap[m.module] = {
         exportsIdentifier: m.exportsIdentifier,
+        exportsEsModule: m.exportsEsModule,
       };
 
       const entry =  this._contentMap.get(m.module, variant);

@@ -43,8 +43,12 @@ class JsBundler extends EventEmitter {
           // to avoid having to regex replace packt placeholders
           // we can add some lookup tables into the bundle and have the
           // placeholder functions look these values up
-          const exportsIdentifier = data.moduleMap[module.resolvedModule].exportsIdentifier;
-          identifierMap[module.resolvedModule] = exportsIdentifier;
+          const mapEntry = data.moduleMap[module.resolvedModule];
+          const exportsIdentifier = mapEntry.exportsIdentifier;
+          identifierMap[module.resolvedModule] = {
+            identifier: mapEntry.exportsIdentifier,
+            esModule: mapEntry.exportsEsModule,
+          };
           aliasMap[exportsIdentifier] = module.importAliases;
           content[index] += module.content +';\n';
         } else {
@@ -153,16 +157,19 @@ class JsBundler extends EventEmitter {
 
   _bundleRuntime(aliasMap, identifierMap) {
     return (
+      'window.module=window.module||{};' +
       'window.__packt_alias_map__=' +
       'Object.assign(window.__packt_alias_map__||{},' + 
       JSON.stringify(aliasMap)+');' +
       'window.__packt_identifier_map__=' + 
       'Object.assign(window.__packt_identifier_map__||{},' + 
       JSON.stringify(identifierMap)+');' +
-      'window.__packt_import__=function(exportsIdentifier,alias){' +
-      'return window[window.__packt_identifier_map__[' +
+      'window.__packt_import__=function(exportsIdentifier,alias,useDefault){' +
+      'var e=window.__packt_identifier_map__[' +
       'window.__packt_alias_map__[exportsIdentifier][alias]' +
-      ']];' +
+      '];' +
+      'var identifier=window[e.identifier];' +
+      'return (!e.esModule&&useDefault)?{default:identifier}:identifier;' +
       '};'
     );
   }
