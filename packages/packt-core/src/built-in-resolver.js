@@ -1,11 +1,40 @@
-'use strict';
+/*
+ * @flow
+ */
+import fs from 'fs';
+import path from 'path';
+import {PacktResolverError} from './packt-errors';
+import type {
+  BuiltInResolverOptions,
+} from '../types';
 
-const fs = require('fs');
-const path = require('path');
-const PacktResolverError = require('./packt-errors').PacktResolverError;
+export default class BuiltInResolver {
 
-class DefaultResolver {
-  constructor(options) {
+  static defaultOptions = (
+    workingDirectory: string
+  ): BuiltInResolverOptions => {
+    return {
+      rootPath: workingDirectory,
+      searchPaths: [
+        workingDirectory,
+        'node_modules',
+      ],
+      extensions: ['.js'],
+    };
+  };
+
+  _packageCache: { [key: string]: {
+    err: ?Error,
+    main: ?string,
+  }};
+  _cache: { [key: string]: {
+    err: ?Error,
+    isFile: ?boolean,
+  }};
+  _waiting: { [key: string]: Array<(err: ?Error, isFile: ?boolean) => void> };
+  _options: BuiltInResolverOptions;
+
+  constructor(options: BuiltInResolverOptions) {
     this._options = options;
     this._cache = {};
     this._waiting = {};
@@ -17,7 +46,12 @@ class DefaultResolver {
     this._packageCache = {};
   }
 
-  resolve(moduleName, resolvedParentModule, expectFolder, cb) {
+  resolve(
+    moduleName: string, 
+    resolvedParentModule: string, 
+    expectFolder: boolean, 
+    cb: (err: ?Error, resolved: ?string) => void
+  ) {
     const context = {
       attempts: [],
       expectFolder: expectFolder,
@@ -50,7 +84,13 @@ class DefaultResolver {
     );
   }
 
-  _searchPaths(moduleName,moduleDir,searchIndex,context,callback) {
+  _searchPaths(
+    moduleName: string,
+    moduleDir: string,
+    searchIndex: number,
+    context: any,
+    callback: (err: ?Error, resolved: ?string) => void
+  ) {
     if (searchIndex === this._options.searchPaths.length) {
       callback(new Error('unable to resolve ' + moduleName));
       return;
@@ -87,7 +127,14 @@ class DefaultResolver {
     }
   }
 
-  _recursiveSearchPaths(moduleName,moduleDir,currentDir,searchIndex,context,callback) {
+  _recursiveSearchPaths(
+    moduleName: string,
+    moduleDir: string,
+    currentDir: string,
+    searchIndex: number,
+    context: any,
+    callback: (err: ?Error, resolved: ?string) => void
+  ) {
     if (currentDir.length < this._options.rootPath.length) {
       // we've reached the root, stop searching up and try the
       // next searchPath
@@ -123,7 +170,11 @@ class DefaultResolver {
     }
   }
 
-  _checkFileIndexOrPackage(modulePath,context,callback) {
+  _checkFileIndexOrPackage(
+    modulePath: string,
+    context: any,
+    callback: (err: ?Error, resolved: ?string) => void
+  ) {
     this._stat(modulePath,(err,isFile) => {
       context.attempts.push(modulePath);
       if (err) {
@@ -147,18 +198,18 @@ class DefaultResolver {
             if (err) {
               // no package.json present - see if an index file is
               this._searchExtensions(path.join(modulePath,'index'),0,context,callback);
-              return;
+            } else if (packageMain) {
+              const main = packageMain;
+              this._stat(main, (err,isFile) => {
+                if (err || !isFile) {
+                  context.attempts.push(main);
+                  this._searchExtensions(main, 0, context, callback);
+                } else {
+                  context.attempts.pop();
+                  callback(null, main);
+                }
+              });
             }
-
-            this._stat(packageMain,(err,isFile) => {
-              if (err || !isFile) {
-                context.attempts.push(packageMain);
-                this._searchExtensions(packageMain,0,context,callback);
-              } else {
-                context.attempts.pop();
-                callback(null,packageMain);
-              }
-            });
           });
         }
       } else {
@@ -176,7 +227,12 @@ class DefaultResolver {
     });
   }
 
-  _searchExtensions(modulePath,extIndex,context,callback) {
+  _searchExtensions(
+    modulePath: string,
+    extIndex: number,
+    context: any,
+    callback: (err: ?Error, resolved: ?string) => void
+  ) {
     if (extIndex === this._options.extensions.length) {
       callback(new Error('Unable to resolve ' + modulePath));
       return;
@@ -195,7 +251,10 @@ class DefaultResolver {
     });
   }
 
-  _stat(path,callback) {
+  _stat(
+    path: string,
+    callback: (err: ?Error, isFile: ?boolean) => void
+  ) {
     const cached = this._cache[path];
     if (cached) {
       callback(cached.err,cached.isFile);
@@ -225,14 +284,17 @@ class DefaultResolver {
     }
   }
 
-  _readPackageMain(packagePath,callback) {
+  _readPackageMain(
+    packagePath: string,
+    callback: (err: ?Error, main: ?string) => void
+  ) {
     const cached = this._packageCache[packagePath];
     if (cached) {
       callback(cached.err,cached.main);
     } else {
       fs.readFile(path.join(packagePath,'package.json'),'utf8',(err,data) => {
         if (err) {
-          this._packageCache[packagePath] = { err: err };
+          this._packageCache[packagePath] = { err: err, main: null };
           callback(err);
           return;
         }
@@ -246,7 +308,8 @@ class DefaultResolver {
           if (!packageJson.browser) {
             if (!packageJson.main) {
               entry = {
-                err: new Error('No browser or main property found in package.json')
+                err: new Error('No browser or main property found in package.json'),
+                main: null,
               };
             } else {
               entry = {
@@ -263,7 +326,7 @@ class DefaultResolver {
           this._packageCache[packagePath] = entry;
           callback(entry.err,entry.main);
         } catch (ex) {
-          this._packageCache[packagePath] = { err: ex };
+          this._packageCache[packagePath] = { err: ex, main: null };
           callback(ex);
         }
       });
@@ -271,16 +334,3 @@ class DefaultResolver {
   }
 
 }
-
-DefaultResolver.defaultOptions = function(workingDirectory) {
-  return {
-    rootPath: workingDirectory,
-    searchPaths: [
-      workingDirectory,
-      'node_modules',
-    ],
-    extensions: ['.js'],
-  };
-};
-
-module.exports = DefaultResolver;

@@ -1,9 +1,31 @@
-'use strict';
-const bundleTypes = require('./bundle-types');
+/**
+ * @flow
+ */
+import type {
+  PacktConfig,
+} from '../types';
+import type {
+  DependencyNode,
+  DependencyGraph,
+} from './dependency-graph';
+import type {
+  WorkingSet
+} from './working-set';
 
-function sortBundles(graph, config, workingSet) {
+export type SortedBundles = {
+  [key: string]: {
+    [key: string]: Array<DependencyNode>,
+  },
+};
+
+export function sortBundles(
+  graph: DependencyGraph, 
+  config: PacktConfig, 
+  workingSet: WorkingSet
+): SortedBundles {
   const result = {};
 
+  /*
   graph.resetMetadata();
   for (let v in graph.variants) {
     const variant = graph.variants[v];
@@ -12,10 +34,10 @@ function sortBundles(graph, config, workingSet) {
     // in re-bundling otherwise unchanged bundles apart from possible
     // tree-shake related changes (i.e. adding/removing symbols int eh
     // current bundle build)
-    /*Object.assign(
+    Object.assign(
       workingSet.bundles,
       updateSymbolUsage(variant)
-      );*/
+      );
 
     for (let r in variant.roots) {
       const entryPoint = variant.roots[r];
@@ -92,12 +114,12 @@ function sortBundles(graph, config, workingSet) {
       }
     }
     result[v] = sortedBundles;
-  }
+}*/
 
   return result;
 }
 
-function updateSymbolUsage(variant) {
+/*function updateSymbolUsage(variant) {
   const bundles = {};
   for (let l in variant.lookups) {
     const node = variant.lookups[l];
@@ -183,6 +205,4 @@ function visit(node, list) {
     list.push(node);
   }
   return true;
-}
-
-module.exports = sortBundles;
+}*/

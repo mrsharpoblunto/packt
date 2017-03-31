@@ -47,7 +47,7 @@ module.exports = {
       requires: ['node_modules/twgl.js', 'node_modules/gl-matrix'],
       bundler: 'js',
     },
-    'html': {
+    'index.html': {
       type: 'entrypoint',
       requires: ['src/index.html'],
       bundler: 'raw',
@@ -69,7 +69,6 @@ module.exports = {
       require: 'packt-bundler-raw',
       invariantOptions: {
         outputPathFormat: '/${name}${ext}',
-        relativePathRoot: path.join(__dirname,'src'),
       },
     }
   },

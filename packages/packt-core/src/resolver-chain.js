@@ -1,14 +1,26 @@
-'use strict';
+/**
+ * @flow
+ */
+import events from 'events';
+import path from 'path';
+import type {
+  PacktConfigResolvers,
+  Resolver,
+} from '../types';
+import BuiltInResolver from './built-in-resolver';
+import {
+  PacktError
+} from './packt-errors';
 
-const EventEmitter = require('events').EventEmitter;
-const path = require('path');
+export default class ResolverChain extends events.EventEmitter {
+  _resolvers: Array<Resolver>;
+  _resolving: number;
+  _resolvingQueue: Set<string>;
 
-const messageTypes = require('./message-types');
-const DefaultResolver = require('./default-resolver');
-const errors = require('./packt-errors');
-
-class ResolverChain extends EventEmitter {
-  constructor(resolvers) {
+  constructor(
+    workingDirectory: string,
+    resolvers: PacktConfigResolvers
+  ) {
     super();
 
     this._resolvers = (resolvers.custom || []).map(r => {
@@ -17,16 +29,22 @@ class ResolverChain extends EventEmitter {
         ))(r.invariantOptions);
     });
     const resolverOptions =
-      (resolvers.default && resolvers.default.invariantOptions) ?
-        resolvers.default.invariantOptions : DefaultResolver.defaultOptions;
+      (resolvers.builtIn && resolvers.builtIn.invariantOptions)
+        ? resolvers.builtIn.invariantOptions
+        : BuiltInResolver.defaultOptions(workingDirectory);
 
-    this._resolvers.push(new DefaultResolver(resolverOptions));
+    this._resolvers.push(((new BuiltInResolver(resolverOptions): any): Resolver));
     this._resolving = 0;
-    this._resolvingQueue = {};
+    this._resolvingQueue = new Set();
   }
 
-  resolve(moduleName, resolvedParentModule, expectFolder, context) {
-    this._resolvingQueue[moduleName] = true;
+  resolve(
+    moduleName: string, 
+    resolvedParentModule: string, 
+    expectFolder: boolean, 
+    context: any,
+  ) {
+    this._resolvingQueue.add(moduleName);
     ++this._resolving;
     const perfStats = {};
 
@@ -43,8 +61,8 @@ class ResolverChain extends EventEmitter {
             perfStats[resolverIndex] = end - start;
             if (err) {
               --this._resolving;
-              delete this._resolvingQueue[moduleName];
-              this.emit(messageTypes.RESOLVED_ERROR,{
+              this._resolvingQueue.delete(moduleName);
+              this.emit('resolved_error',{
                 error: err,
                 moduleName: moduleName,
                 context: context,
@@ -55,10 +73,10 @@ class ResolverChain extends EventEmitter {
                 tryResolve(resolverIndex);
               } else {
                 --this._resolving;
-                delete this._resolvingQueue[moduleName];
-                this.emit(messageTypes.RESOLVED_ERROR, {
+              this._resolvingQueue.delete(moduleName);
+              this.emit('resolved_error', {
                   error: new Error(
-                    'No resolvers left to resolve ' + unresolved +
+                    'No resolvers left to resolve ' + moduleName +
                     (context ? (' (' + context + ')') : '')
                   ),
                   moduleName: moduleName,
@@ -68,8 +86,8 @@ class ResolverChain extends EventEmitter {
               }
             } else {
               --this._resolving;
-              delete this._resolvingQueue[moduleName];
-              this.emit(messageTypes.RESOLVED, {
+              this._resolvingQueue.delete(moduleName);
+              this.emit('resolved', {
                 moduleName: moduleName,
                 resolvedModule: resolved,
                 resolvedParentModule: resolvedParentModule,
@@ -78,15 +96,15 @@ class ResolverChain extends EventEmitter {
               });
             }
             if (!this._resolving) {
-              this.emit(messageTypes.IDLE);
+              this.emit('idle');
             }
           }
         );
       } catch (ex) {
         const end = Date.now();
         perfStats[resolverIndex] = end - start;
-        this.emit(messageTypes.RESOLVED_ERROR,{
-          error: new errors.PacktError(
+        this.emit('resolved_error', {
+          error: new PacktError(
             'Unexpected exception thrown in resolver ' + resolverIndex,
             ex
           ),
@@ -103,5 +121,3 @@ class ResolverChain extends EventEmitter {
   }
 
 }
-
-module.exports = ResolverChain;

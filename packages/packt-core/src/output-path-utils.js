@@ -1,16 +1,37 @@
+/**
+ * @flow
+ */
 'use strict';
-const path = require('path');
-const crypto = require('crypto');
+import path from 'path';
+import crypto from 'crypto';
+import type {
+  PacktConfig,
+} from '../types';
 
 const TEMPLATE_REGEX = /\$\{(.*?)\}/g;
 
+export type OutputPaths = {
+  assetName: string,
+  outputPath: string,
+  outputPublicPath: string,
+  outputParentPath: string,
+};
+
 class OutputPathHelpers {
-  constructor(config) {
+  _config: PacktConfig;
+  _configHash: string;
+
+  constructor(config: PacktConfig) {
     this._config = config;
     this._configHash = this.generateHash(JSON.stringify(config));
   }
 
-  getBundlerOutputPaths(name, hash, bundler, variant) {
+  getBundlerOutputPaths(
+    name: string, 
+    hash: string, 
+    bundler: string,
+    variant: string
+  ): OutputPaths  {
     const b = this._config.bundlers[bundler];
     if (!b) {
       throw new Error('No bundler named '+bundler+' has been configured');
@@ -38,7 +59,13 @@ class OutputPathHelpers {
     );
   }
 
-  getOutputPaths(name, hash, params, outputPathTemplate, assetNameTemplate) {
+  getOutputPaths(
+    name: string, 
+    hash: string,
+    params: Object, 
+    outputPathTemplate: string, 
+    assetNameTemplate: string
+  ): OutputPaths {
     const ext = path.extname(name);
     name = name.substr(0,name.length - ext.length);
     const templateReplacer = (match, arg) => {
@@ -50,33 +77,40 @@ class OutputPathHelpers {
         case 'hash':
           return hash;
         default:
-          return this._getObjectProp(arg);
+          return this._getObjectProp(arg, params);
       }
     };
 
     const outputSuffix = outputPathTemplate.replace(TEMPLATE_REGEX, templateReplacer);
 
-    const result = {
+    const outputPath = path.join(
+      this._config.invariantOptions.outputPath,
+      outputSuffix
+    );
+
+    return {
       outputPublicPath: path.join(
         this._config.invariantOptions.outputPublicPath,
         outputSuffix
       ),
-      outputPath: path.join(
-        this._config.invariantOptions.outputPath,
-        outputSuffix
-      ),
+      outputPath,
+      outputParentPath: path.dirname(outputPath),
       assetName: assetNameTemplate.replace(TEMPLATE_REGEX, templateReplacer),
     };
-    result.outputParentPath = path.dirname(result.outputPath);
-    return result;
   }
 
-  _getObjectProp(expression, object) {
+  _getObjectProp(
+    expression: string, 
+    object: Object
+  ): string {
     try {
       const components = expression.split('.');
       let context = object;
       for (let component of components) {
         context = context[component];
+      }
+      if (typeof context !== 'string') {
+        throw new Error(expression + ' must resolve to a string on template params object');
       }
       return context;
     } catch (ex) {
@@ -85,7 +119,9 @@ class OutputPathHelpers {
   }
 
 
-  generateHash(content) {
+  generateHash(
+    content: string
+  ): string {
     const hasher = crypto.createHash(this._config.invariantOptions.outputHash);
     hasher.update(content);
     if (this._configHash) {

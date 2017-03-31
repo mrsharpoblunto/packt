@@ -1,3 +1,6 @@
+/**
+ * @flow
+ */
 'use strict';
 
 const babel = require('babel-core');
@@ -185,6 +188,7 @@ function transform(babel) {
           imported: {
             source: path.node.source.value,
             symbols: ['*'],
+            type: 'static',
           },
           variants: this.opts.variants,
         });
@@ -342,6 +346,7 @@ function transform(babel) {
               imported: {
                 source: path.node.source.value,
                 symbols: symbols,
+                type: 'static',
               },
               variants: this.opts.variants,
             });
@@ -393,6 +398,7 @@ function transform(babel) {
           imported: {
             source: path.node.source.value,
             symbols: symbols,
+            type: 'static',
           },
           variants: this.opts.variants,
         });
@@ -401,7 +407,16 @@ function transform(babel) {
       },
       CallExpression: {
         exit: function(path) {
-          if (
+          if (path.node.callee.type === 'import') {
+            this.opts.emitter.emit('import',{
+              imported: {
+                source: required,
+                symbols: ['*'],
+                type: 'dynamic',
+              },
+              variants: this.opts.variants,
+            });
+          } else if (
             path.node.callee.name === 'require' &&
             !path.scope.hasBinding('require') &&
             !isUnreachable(path)
@@ -426,6 +441,7 @@ function transform(babel) {
               imported: {
                 source: required,
                 symbols: ['*'],
+                type: 'static',
               },
               variants: this.opts.variants,
             });

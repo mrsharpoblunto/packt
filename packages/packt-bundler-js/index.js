@@ -2,6 +2,9 @@
 const EventEmitter = require('events').EventEmitter;
 const mkdirp = require('mkdirp');
 const fs = require('fs');
+const uglify = require('uglify-js');
+//const debugRuntime = require('debug-runtime');
+//const runtime = require('runtime');
 
 const PACKT_PLACEHOLDER_PATTERN = /__packt_(\w*?)__\((.*?)\)/g;
 
@@ -9,40 +12,55 @@ const JS_INDEX = 0;
 const CSS_INDEX = 1;
 class JsBundler extends EventEmitter {
   init(invariants, utils, cb) {
-    this._minify = invariants.minify;
+    this._minify = !invariants.minify;
     cb();
   }
 
   process(options, data, cb) {
-    const perfStats = {};
-    let start = Date.now();
+    mkdirp(data.outputParentPath,(err) => {
+      if (err) {
+        return cb(err);
+      }
 
-    const content = [];
-    content[JS_INDEX] = '';
-    content[CSS_INDEX] = '';
+      const perfStats = {};
+      let start = Date.now();
 
-    const aliasMap = {};
-    const identifierMap = {};
-
-    for (let module of data.modules) {
-      try {
-        let index;
+      const cssModules = [];
+      const jsModules = [];
+      for (let module of data.modules) {
         if (module.contentType === 'text/javascript') {
-          index = JS_INDEX;
+          jsModules.push(module);
         } else if (module.contentType === 'text/css') {
-          index = CSS_INDEX;
+          cssModules.push(module);
         } else {
-          throw new Error(
+          return cb(new Error(
             'This bundler can only handle "text/javascript" and "text/css" ' +
             'content types. Module "' + module.resolvedModule + '" has "' +
             module.contentType + '"'
-          );
+          ));
         }
+      }
 
-        if (!this._minify) {
-          // to avoid having to regex replace packt placeholders
-          // we can add some lookup tables into the bundle and have the
-          // placeholder functions look these values up
+      const wstream = fs.createWriteStream(data.outputPath);
+      wstream.on('finish',() => {
+        perfStats.diskIO = Date.now() - start;
+        cb(null,
+        {
+          perfStats: perfStats,
+        });
+      });
+      wstream.on('error',(err) => {
+        cb(err);
+      });
+      if (this._includeRuntime) {
+        // write out packt runtime helpers 
+      }
+      if (!this._minify) {
+        //write out debug runtime helpers
+        // TODO factor this out into a separate module
+        const aliasMap = {};
+        const identifierMap = {};
+        for (let module of jsModules) {
           const mapEntry = data.moduleMap[module.resolvedModule];
           const exportsIdentifier = mapEntry.exportsIdentifier;
           identifierMap[module.resolvedModule] = {
@@ -50,99 +68,86 @@ class JsBundler extends EventEmitter {
             esModule: mapEntry.exportsEsModule,
           };
           aliasMap[exportsIdentifier] = module.importAliases;
-          content[index] += module.content +';\n';
-        } else {
-          // TODO custom parser for packt placeholders
-          // regex replace out the packt placeholder functions
-          content[index] += module.content.replace(
-            PACKT_PLACEHOLDER_PATTERN,
-            (match, type, args) => {
-              args = JSON.parse('[' + args.replace(/\'/g,'"') + ']');
-              switch (type) {
-                case 'import': {
-                  // replace imports with the imported modules 
-                  // exported identifier
-                  const resolvedAlias = module.importAliases[args[0]];
-                  if (!resolvedAlias) {
-                    throw new Error(
-                      'No import alias "' + args[0] + '" found in module "' + 
-                      module.resolvedModule
-                    );
-                  }
-                  const importedModule = data.moduleMap[resolvedAlias];
-                  if (!importedModule) {
-                    throw new Error(
-                      'No module "' + resolvedAlias + 
-                      '" found in this bundle'
-                    );
-                  }
-                  console.log(match);
-                  console.log(importedModule.exportsIdentifier);
-                  return importedModule.exportsIdentifier;
-                  break;
-                }
-                case 'asset': {
-                  // replace asset paths with their hashed public paths
-                  const asset = data.assetMap[args[0]];
-                  if (!asset) {
-                    throw new Error(
-                      'No asset named "' + asset + ' found'
-                    );
-                  }
-                  return asset;
-                  break;
-                }
-                default:
-                  this.emit('warning', {
-                    warning: 'Unknown packt placeholder type "' + 
-                      type + '" found in module',
-                  });
-                  return match;
-              }
-
-              return type;
-            }
-          ) + ';\n';
         }
-      } catch (ex) {
-        return cb(ex);
+        wstream.write(this._bundleRuntime(aliasMap, identifierMap));
       }
-    }
-
-    let runtime = '';
-    if (!this._minify) {
-      runtime = this._bundleRuntime(aliasMap, identifierMap);
-    }
-
-    if (content[CSS_INDEX]) {
-      content[CSS_INDEX] = '(' + this._styleLoader() + ')(\'' + 
-        data.assetName + '\',\'' + 
-        JSON.stringify(content[CSS_INDEX])
-      + '\');';
-    }
-
-    const bundleContent = runtime + content[CSS_INDEX] + content[JS_INDEX];
-
-    perfStats.transform = Date.now() - start;
-    start = Date.now();
-
-    mkdirp(data.outputParentPath,(err) => {
-      if (err) {
-        return cb(err);
+      if (cssModules.length > 0) {
+        wstream.write(
+          '(' + this._styleLoader() + ')(\'' + 
+          data.assetName + '\',\''
+        );
+        wstream.write(JSON.stringify(
+          cssModules.map((c) => c.content).join('')
+        ));
+        wstream.write('\');');
       }
-
-      fs.writeFile(data.outputPath, bundleContent, (err) => {
-        if (err) {
-          return cb(err);
+      if (jsModules.length > 0) {
+        for (let module of jsModules) {
+          if (this._minify) {
+            wstream.write(this._minifyJSModule(data, module));
+          } else {
+            wstream.write(module.content);
+            wstream.write(';\n');
+          }
         }
+      }
+      wstream.end();
 
-        perfStats.diskIO = Date.now() - start;
-        cb(null,
-        {
-          perfStats: perfStats,
-        });
-      });
+      perfStats.transform = Date.now() - start;
+      start = Date.now();
     });
+  }
+
+  _minifyJSModule(data, module) {
+    return uglify.minify(module.content.replace(
+      PACKT_PLACEHOLDER_PATTERN,
+      (match, type, args) => {
+        args = JSON.parse('[' + args.replace(/\'/g,'"') + ']');
+        switch (type) {
+          case 'import': {
+            // replace imports with the imported modules 
+            // exported identifier
+            const resolvedAlias = module.importAliases[args[1]];
+            if (!resolvedAlias) {
+              throw new Error(
+                'No import alias "' + args[0] + '" found in module "' + 
+                module.resolvedModule
+              );
+            }
+            const importedModule = data.moduleMap[resolvedAlias];
+            if (!importedModule) {
+              throw new Error(
+                'No module "' + resolvedAlias + 
+                '" found in this bundle'
+              );
+            }
+            console.log(match);
+            console.log(importedModule.exportsIdentifier);
+            return importedModule.exportsIdentifier;
+            break;
+          }
+          /*case 'asset': {
+            // replace asset paths with their hashed public paths
+            const asset = data.assetMap[args[0]];
+            if (!asset) {
+              throw new Error(
+                'No asset named "' + asset + ' found'
+              );
+            }
+            return asset;
+            break;
+          }*/
+          default:
+            this.emit('warning', {
+              warning: 'Unknown packt placeholder type "' + 
+                type + '" found in module',
+            });
+            return match;
+        }
+
+        return type;
+      }
+    ), { fromString: true });
   }
 
   _styleLoader(minify) {

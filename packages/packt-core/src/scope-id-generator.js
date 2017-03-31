@@ -1,5 +1,7 @@
-'use strict';
-const fs = require('fs');
+/**
+ * @flow
+ */
+import fs from 'fs';
 
 const DIGITS = 
   '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz$_'.split('');
@@ -8,8 +10,12 @@ for (let i = 0; i < DIGITS.length; ++i) {
   DIGITS_MAP[DIGITS[i]] = i;
 }
 
-class ScopeIdGenerator {
-  constructor(filename) {
+export default class ScopeIdGenerator {
+  _idPool: Array<string>;
+  _map: { [key: string]: string };
+  _nextId: number;
+
+  constructor(filename: ?string) {
     if (filename) {
       const data = require(filename);
       this._idPool = data.idPool;
@@ -22,14 +28,14 @@ class ScopeIdGenerator {
     }
   }
 
-  getId(resolvedModuleName) {
+  getId(resolvedModuleName: string): string {
     let result = this._map[resolvedModuleName];
     if (result) {
       return result;
     }
 
     if (this._idPool.length) {
-      return this._idPool.unshift();
+      return this._idPool.shift();
     }
 
     result = '';
@@ -45,7 +51,10 @@ class ScopeIdGenerator {
     return result;
   }
 
-  save(filename, filter) {
+  save(
+    filename: string, 
+    filter: (id: string) => boolean
+  ): Promise<any> {
     for (let key in this._map) {
       if (!filter(this._map[key])) {
         delete this._map[key];
@@ -67,5 +76,3 @@ class ScopeIdGenerator {
     });
   }
 }
-
-module.exports = ScopeIdGenerator;
