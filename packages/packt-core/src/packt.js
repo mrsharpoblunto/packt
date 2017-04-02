@@ -1,8 +1,6 @@
 /**
  * @flow
  */
-'use strict';
-
 import path from 'path';
 import type {
   MessageType,
@@ -10,9 +8,8 @@ import type {
 import type {
   PacktOptions,
   PacktConfig,
-} from '../types';
-import type {
   PerfStats,
+  PerfStatsDict,
   Reporter,
 } from '../types';
 import type {
@@ -28,6 +25,7 @@ import * as errors from './packt-errors';
 import ScopeIdGenerator from './scope-id-generator';
 import OutputPathUtils from './output-path-utils';
 import {loadConfig} from './packt-config';
+import {determineInitialWorkingSet} from './working-set';
 
 type BuildState = {
   contentMap: ContentMap,
@@ -107,7 +105,7 @@ export default class Packt {
       ));
     }
 
-    return this._determineWorkingSet(config)
+    return determineInitialWorkingSet(config)
       .then(workingSet => {
         this._reporter.onStartBuild();
         const params = {
@@ -173,10 +171,7 @@ export default class Packt {
   _createBuildUtils(config: PacktConfig): Promise<BuildUtils> {
     return Promise.resolve({
       pathUtils: new OutputPathUtils(config),
-      resolvers: new ResolverChain(
-        config.workingDirectory,
-        config.config.resolvers
-      ),
+      resolvers: new ResolverChain(config),
       pool: new WorkerPool(config),
     });
   }
@@ -207,47 +202,6 @@ export default class Packt {
     });
   }
 
-  _determineWorkingSet(config: PacktConfig): Promise<WorkingSet> {
-    // TODO determine files which changed from last build using filesystem
-    // search or watchman if available. if empty, use config entrypoints as inputs
-    //  also determine all the chunks where a changed input occurred, so once
-    //  we've rebuilt the inputs, we can regenerate the output chunks
-
-    const set: WorkingSet = {
-      bundles: {},
-      commonBundles: {},
-    };
-
-    try {
-      for (let key in config.config.bundles) {
-        const bundle = config.config.bundles[key];
-        if (bundle.type === 'common') {
-          continue;
-        }
-        if (bundle.commons) {
-          for (let common in bundle.commons) {
-            // if a changing bundle has a common module, then all the bundles
-            // that also depend on that common module might also have to change
-            const commonBundle = config.config.bundles[common];
-            Object.keys(commonBundle.dependedBy).forEach(dep => {
-              set.bundles[dep] = (set.bundles[dep] || []).map((m) =>
-                typeof(m) === 'string' ? { name: m, folder: false } : m
-              ) || [];
-            });
-            set.commonBundles[common] = true;
-          }
-        }
-        if (bundle.requires) {
-          set.bundles[key] = bundle.requires.map((m) =>
-            typeof(m) === 'string' ? { name: m, folder: false } : m
-          );
-        }
-      }
-      return Promise.resolve(set);
-    } catch (err) {
-      return Promise.reject(err);
-    }
-  }
 
   _buildModules({
     workingSet,
@@ -268,7 +222,7 @@ export default class Packt {
       const buildStats: PerfStatsDict = {};
       const handlerTimer = new Timer();
 
-      const cleanup = (err,result) => {
+      const cleanup = (err: ?Error) => {
         timer.accumulate('build',{ 'modules': Date.now() - start });
         if (updateReporter) {
           clearInterval(updateReporter);
@@ -285,118 +239,138 @@ export default class Packt {
         }
       };
 
-      utils.resolvers.on(RESOLVED,(m) => {
-        timer.accumulate('resolvers',m.perfStats);
+      utils.resolvers.on('resolver_chain_message',(m: MessageType) => {
+        switch (m.type) {
+          case 'module_resolved': {
+            timer.accumulate('resolvers',m.perfStats);
+            const resolvedModule = m.resolvedModule;
 
-        if (!m.context.imported) {
-          state.dependencyGraph.entrypoint(
-            m.resolvedModule,
-            m.context.variants,
-            m.context.bundle
-          );
-        } else {
-          state.dependencyGraph.imports(
-            m.resolvedParentModule,
-            m.resolvedModule,
-            m.context.variants,
-            m.context.imported
-          );
-        }
+            if (!m.importedByDeclaration) {
+              state.dependencyGraph.bundleEntrypoint(
+                resolvedModule,
+                m.variants,
+                m.resolvedParentModuleOrBundle
+              );
+            } else {
+              state.dependencyGraph.imports(
+                resolvedModule,
+                m.resolvedParentModuleOrBundle,
+                m.variants,
+                m.importedByDeclaration
+              );
+            }
 
-        state.contentMap.addIfNotPresent(
-          m.resolvedModule,
-          () => {
-            const scopeId = state.scopeGenerator.getId(m.resolvedModule);
-            utils.pool.process(m.resolvedModule, scopeId)
+            state.contentMap.addIfNotPresent(
+              resolvedModule,
+              () => {
+                const scopeId = state.scopeGenerator.getId(resolvedModule);
+                utils.pool.processModule(resolvedModule, scopeId)
+              }
+            );
           }
-        );
-      });
-      utils.resolvers.on(RESOLVED_ERROR,(m) => {
-        cleanup(m.error);
-      });
-      utils.resolvers.on(IDLE,() => {
-        if (utils.pool.idle()) {
-          cleanup();
+          break;
+
+          case 'module_resolver_error':
+            cleanup(m.error);
+            break;
+
+          case 'idle':
+            if (utils.pool.idle()) {
+              cleanup();
+            }
+            break;
         }
       });
 
-      utils.pool.on(ERROR,(m) => {
-        cleanup(m.error);
-      });
-      utils.pool.on(CONTENT,(m) => {
-        buildStats[m.resolved] = m.perfStats;
-        handlerTimer.accumulate(m.handler,m.perfStats);
-        handlerTimer.accumulate(m.handler,{ modules: m.variants.length });
+      utils.pool.on('worker_pool_message', (m: MessageType) => {
+        switch (m.type) {
+          case 'worker_error':
+            cleanup(m.error);
+            break;
 
-        state.dependencyGraph.setContentType(
-          m.resolvedModule,
-          m.variants,
-          m.contentType
-        );
-        state.contentMap.setContent(
-          m.resolvedModule,
-          m.variants,
-          m.content
-        );
-      });
-      utils.pool.on(GENERATED,(m) => {
-        state.dependencyGraph.addGenerated(
-          m.resolvedModule,
-          m.variants,
-          m.assetName,
-          m.outputPath
-        );
-      });
-      utils.pool.on(WARNING,(m) => {
-        this._reporter.onBuildWarning(
-          m.resolvedModule,
-          m.variants,
-          m.warning
-        );
-      });
-      utils.pool.on(CONTENT_ERROR,(m) => {
-          error: new errors.PacktContentError(
-            m.handler,
-            m.variants,
-            m.error,
-            m.resolvedModule
-          )
-        cleanup(m.error);
-      });
-      utils.pool.on(EXPORT,(m) => {
-        state.dependencyGraph.exportsSymbols(
-          m.resolvedModule,
-          m.variants,
-          m.exported
-        );
-      });
-      utils.pool.on(IMPORT,(m) => {
-        utils.resolvers.resolve(
-          m.imported.source,
-          m.resolvedModule,
-          false,
-          {
-            variants: m.variants,
-            imported: m.imported,
-          }
-        );
-      });
-      utils.pool.on(IDLE,() => {
-        if (utils.resolvers.idle()) {
-          cleanup();
+          case 'module_content':
+            buildStats[m.resolvedModule] = m.perfStats;
+            handlerTimer.accumulate(m.handler,m.perfStats);
+            handlerTimer.accumulate(m.handler,{ modules: m.variants.length });
+
+            state.dependencyGraph.setContentType(
+              m.resolvedModule,
+              m.variants,
+              m.contentType
+            );
+            state.contentMap.setContent(
+              m.resolvedModule,
+              m.variants,
+              m.content
+            );
+            break;
+
+          case 'module_content_warning':
+            cleanup(new errors.PacktContentError(
+              m.handler,
+              m.variants,
+              m.error,
+              m.resolvedModule
+            ));
+            break;
+
+          case 'module_warning':
+            this._reporter.onBuildWarning(
+              m.resolvedModule,
+              m.variants,
+              m.warning
+            );
+            break;
+
+          case 'module_export':
+            state.dependencyGraph.exports(
+              m.resolvedModule,
+              m.variants,
+              m.exportDeclaration
+            );
+            break;
+
+          case 'module_import':
+            utils.resolvers.resolve(
+              m.importDeclaration.source,
+              m.variants,
+              {
+                importDeclaration: m.importDeclaration,
+              },
+              {
+                resolvedParentModule: m.resolvedModule,
+              },
+            );
+            break;
+
+          case 'module_generated_asset':
+            state.dependencyGraph.addGenerated(
+              m.resolvedModule,
+              m.variants,
+              m.assetName,
+              m.outputPath
+            );
+            break;
+            
+          case 'idle':
+            if (utils.resolvers.idle()) {
+              cleanup();
+            }
+            break;
         }
       });
 
-      for (let bundle in workingSet.bundles) {
-        const modules = workingSet.bundles[bundle];
+      for (let bundleName in workingSet.bundles) {
+        const modules = workingSet.bundles[bundleName];
         modules.forEach((m) => {
           utils.resolvers.resolve(
             m.name,
-            config.configFile,
-            m.folder,
+            Object.keys(config.options),
             {
-              variants: Object.keys(config.config.options),
-              bundle: bundle,
+              bundleName,
+            },
+            {
+              expectFolder: m.folder
             }
           );
         });
@@ -452,32 +426,37 @@ export default class Packt {
         }
       };
 
-      utils.pool.on(ERROR,(m) => {
-        cleanup(m.error);
-      });
-      utils.pool.on(BUNDLE,(m) => {
-        bundlerTimer.accumulate(m.bundler,m.perfStats);
-        bundleStats[m.bundle] = m.perfStats;
-      });
-      utils.pool.on(WARNING,(m) => {
-        this._reporter.onBundleWarning(
-          m.bundleName,
-          m.variant,
-          m.warning
-        );
-      });
-      utils.pool.on(BUNDLE_ERROR,(m) => {
-          this.emit(messageTypes.BUNDLE_ERROR,{
-            error: new errors.PacktBundleError(
+      utils.pool.on('worker_pool_message', (m: MessageType) => {
+        switch (m.type) {
+          case 'bundle_content':
+            bundlerTimer.accumulate(m.bundler,m.perfStats);
+            bundleStats[m.bundleName] = m.perfStats;
+            break;
+
+          case 'bundle_content_error':
+            cleanup(new errors.PacktBundleError(
               m.bundler,
               m.error,
-              m.bundle
-            )
-          });
-        cleanup(m.error);
-      });
-      utils.pool.on(IDLE,() => {
-        cleanup();
+              m.bundleName
+            ));
+            break;
+
+          case 'bundle_warning':
+            this._reporter.onBundleWarning(
+              m.bundleName,
+              m.variant,
+              m.warning
+            );
+            break;
+
+          case 'worker_error':
+            cleanup(m.error);
+            break;
+
+          case 'idle':
+            cleanup();
+            break;
+        }
       });
 
       const assetMap = {};
@@ -504,10 +483,10 @@ export default class Packt {
       }
 
       for (let pd of preparedData) {
-        utils.pool.bundle(
+        utils.pool.processBundle(
           pd.bundleName,
           pd.variant,
-          Object.assign(pd.data, { assetMap: assetMap }),
+          { ...pd.data, assetMap },
           {}
         );
       }

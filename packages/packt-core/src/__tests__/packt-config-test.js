@@ -1,19 +1,17 @@
-'use strict';
-jest.mock('../default-resolver');
-const PacktConfig = require('../packt-config');
-const path = require('path');
-const MockDefaultResolver = require('../default-resolver');
+jest.mock('../built-in-resolver');
+
+import {parseConfig} from '../packt-config';
+import path from 'path';
+import MockBuiltInResolver from '../built-in-resolver';
 
 describe('Config',() => {
   it('loads a simple config and generates defaults',()=> {
-    const config = new PacktConfig();
-
-    MockDefaultResolver.__resolvableDirectories = {
+    MockBuiltInResolver.__resolvableDirectories = {
       './handler-js': '/path/to/handler.js',
       './bundler-js': '/path/to/bundler.js',
     };
 
-    return config.load(path.join(__dirname,'packt.config.js'),{
+    return parseConfig(path.join(__dirname,'packt.config.js'),{
       bundles: {
         'entry.js': {
           type: 'entrypoint',
@@ -71,14 +69,14 @@ describe('Config',() => {
       expect(config.resolvers).toBeTruthy();
       expect(config.resolvers.custom.length).toBe(0);
 
-      const defaultResolver = config.resolvers.default;
-      expect(defaultResolver).toBeTruthy();
-      expect(defaultResolver.invariantOptions).toBeTruthy();
-      expect(defaultResolver.invariantOptions.searchPaths).toEqual([
+      const builtInResolver = config.resolvers.builtIn;
+      expect(builtInResolver).toBeTruthy();
+      expect(builtInResolver.invariantOptions).toBeTruthy();
+      expect(builtInResolver.invariantOptions.searchPaths).toEqual([
              __dirname,
              'node_modules'
       ]);
-      expect(defaultResolver.invariantOptions.extensions).toEqual(['.js','.json']);
+      expect(builtInResolver.invariantOptions.extensions).toEqual(['.js','.json']);
 
       expect(config.handlers.length).toBe(1);
       expect(config.handlers[0].options).toBeTruthy();
@@ -100,14 +98,12 @@ describe('Config',() => {
   });
 
   it('fails when an entrypoint has multiple common chunks with the same content type',()=> {
-    const config = new PacktConfig();
-
-    MockDefaultResolver.__resolvableDirectories = {
+    MockBuiltInResolver.__resolvableDirectories = {
       './bundler-js': '/path/to/bundler.js',
       './handler-js': '/path/to/handler.js',
     };
 
-    return config.load(path.join(__dirname,'packt.config.js'),{
+    return parseConfig(path.join(__dirname,'packt.config.js'),{
       bundles: {
         'entry.js': {
           type: 'entrypoint',
@@ -147,13 +143,11 @@ describe('Config',() => {
   });
 
   it('fails with unresolved handlers',()=> {
-    const config = new PacktConfig();
-
-    MockDefaultResolver.__resolvableDirectories = {
+    MockBuiltInResolver.__resolvableDirectories = {
       './bundler-js': '/path/to/bundler.js',
     };
 
-    return config.load(path.join(__dirname,'packt.config.js'),{
+    return parseConfig(path.join(__dirname,'packt.config.js'),{
       bundles: {
         'entry.js': {
           type: 'entrypoint',
@@ -180,13 +174,11 @@ describe('Config',() => {
   });
 
   it('fails with unresolved bundlers',()=> {
-    const config = new PacktConfig();
-
-    MockDefaultResolver.__resolvableDirectories = {
+    MockBuiltInResolver.__resolvableDirectories = {
       './handler-js': '/path/to/handler.js',
     };
 
-    return config.load(path.join(__dirname,'packt.config.js'),{
+    return parseConfig(path.join(__dirname,'packt.config.js'),{
       bundles: {
         'entry.js': {
           type: 'entrypoint',
@@ -257,14 +249,12 @@ describe('Config',() => {
     },
   ]).forEach((bundles) => {
     it('fails with invalid bundle options',()=> {
-      const config = new PacktConfig();
-
-      MockDefaultResolver.__resolvableDirectories = {
+      MockBuiltInResolver.__resolvableDirectories = {
         './bundler-js': '/path/to/bundler.js',
         './handler-js': '/path/to/handler.js',
       };
 
-      return config.load(path.join(__dirname,'packt.config.js'),{
+      return parseConfig(path.join(__dirname,'packt.config.js'),{
         bundles: bundles,
         bundlers: {
           'js': {
@@ -286,14 +276,12 @@ describe('Config',() => {
   });
 
   it('generates config variants',()=> {
-    const config = new PacktConfig();
-
-    MockDefaultResolver.__resolvableDirectories = {
+    MockBuiltInResolver.__resolvableDirectories = {
       './handler-js': '/path/to/handler.js',
       './bundler-js': '/path/to/bundler.js',
     };
 
-    return config.load(path.join(__dirname,'packt.config.js'),{
+    return parseConfig(path.join(__dirname,'packt.config.js'),{
       bundles: {
         'entry.js': {
           type: 'entrypoint',

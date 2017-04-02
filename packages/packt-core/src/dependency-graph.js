@@ -23,6 +23,7 @@ export class DependencyNode {
   bundles: Set<string>;
 
   constructor(module: string) {
+    this.module = module;
     this.importedBy = {};
     this.imports = {};
     this.importAliases = {};
@@ -67,10 +68,24 @@ export class DependencyNode {
       i.type = 'static';
     }
 
-    // mark this node as belonging to the same set of bundles as the parent
-    // that imports it
-    for (let bundle in this.bundles) {
-      node.bundles.add(bundle);
+    node.addBundles(this.bundles);
+  }
+
+  addBundles(bundles: Set<string>) {
+    const difference: Set<string> = new Set(); 
+    for (let bundle of bundles) {
+      if (!this.bundles.has(bundle)) {
+        this.bundles.add(bundle);
+        difference.add(bundle);
+      }
+    }
+
+    // recursively add the new bundles to all modules imported by this 
+    // module
+    if (difference.size) {
+      for (let imported in this.imports) {
+        this.imports[imported].node.addBundles(difference);
+      }
     }
   }
 
@@ -95,6 +110,14 @@ export class DependencyNode {
     }
     this.exports.identifier = exported.identifier;
     this.exports.esModule = exported.esModule;
+  }
+
+  getImportTypeForBundle(bundle: string): ('static' | 'dynamic') {
+    // TODO compute from backreferences.
+  }
+
+  getUsedSymbolsForBundle(bundle: string): Array<string> {
+    // TODO compute from backreferences.
   }
 }
 

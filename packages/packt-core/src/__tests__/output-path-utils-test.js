@@ -1,8 +1,7 @@
-'use strict';
 jest.mock('fs');
 
-const fs = require('fs');
-const OutputPathUtils = require('../output-path-utils');
+import fs from 'fs';
+import OutputPathUtils from '../output-path-utils';
 
 describe('output path utils',() => {
   it('generates fixed length md5 hashes',() => {
@@ -59,10 +58,17 @@ describe('output path utils',() => {
         outputPublicPath: '/static',
       },
     });
-    expect(utils.getOutputPaths('my/resource.js')).toEqual({
-      outputPath: '/opt/build/my/resource.js',
-      outputParentPath: '/opt/build/my',
-      outputPublicPath: '/static/my/resource.js',
+    expect(utils.getOutputPaths(
+      'my/resource.js',
+      'xyzzy',
+      {},
+      '${hash}/${name}${ext}',
+      '${name}${ext}',
+    )).toEqual({
+      outputPath: '/opt/build/xyzzy/my/resource.js',
+      outputParentPath: '/opt/build/xyzzy/my',
+      outputPublicPath: '/static/xyzzy/my/resource.js',
+      assetName: 'my/resource.js',
     });
   });
 
@@ -78,6 +84,7 @@ describe('output path utils',() => {
         'js': {
           invariantOptions: {
             outputPathFormat: '/bundles/${options.lang}_${name}${ext}/${hash}${ext}',
+            assetNameFormat: '${name}',
           },
           options: {
             'en_US': {
@@ -92,6 +99,7 @@ describe('output path utils',() => {
       outputPath: '/opt/build/bundles/en_US_foobar.js/xyzzy.js',
       outputParentPath: '/opt/build/bundles/en_US_foobar.js',
       outputPublicPath: '/static/bundles/en_US_foobar.js/xyzzy.js',
+      assetName: 'foobar',
     });
 
 

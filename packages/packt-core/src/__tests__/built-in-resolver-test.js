@@ -1,14 +1,13 @@
-'use strict';
 jest.mock('fs');
 
-const fs = require('fs');
-const DefaultResolver = require('../default-resolver');
+import fs from 'fs';
+import BuiltInResolver from '../built-in-resolver';
 
-describe('default resolver',() => {
+describe('built in resolver',() => {
   let resolver;
 
   beforeEach(() => {
-    resolver = new DefaultResolver({
+    resolver = new BuiltInResolver({
       rootPath: '/my-project',
       searchPaths: [
         'node_modules',

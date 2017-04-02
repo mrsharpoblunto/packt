@@ -16,17 +16,6 @@ export type BuiltInResolverOptions = {
   extensions: Array<string>,
 };
 
-export type PacktConfigResolvers = {
-  custom: Array<{
-    require: string,
-    invariantOptions: Object,
-    options: { [key: string]: Object },
-  }>,
-  builtIn: {
-    invariantOptions: BuiltInResolverOptions,
-  },
-};
-
 export type PacktConfig = {
   configFile: string,
   workingDirectory: string,
@@ -62,7 +51,16 @@ export type PacktConfig = {
     },
     options: { [key: string]: Object },
   }},
-  resolvers: PacktConfigResolvers,
+  resolvers: {
+    custom: Array<{
+      require: string,
+      invariantOptions: Object,
+      options: { [key: string]: Object },
+    }>,
+    builtIn: {
+      invariantOptions: BuiltInResolverOptions,
+    },
+  },
   handlers: Array<{
     pattern: string,
     require: string,
@@ -94,7 +92,7 @@ export type PerfStats = {
   transform: number,
 };
 
-type PerfStatsDict = { [key: string]: PerfStats };
+export type PerfStatsDict = { [key: string]: PerfStats };
 
 export type Reporter = {
   onInit(version: string, options: PacktOptions): void,

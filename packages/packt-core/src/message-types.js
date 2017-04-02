@@ -1,11 +1,10 @@
 /**
  * @flow
  */
-'use strict';
 
 import type {
-  PacktConfig,
   PerfStats,
+  PacktConfig,
   ExportDeclaration,
   ImportDeclaration,
 } from '../types';
@@ -51,7 +50,7 @@ export type ModuleContentMessage = {
   handler: string,
   content: string,
   contentType: string,
-  perfStats: PerfStats,
+  perfStats: { [key: string]: number },
 } & ModuleMessage;
 
 export type ModuleContentErrorMessage = {
@@ -91,7 +90,7 @@ export type ModuleResolvedMessage = {
 
 export type ModuleResolveErrorMessage = {
   type: 'module_resolve_error',
-  error: string,
+  error: Error,
 };
 
 export type BundleWarningMessage = {

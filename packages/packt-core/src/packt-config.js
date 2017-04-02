@@ -1,7 +1,6 @@
 /*
  * @flow
  */
-'use strict';
 import path from 'path';
 import type {
   BuiltInResolverOptions,
@@ -14,7 +13,7 @@ import os from 'os';
 import chalk from 'chalk';
 
 
-export function loadConfig(
+export function parseConfig(
   filename: string, 
   json: Object
 ): Promise<PacktConfig> {
@@ -43,7 +42,7 @@ function validate(
     resolvers.map(c => resolveRequire(c, configFile, resolver))
       .concat(handlers.map(h => resolveRequire(h, configFile, resolver)))
       .concat(bundlers.map(b => resolveRequire(json.bundlers[b], configFile, resolver)))
-  ).then((resolved) => new Promise((resolve,reject) => {
+      ).then((resolved) => new Promise((resolve,reject) => {
     const libraries = (json.bundles && typeof(json.bundles) === 'object') ?
       Object.keys(json.bundles).filter(
         (b) => json.bundles[b].type === 'library' ||
@@ -323,7 +322,7 @@ function resolveRequire(
             require: entry.require,
             err: err,
           });
-        } else if (resolved) {
+        } else {//if (resolved) {
           entry.require = resolved;
           resolve({
             require: entry.require,
