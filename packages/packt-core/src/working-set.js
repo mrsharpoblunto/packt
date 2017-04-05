@@ -12,7 +12,7 @@ export type WorkingSet = {
       folder: boolean,
     }>,
   },
-  commonBundles: { [key: string]: boolean },
+  commonBundles: Set<string>,
 };
 
 // TODO determine files which changed from last build using filesystem
@@ -26,7 +26,7 @@ export function determineInitialWorkingSet(
 ): Promise<WorkingSet> {
   const set: WorkingSet = {
     bundles: {},
-    commonBundles: {},
+    commonBundles: new Set(),
   };
 
   try {
@@ -40,12 +40,13 @@ export function determineInitialWorkingSet(
           // if a changing bundle has a common module, then all the bundles
           // that also depend on that common module might also have to change
           const commonBundle = config.bundles[common];
-          Object.keys(commonBundle.dependedBy).forEach(dep => {
+          const dependedBy = Object.keys(commonBundle.dependedBy);
+          dependedBy.forEach(dep => {
             set.bundles[dep] = (set.bundles[dep] || []).map((m) =>
               typeof(m) === 'string' ? { name: m, folder: false } : m
             ) || [];
           });
-          set.commonBundles[common] = true;
+          set.commonBundles.add(common);
         }
       }
       if (bundle.requires) {

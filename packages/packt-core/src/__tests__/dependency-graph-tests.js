@@ -138,15 +138,210 @@ describe('dependency graph tests', () => {
   });
 
   it('marks dynamic and static imports correctly', () => {
-    // TODO
+    const graph = new DependencyGraph();
+
+    graph.bundleEntrypoint(
+      '/src/entrypoint-a.js',
+      ['default'],
+      'bundle-a'
+    );
+
+    graph.bundleEntrypoint(
+      '/src/entrypoint-b.js',
+      ['default'],
+      'bundle-b'
+    );
+
+    graph.imports(
+      '/src/entrypoint-a.js',
+      '/src/dynamic-component.js',
+      ['default'],
+      {
+        source: './dynamic-component',
+        symbols: ['*'],
+        type: 'dynamic',
+      }
+    );
+
+    graph.imports(
+      '/src/entrypoint-b.js',
+      '/src/dynamic-component.js',
+      ['default'],
+      {
+        source: './dynamic-component',
+        symbols: ['*'],
+        type: 'dynamic',
+      }
+    );
+
+    graph.imports(
+      '/src/entrypoint-b.js',
+      '/src/static-component.js',
+      ['default'],
+      {
+        source: './static-component',
+        symbols: ['*'],
+        type: 'static',
+      }
+    );
+
+    graph.imports(
+      '/src/static-component.js',
+      '/src/dynamic-component.js',
+      ['default'],
+      {
+        source: './dynamic-component',
+        symbols: ['*'],
+        type: 'static',
+      }
+    );
+
+    const dynamicComponent = graph.variants['default'].lookups['/src/dynamic-component.js'];
+
+    expect(dynamicComponent.getImportTypeForBundle('bundle-a')).toEqual('dynamic');
     // if a module is imported both statically & dynamically in the same bundle
+    // then we consider it to be static.
+    expect(dynamicComponent.getImportTypeForBundle('bundle-b')).toEqual('static');
   });
 
   it('sets exports, content types, and generated assets correctly', () => {
-    // TODO
+    const graph = new DependencyGraph();
+
+    graph.bundleEntrypoint(
+      '/src/entrypoint-a.js',
+      ['default'],
+      'bundle-a'
+    );
+
+    graph.exports(
+      '/src/entrypoint-a.js',
+      ['default'],
+      {
+        identifier: '_',
+        symbols: ['a'],
+        esModule: true,
+      }
+    );
+
+    graph.exports(
+      '/src/entrypoint-a.js',
+      ['default'],
+      {
+        identifier: '_',
+        symbols: ['b'],
+        esModule: true,
+      }
+    );
+
+    graph.setContentType(
+      '/src/entrypoint-a.js',
+      ['default'],
+      'text/javascript'
+    );
+
+    graph.addGenerated(
+      '/src/entrypoint-a.js',
+      ['default'],
+      'foobar.txt',
+      '/built/foobar.txt'
+    );
+
+    const entrypoint = graph.variants['default'].lookups['/src/entrypoint-a.js'];
+    expect(entrypoint.exports.identifier).toEqual('_');
+    expect(entrypoint.exports.symbols).toEqual(['a','b']);
+    expect(entrypoint.exports.esModule).toEqual(true);
+    expect(entrypoint.contentType).toEqual('text/javascript');
+    expect(entrypoint.generatedAssets).toEqual({
+      'foobar.txt': '/built/foobar.txt',
+    });
   });
 
   it('computes symbol usage correctly', () => {
-    // TODO
+    const graph = new DependencyGraph();
+
+    graph.bundleEntrypoint(
+      '/src/entrypoint-a.js',
+      ['default'],
+      'bundle-a'
+    );
+
+    graph.bundleEntrypoint(
+      '/src/entrypoint-b.js',
+      ['default'],
+      'bundle-b'
+    );
+
+    graph.imports(
+      '/src/entrypoint-b.js',
+      '/src/component-1.js',
+      ['default'],
+      {
+        source: './component-2',
+        symbols: ['*'],
+        type: 'static',
+      }
+    );
+
+    graph.imports(
+      '/src/entrypoint-a.js',
+      '/src/component-1.js',
+      ['default'],
+      {
+        source: './component-1',
+        symbols: ['a','b'],
+        type: 'static',
+      }
+    );
+
+    graph.imports(
+      '/src/entrypoint-a.js',
+      '/src/component-2.js',
+      ['default'],
+      {
+        source: './component-2',
+        symbols: ['*'],
+        type: 'static',
+      }
+    );
+
+    graph.imports(
+      '/src/component-2.js',
+      '/src/component-1.js',
+      ['default'],
+      {
+        source: './component-1',
+        symbols: ['a','c'],
+        type: 'static',
+      }
+    );
+
+    const component1 = graph.variants['default'].lookups['/src/component-1.js'];
+    expect(component1.getUsedSymbolsForBundle('bundle-a')).toEqual([
+      'a','b','c'
+    ]);
+    expect(component1.getUsedSymbolsForBundle('bundle-b')).toEqual(['*']);
   });
+
+  it('variant graphs are independent of one another', () => {
+    const graph = new DependencyGraph();
+
+    graph.bundleEntrypoint(
+      '/src/entrypoint-a.js',
+      ['en_US'],
+      'bundle-a'
+    );
+
+    graph.bundleEntrypoint(
+      '/src/entrypoint-a.js',
+      ['es_ES'],
+      'bundle-a'
+    );
+
+    expect(Object.keys(graph.variants)).toEqual(['en_US','es_ES']);
+    const entrypointEn = graph.variants['en_US'].lookups['/src/entrypoint-a.js'];
+    const entrypointEs = graph.variants['es_ES'].lookups['/src/entrypoint-a.js'];
+    expect(entrypointEn).not.toBe(entrypointEs);
+  });
+
+
 });

@@ -72,8 +72,8 @@ function validate(
           dependedBy: new Set(),
           commons: new Set(),
           requires: [],
-          depends: [],
-          contentTypes: [],
+          depends: new Set(),
+          contentTypes: new Set(),
           threshold: 0,
           ...value.bundles[b]
         };
@@ -93,6 +93,7 @@ function validate(
               depBundle.dependedBy.add(b);
             }
             if (depBundle.type === 'common') {
+              depBundle.contentTypes = new Set(depBundle.contentTypes);
               for (let contentType of depBundle.contentTypes) {
                 if (commonTypes.has(contentType)) {
                   return reject(new PacktConfigError(
@@ -113,9 +114,11 @@ function validate(
         if (typeof(value.bundles[b].requires) === 'string') {
           value.bundles[b].requires = [value.bundles[b].requires];
         }
-        if (typeof(value.bundles[b].depends) === 'string') {
-          value.bundles[b].depends = [value.bundles[b].depends];
-        }
+        value.bundles[b].depends = new Set(
+          typeof(value.bundles[b].depends) === 'string' 
+          ? [value.bundles[b].depends]
+          : value.bundles[b].depends
+        );
       }
       resolve(value);
     });
@@ -317,16 +320,16 @@ function resolveRequire(
       configFile,
       false,
       (err,resolved) => {
-        if (err) {
+        if (err || !resolved) {
           resolve({
             require: entry.require,
-            err: err,
+            err: err || new Error('Unable to resolve ' + entry.require),
           });
-        } else {//if (resolved) {
+        } else {
           entry.require = resolved;
           resolve({
             require: entry.require,
-            resolved: resolved,
+            resolved,
           });
         }
       }

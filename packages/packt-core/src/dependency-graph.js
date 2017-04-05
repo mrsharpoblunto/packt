@@ -8,7 +8,7 @@ import type {
 
 export type DependencyNodeImport = {
   node: DependencyNode,
-  symbols: Array<string>,
+  symbols: Set<string>,
   type: 'static' | 'dynamic',
 };
 
@@ -45,7 +45,7 @@ export class DependencyNode {
     if (!i) {
       i = this.imports[node.module] = {
         node: node,
-        symbols: [],
+        symbols: new Set(),
         type: 'dynamic',
       };
     }
@@ -55,9 +55,13 @@ export class DependencyNode {
       imported.type === 'dynamic' || 
       (imported.symbols.length === 1 && imported.symbols[0] === '*') 
     ) {
-      i.symbols = ['*'];
-    } else if (!i.symbols.length || i.symbols[0] !== '*') {
-      i.symbols.push.apply(i.symbols, imported.symbols);
+      if (i.symbols.size !== 1 || !i.symbols.has('*')) {
+        i.symbols = new Set(['*']);
+      }
+    } else if (!i.symbols.has('*')) {
+      for (let s of imported.symbols) {
+        i.symbols.add(s); 
+      }
     }
 
     // if the same module via both static and dynamic means, the static
@@ -67,16 +71,15 @@ export class DependencyNode {
     if (imported.type === 'static') {
       i.type = 'static';
     }
-
     node.addBundles(this.bundles);
   }
 
   addBundles(bundles: Set<string>) {
-    const difference: Set<string> = new Set(); 
-    for (let bundle of bundles) {
-      if (!this.bundles.has(bundle)) {
-        this.bundles.add(bundle);
-        difference.add(bundle);
+    const difference: Set<string> = new Set();
+    for (let key of bundles) {
+      if (!this.bundles.has(key)) {
+        this.bundles.add(key);
+        difference.add(key);
       }
     }
 
@@ -112,12 +115,41 @@ export class DependencyNode {
     this.exports.esModule = exported.esModule;
   }
 
-  getImportTypeForBundle(bundle: string): ('static' | 'dynamic') {
-    // TODO compute from backreferences.
+  getImportTypeForBundle(bundleName: string): ('static' | 'dynamic') {
+    for (let key in this.importedBy) {
+      const importedBy = this.importedBy[key];
+      if (importedBy.bundles.has(bundleName)) {
+        const thisImport = importedBy.imports[this.module];
+        if (thisImport.type === 'static') {
+          return 'static';
+        }
+      }
+    }
+    // an import can only be dynamic if its never imported statically in the
+    // current bundle. Any static imports override the other dynamic import
+    return 'dynamic';
   }
 
-  getUsedSymbolsForBundle(bundle: string): Array<string> {
-    // TODO compute from backreferences.
+  getUsedSymbolsForBundle(bundleName: string): Array<string> {
+    const used = new Set();
+    for (let key in this.importedBy) {
+      const importedBy = this.importedBy[key];
+      if (importedBy.bundles.has(bundleName)) {
+        const symbols = importedBy.imports[this.module].symbols;
+        if (symbols.has('*')) {
+          return ['*'];
+        } else {
+          for (let v of symbols) {
+            used.add(v);
+          }
+        }
+      }
+    }
+    const result = [];
+    for (let v of used) {
+      result.push(v);
+    }
+    return result;
   }
 }
 
@@ -197,7 +229,7 @@ export class DependencyGraph {
   bundleEntrypoint(
     resolvedModule: string,
     variants: Array<string>,
-    bundle: string
+    bundleName: string
   ) {
     for (let v of variants) {
       const variant = this._getVariant(v);
@@ -206,7 +238,7 @@ export class DependencyGraph {
       if (!root) {
         root = variant.roots[resolvedModule] = node;
       }
-      root.bundles.add(bundle);
+      root.bundles.add(bundleName);
     }
   }
 
@@ -221,7 +253,7 @@ export class DependencyGraph {
       const node = this._getNode(resolvedModule, variant);
       const importedNode = this._getNode(resolvedImportedModule, variant);
       node.importsNode(importedNode, imported);
-      importedNode.importedByNode(node);
+      importedNode.importedByNode(node, imported.type);
     }
   }
 }

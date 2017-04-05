@@ -24,7 +24,7 @@ import {sortBundles} from './dependency-graph-sort';
 import * as errors from './packt-errors';
 import ScopeIdGenerator from './scope-id-generator';
 import OutputPathUtils from './output-path-utils';
-import {loadConfig} from './packt-config';
+import {parseConfig} from './packt-config';
 import {determineInitialWorkingSet} from './working-set';
 
 type BuildState = {
