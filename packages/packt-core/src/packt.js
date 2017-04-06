@@ -10,20 +10,27 @@ import type {
   PacktConfig,
   PerfStats,
   PerfStatsDict,
+  SerializedModule,
   Reporter,
 } from '../types';
 import type {
   WorkingSet,
 } from './working-set';
-import {DependencyGraph} from './dependency-graph';
+import {
+  DependencyNode,
+  DependencyGraph,
+} from './dependency-graph';
 import WorkerPool from './worker-pool';
 import ResolverChain from './resolver-chain';
 import Timer from './timer';
 import ContentMap from './content-map';
-import {sortBundles} from './dependency-graph-sort';
+import {
+  generateBundlesFromWorkingSet,
+  generateBundleLookups,
+} from './dependency-graph-transformations';
 import * as errors from './packt-errors';
 import ScopeIdGenerator from './scope-id-generator';
-import OutputPathUtils from './output-path-utils';
+import OutputPathHelpers from './output-path-helpers';
 import {parseConfig} from './packt-config';
 import {determineInitialWorkingSet} from './working-set';
 
@@ -34,7 +41,7 @@ type BuildState = {
 };
 
 type BuildUtils = {
-  pathUtils: OutputPathUtils,
+  pathHelpers: OutputPathHelpers,
   resolvers: ResolverChain,
   pool: WorkerPool,
 };
@@ -165,12 +172,12 @@ export default class Packt {
         ));
       }
     }
-    return loadConfig(this._options.config, json);
+    return parseConfig(this._options.config, json);
   }
 
   _createBuildUtils(config: PacktConfig): Promise<BuildUtils> {
     return Promise.resolve({
-      pathUtils: new OutputPathUtils(config),
+      pathHelpers: new OutputPathHelpers(config),
       resolvers: new ResolverChain(config),
       pool: new WorkerPool(config),
     });
@@ -195,9 +202,7 @@ export default class Packt {
     // if the tree requires changes
     return Promise.resolve({
       scopeGenerator,
-      contentMap: new ContentMap(
-        (c) => utils.pathUtils.generateHash(c)
-      ),
+      contentMap: new ContentMap(),
       dependencyGraph: new DependencyGraph(),
     });
   }
@@ -293,10 +298,11 @@ export default class Packt {
             handlerTimer.accumulate(m.handler,m.perfStats);
             handlerTimer.accumulate(m.handler,{ modules: m.variants.length });
 
-            state.dependencyGraph.setContentType(
+            state.dependencyGraph.setContentMetadata(
               m.resolvedModule,
               m.variants,
-              m.contentType
+              m.contentType,
+              m.contentHash
             );
             state.contentMap.setContent(
               m.resolvedModule,
@@ -390,13 +396,16 @@ export default class Packt {
   }> {
     let start = Date.now();
 
-    // TODO compute bundle belonging & symbol usage
-    // update working set bundles with symbol usage related changes
-    // THEN do bundle sort
-    const bundles = sortBundles(
+    const generatedBundles = generateBundlesFromWorkingSet(
       state.dependencyGraph,
+      workingSet,
       config,
-      workingSet
+      utils.pathHelpers
+    );
+
+    const generatedBundleLookups = generateBundleLookups(
+      state.dependencyGraph,
+      generatedBundles
     );
 
     timer.accumulate('build',{ 'bundle-sort': Date.now() - start });
@@ -459,105 +468,51 @@ export default class Packt {
         }
       });
 
-      const assetMap = {};
-      const preparedData = [];
-      for (let variant in bundles) {
-        for (let bundleName in bundles[variant]) {
-          const data = this._prepareBundleData(
-            bundleName, 
-            variant, 
-            bundles[variant][bundleName],
-            assetMap
-          );
-          // can't bundle yet because we need the complete
-          // asset map in order to do replacements of asset paths
-          // if required.
-          if (data) {
-            preparedData.push({
-              data: data,
-              bundleName: bundleName,
-              variant, variant,
-            });
+      // TODO because we dedupe bundles to module hashes, we could
+      // detect when a bundle has already been generated with a given hash &
+      // if the output name is different, just cp the file to the new name
+      // instead of passing the bundles off to a bundler for rebundling
+      for (let variant in generatedBundles) {
+        const generatedVariant = generatedBundles[variant];
+        const bundleType = (bundleMap, bundles) => {
+          for (let bundleName in bundleMap) {
+            const mapEntry = bundleMap[bundleName];
+            const modules = bundles[mapEntry.hash];
+            utils.pool.processBundle(
+              bundleName,
+              variant,
+              { 
+                modules: this._serializeModules(
+                  variant, 
+                  modules, 
+                  state.contentMap
+                ),
+                paths: mapEntry.paths,
+                ...generatedBundleLookups[variant]
+              }
+            );
           }
         }
-      }
-
-      for (let pd of preparedData) {
-        utils.pool.processBundle(
-          pd.bundleName,
-          pd.variant,
-          { ...pd.data, assetMap },
-          {}
+        bundleType(
+          generatedVariant.dynamicBundleMap, 
+          generatedVariant.dynamicBundles
+        );
+        bundleType(
+          generatedVariant.staticBundleMap, 
+          generatedVariant.staticBundles
         );
       }
     });
   }
 
-  // TODO prepare bundle into a serializable object to pass
-  // to the bundler
-  // TODO get the list of bundles & match up with content.
-  // any modules in this bundle which belong
-  _prepareBundleData(bundleName, variant, bundleModules, assetMap) {
-
-    for (let module of bundleModules) {
-      for (let asset in module.generatedAssets) {
-        assetMap[asset] = module.generatedAssets[asset].ouputPublicPath;
-      }
-    }
-    // TODO need to deal with dynamically created bundles from
-    // System.import etc.`
-    const bundler = this._config.config.bundles[bundleName].bundler;
-    if (!bundler) {
-      return null;
-    }
-
-    const moduleMap = {};
-    let dependentHashes = '';
-
-    // TODO need to build moduleMap as part of dependency graph
-    const modules = bundleModules.map(m => {
-      moduleMap[m.module] = {
-        exportsIdentifier: m.exportsIdentifier,
-        exportsEsModule: m.exportsEsModule,
-      };
-
-      const entry =  this._contentMap.get(m.module, variant);
-      dependentHashes += entry.hash;
-      return {
-        importAliases: Object.keys(m.importAliases).reduce((p,n) => {
-          p[n] = m.importAliases[n].node.module;
-          return p;
-        },{}),
-        resolvedModule: m.module,
-        content: entry.content,
-        contentHash: entry.hash,
-        contentType: m.contentType,
-      }
-    });
-
-    const paths = this._outputPathUtils.getBundlerOutputPaths(
-      bundleName, 
-      // the hash of a bundle must be deterministic based on the content
-      // that makes up the module and the complete hash of the current
-      // config. This allows us to determine all the output names of the 
-      // bundles before computing the bundle content themselves
-      this._outputPathUtils.generateHash(dependentHashes), 
-      bundler, 
-      variant
+  _serializeModules(
+    variant: string, 
+    modules: Array<DependencyNode>,
+    contentMap: ContentMap
+  ): Array<SerializedModule> {
+    return modules.map((m) =>
+      m.serialize(contentMap.get(m.module, variant))
     );
-    assetMap[paths.assetName] = paths.outputPublicPath;
-
-    const result = {
-      // TODO moduleMap needs to include *ALL modules - not just modules
-      // in the current bundle
-      moduleMap: moduleMap,
-      modules: modules,
-      bundler: bundler,
-      outputPath: paths.outputPath,
-      outputParentPath: paths.outputParentPath,
-      outputPublicPath: paths.outputPublicPath,
-      assetName: paths.assetName,
-    };
-    return result;
   }
+  
 }

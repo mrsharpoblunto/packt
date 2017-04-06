@@ -5,21 +5,26 @@ import {
   DependencyNode,
   DependencyGraph,
 } from './dependency-graph';
-import type {PacktConfig} from '../types';
+import path from 'path';
+import type {
+  PacktConfig,
+  OutputPaths,
+} from '../types';
 import type {WorkingSet} from './working-set';
+import type OutputPathHelpers from './output-path-helpers';
 
-type GeneratedBundles = {
+export type GeneratedStaticBundles = {
   [key: string]: { // variants
     [key: string]: Array<DependencyNode>,
   }
 };
 
-export function generateBundlesFromWorkingSet(
+export function generateStaticBundlesFromWorkingSet(
   graph: DependencyGraph,
   workingSet: WorkingSet,
   config: PacktConfig
-): GeneratedBundles {
-  const result: GeneratedBundles = {};
+): GeneratedStaticBundles {
+  const result: GeneratedStaticBundles = {};
  
   for (let v in graph.variants) {
     const variant = graph.variants[v];
@@ -134,9 +139,9 @@ function getModuleBundles(
 function sortBundle(modules: Array<DependencyNode>): Array<DependencyNode> {
   const sorted = [];
   const visited: Set<DependencyNode> = new Set();
-  const tempVisited: Set<DependencyNode> = new Set();
+  const tmp: Set<DependencyNode> = new Set();
   for (let m of modules) {
-    if (!visit(m, visited, tempVisited, sorted)) {
+    if (!visit(m, visited, tmp, sorted, false)) {
       throw new Error('cycle detected!');
     }
   }
@@ -147,7 +152,8 @@ function visit(
   node: DependencyNode, 
   visited: Set<DependencyNode>,
   tempVisited: Set<DependencyNode>,
-  output: Array<DependencyNode>
+  output: Array<DependencyNode>,
+  staticOnly: boolean,
 ): boolean {
   if (tempVisited.has(node)) {
     return false;
@@ -155,7 +161,10 @@ function visit(
   if (!visited.has(node)) {
     tempVisited.add(node);
     for (let i in node.imports) {
-      visit(node.imports[i].node, visited, tempVisited, output);
+      const imported = node.imports[i];
+      if (!staticOnly || imported.type === 'static') {
+        visit(imported.node, visited, tempVisited, output, staticOnly);
+      }
     }
     visited.add(node);
     tempVisited.delete(node);
@@ -164,19 +173,189 @@ function visit(
   return true;
 }
 
-export function generateSubBundles(
+export type GeneratedBundles = {
+  staticBundleMap: { [key: string]: {
+    hash: string,
+    paths: OutputPaths,
+  }},
+  dynamicBundleMap: { [key: string]: {
+    hash: string,
+    paths: OutputPaths,
+  }},
+  staticBundles: { [key: string]: Array<DependencyNode> },
+  dynamicBundles: { [key: string]: Array<DependencyNode> },
+};
+
+export function splitDynamicBundles(
   bundleName: string,
-  modules: Array<string>,
+  variant: string,
+  modules: Array<DependencyNode>,
+  packtConfig: PacktConfig,
+  outputPathHelpers: OutputPathHelpers,
+  output: GeneratedBundles
 ) {
-    //determine any modules that are dyamically imported. build out those trees.
-    //color nodes in a map in the dynamic subtree then check that all nodes in
-    //that colored tree are only imported by other colored nodes - if they aren't.
-    //then remove them from the dynamic set as they are statically imported by
-    //the parent
+  const tmp: Set<DependencyNode> = new Set();
+  const remaining: Set<DependencyNode> = new Set(modules);
+  const bundler = packtConfig.bundles[bundleName].bundler;
+
+  for (let module of modules) {
+    if (module.getImportTypeForBundle(bundleName) === 'dynamic') {
+      // get the subtree of dependencies from this dynamic import
+      const visited: Set<DependencyNode> = new Set();
+      const bundle: Array<DependencyNode> = [];
+      const dynamicBundle: Array<DependencyNode> = [];
+      let bundleHash = '';
+      visit(module, visited, tmp, bundle, true);
+
+      for (let bundleNode of bundle) {
+        if (bundleNode === module) {
+          continue;
+        }
+        // then check each module to see if it is only imported
+        // by modules that are also in the dynamic bundle. if not,
+        // we should be including that module statically
+        let include = true;
+        for (let i in bundleNode.importedBy) {
+          const importedByNode = bundleNode.importedBy[i];
+          if (
+            importedByNode.bundles.has(bundleName) &&
+            !visited.has(importedByNode)
+          ) {
+            include = false;
+            break;
+          }
+        }
+        if (include) {
+          dynamicBundle.push(bundleNode);
+          remaining.delete(bundleNode);
+          bundleHash += bundleNode.contentHash || '';
+        }
+      }
+      dynamicBundle.push(module);
+      remaining.delete(module);
+      bundleHash += outputPathHelpers.generateHash(
+        bundleHash + (module.contentHash || '')
+      );
+
+      const bundleOutputPaths = outputPathHelpers.getBundlerOutputPaths(
+        bundleHash + path.extname(bundleName),
+        bundleHash,
+        bundler,
+        variant,
+      );
+
+      // its possible that multiple bundles might have the same dynamic import
+      // bundles. Instead of duplicating them, we'll look them up by hash first
+      // and dedeupe them by their content
+      output.dynamicBundleMap[bundleName + ':' + module.module] = {
+        hash: bundleHash,
+        paths: bundleOutputPaths,
+      };
+      if (!output.dynamicBundles[bundleHash]) {
+        output.dynamicBundles[bundleHash] = dynamicBundle;
+      }
+    }
+  }
+
+  const staticBundle = [];
+  let staticBundleHash = '';
+  for (let r of remaining) {
+    staticBundle.push(r);
+    staticBundleHash += r.contentHash || '';
+  }
+  staticBundleHash = outputPathHelpers.generateHash(staticBundleHash);
+
+  const bundleOutputPaths = outputPathHelpers.getBundlerOutputPaths(
+    bundleName,
+    staticBundleHash,
+    bundler,
+    variant,
+  );
+
+  output.staticBundleMap[bundleName] = {
+    hash: staticBundleHash,
+    paths: bundleOutputPaths,
+  }
+  output.staticBundles[staticBundleHash] = staticBundle;
 }
 
-export function generateSerializable() {
-  // TODO
-  // determine symbol usages for each module & generate the JSON blob to 
-  // pass to the bundler
+export function generateBundlesFromWorkingSet(
+  graph: DependencyGraph,
+  workingSet: WorkingSet,
+  config: PacktConfig,
+  outputPathHelpers: OutputPathHelpers
+): { [key: string]: GeneratedBundles } {
+  const staticBundles = generateStaticBundlesFromWorkingSet(
+    graph,
+    workingSet,
+    config
+  );
+
+  const output = {};
+  for (let v in staticBundles) {
+    const variant = staticBundles[v];
+    const subBundleVariant = output[v] = {
+      dynamicBundleMap: {},
+      staticBundleMap: {},
+      staticBundles: {},
+      dynamicBundles: {},
+    };
+    for (let s in variant) {
+      const staticBundle = variant[s];
+      splitDynamicBundles(
+        s,
+        v,
+        staticBundle,
+        config,
+        outputPathHelpers,
+        subBundleVariant
+      );
+    }
+  }
+  return output;
+}
+
+export type GeneratedBundleLookups = {
+  [key: string]: {
+    assetMap: { [key: string]: string },
+    dynamicBundleMap: { [key: string]: string },
+    moduleMap: { [key: string]: {
+      exportsIdentifier: string,
+      exportsESModule: boolean,
+    }},
+  },
+};
+
+export function generateBundleLookups(
+  graph: DependencyGraph,
+  bundles: { [key: string]: GeneratedBundles }
+): GeneratedBundleLookups {
+  const output = {};
+
+  for (let v in graph.variants) {
+    const variant = output[v] = {
+      assetMap: {},
+      dynamicBundleMap: {},
+      moduleMap: {},
+    };
+
+    const dynamicBundles = bundles[v].dynamicBundleMap;
+    for (let b in dynamicBundles) {
+      variant.dynamicBundleMap[b] = dynamicBundles[b].paths.outputPublicPath;
+    }
+
+    const lookups = graph.variants[v].lookups;
+    for (let m in lookups) {
+      const module = lookups[m];
+      for (let asset in module.generatedAssets) {
+        variant.assetMap[asset] = module.generatedAssets[asset];
+      }
+      variant.moduleMap[m] = {
+        exportsIdentifier: module.exports.identifier,
+        exportsESModule: module.exports.esModule,
+      };
+    }
+  }
+
+  return output;
 }

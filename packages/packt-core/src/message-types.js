@@ -50,6 +50,7 @@ export type ModuleContentMessage = {
   handler: string,
   content: string,
   contentType: string,
+  contentHash: string,
   perfStats: { [key: string]: number },
 } & ModuleMessage;
 
@@ -57,7 +58,6 @@ export type ModuleContentErrorMessage = {
   type: 'module_content_error',
   handler: string,
   error: string,
-  //context: any,
 } & ModuleMessage;
 
 export type ModuleImportMessage = {

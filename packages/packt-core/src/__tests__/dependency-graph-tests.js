@@ -233,10 +233,11 @@ describe('dependency graph tests', () => {
       }
     );
 
-    graph.setContentType(
+    graph.setContentMetadata(
       '/src/entrypoint-a.js',
       ['default'],
-      'text/javascript'
+      'text/javascript',
+      'xxxx',
     );
 
     graph.addGenerated(
@@ -251,6 +252,7 @@ describe('dependency graph tests', () => {
     expect(entrypoint.exports.symbols).toEqual(['a','b']);
     expect(entrypoint.exports.esModule).toEqual(true);
     expect(entrypoint.contentType).toEqual('text/javascript');
+    expect(entrypoint.contentHash).toEqual('xxxx');
     expect(entrypoint.generatedAssets).toEqual({
       'foobar.txt': '/built/foobar.txt',
     });

@@ -4,6 +4,7 @@
 import type {
   ExportDeclaration,
   ImportDeclaration,
+  SerializedModule,
 } from '../types';
 
 export type DependencyNodeImport = {
@@ -19,6 +20,7 @@ export class DependencyNode {
   exports: ExportDeclaration;
   module: string;
   contentType: ?string;
+  contentHash: ?string;
   generatedAssets: { [key: string]: string };
   bundles: Set<string>;
 
@@ -33,6 +35,7 @@ export class DependencyNode {
       symbols: [],
     };
     this.contentType = null;
+    this.contentHash = null;
     this.generatedAssets = {};
     this.bundles = new Set();
   }
@@ -116,6 +119,7 @@ export class DependencyNode {
   }
 
   getImportTypeForBundle(bundleName: string): ('static' | 'dynamic') {
+    let result = 'static';
     for (let key in this.importedBy) {
       const importedBy = this.importedBy[key];
       if (importedBy.bundles.has(bundleName)) {
@@ -124,10 +128,11 @@ export class DependencyNode {
           return 'static';
         }
       }
+      result = 'dynamic';
     }
     // an import can only be dynamic if its never imported statically in the
     // current bundle. Any static imports override the other dynamic import
-    return 'dynamic';
+    return result;
   }
 
   getUsedSymbolsForBundle(bundleName: string): Array<string> {
@@ -150,6 +155,19 @@ export class DependencyNode {
       result.push(v);
     }
     return result;
+  }
+
+  serialize(content: string): SerializedModule {
+    return {
+      importAliases: Object.keys(this.importAliases).reduce((p,n) => {
+        p[n] = this.importAliases[n].node.module;
+        return p;
+      },{}),
+      resolvedModule: this.module,
+      contentHash: this.contentHash || '',
+      contentType: this.contentType || '',
+      content,
+    }
   }
 }
 
@@ -201,15 +219,17 @@ export class DependencyGraph {
     }
   }
 
-  setContentType(
+  setContentMetadata(
     resolvedModule: string,
     variants: Array<string>,
-    contentType: string
+    contentType: string,
+    contentHash: string,
   ) {
     for (let v of variants) {
       const variant = this._getVariant(v);
       const node = this._getNode(resolvedModule, variant);
       node.contentType = contentType;
+      node.contentHash = contentHash;
     }
   }
 

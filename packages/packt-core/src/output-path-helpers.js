@@ -5,18 +5,12 @@ import path from 'path';
 import crypto from 'crypto';
 import type {
   PacktConfig,
+  OutputPaths,
 } from '../types';
 
 const TEMPLATE_REGEX = /\$\{(.*?)\}/g;
 
-export type OutputPaths = {
-  assetName: string,
-  outputPath: string,
-  outputPublicPath: string,
-  outputParentPath: string,
-};
-
-class OutputPathHelpers {
+export default class OutputPathHelpers {
   _config: PacktConfig;
   _configHash: string;
 
@@ -132,5 +126,3 @@ class OutputPathHelpers {
     );
   }
 }
-
-module.exports = OutputPathHelpers;

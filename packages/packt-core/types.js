@@ -5,6 +5,13 @@
  */
 'use strict';
 
+export type OutputPaths = {
+  assetName: string,
+  outputPath: string,
+  outputPublicPath: string,
+  outputParentPath: string,
+};
+
 export type PacktOptions = {
   config: string,
   moduleScopes: string,
@@ -41,6 +48,7 @@ export type PacktConfig = {
       threshold: number,
       dependedBy: Set<string>,
       commons: Set<string>,
+      bundler: string,
     }
   },
   bundlers: { [key: string]: {
@@ -197,6 +205,7 @@ export type Handler = {
       response: ?{
         content: string,
         contentType: string, 
+        contentHash: string,
         perfStats: PerfStats,
       }
     ) => void,
@@ -211,6 +220,25 @@ export type BundlerDelegate = {
     path: string, 
     callback: (err: ?Error, resolvedModule: ?string) => void,
   ) => void,
+};
+
+export type SerializedModule = {
+  importAliases: { [key: string]: string },
+  resolvedModule: string,
+  content: string,
+  contentHash: string,
+  contentType: string,
+};
+
+export type BundlerData = {
+  assetMap: { [key: string]: string },
+  dynamicBundleMap: { [key: string]: string },
+  moduleMap: { [key: string]: {
+    exportsIdentifier: string,
+    exportsESModule: boolean,
+  }},
+  modules: Array<SerializedModule>,
+  paths: OutputPaths,
 };
 
 export type Bundler = {
@@ -230,7 +258,7 @@ export type Bundler = {
       global: Object,
       bundler: Object,
     },
-    data: any, // TODO define bundler data type
+    data: BundlerData, 
     delegate: BundlerDelegate,
     callback: (
       err: ?(Error | string),

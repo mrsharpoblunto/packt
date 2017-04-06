@@ -5,6 +5,7 @@ import events from 'events';
 import Worker from './worker';
 import type {
   PacktConfig,
+  BundlerData,
 } from '../types';
 import type {
   MessageType,
@@ -84,14 +85,12 @@ export default class WorkerPool extends EventEmitter {
 
   processModule(
     resolvedModule: string, 
-    scopeId: string,
-    context: any
+    scopeId: string
   ) {
     this._messageQueue.push({
       type: 'process_module',
       resolvedModule: resolvedModule,
       scopeId: scopeId,
-      context: context,
     });
     this._dequeueMessage();
   }
@@ -99,15 +98,13 @@ export default class WorkerPool extends EventEmitter {
   processBundle(
     bundle: string, 
     variant: string,
-    data: any, // TODO type this
-    context: any
+    data: BundlerData
   ) {
     this._messageQueue.push({
       type: 'process_bundle',
       bundleName: bundle,
       variant: variant,
       data: data,
-      //context: context,
     });
     this._dequeueMessage();
   }

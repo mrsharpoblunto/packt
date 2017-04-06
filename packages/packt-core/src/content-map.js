@@ -3,25 +3,22 @@
  */
 export type ContentMapEntry = {
   content: string,
-  hash: string,
 };
 
 export default class ContentMap {
   _content: { [key: string]: {
     variants: { [key: string]: ContentMapEntry },
   }};
-  _hasher: (content: string) => string;
 
-  constructor(hasher: (content: string) => string) {
+  constructor() {
     this._content = {};
-    this._hasher = hasher;
   }
 
   get(
     resolved: string,
     variant: string
-  ): ContentMapEntry {
-    return this._content[resolved].variants[variant];
+  ): string {
+    return this._content[resolved].variants[variant].content;
   }
 
   addIfNotPresent(resolved: string,ifNotPresent: Function) {
@@ -44,7 +41,6 @@ export default class ContentMap {
       variants.reduce((prev, next) => {
         prev[next] = {
           content: content,
-          hash: this._hasher(content),
         };
         return prev;
       },{})

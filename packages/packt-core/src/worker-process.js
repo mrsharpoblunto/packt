@@ -8,6 +8,7 @@ import type {
   ProcessBundleMessage,
 } from './message-types';
 import type {
+  OutputPaths,
   PerfStats,
   ImportDeclaration,
   ExportDeclaration,
@@ -16,12 +17,9 @@ import type {
   Bundler,
   BundlerDelegate,
 } from '../types';
-import type {
-  OutputPaths,
-} from './output-path-utils';
 import path from 'path';
 import BuiltInResolver from './built-in-resolver';
-import OutputPathUtils from './output-path-utils';
+import OutputPathHelpers from './output-path-helpers';
 
 class WorkerProcess {
   _allVariants: Array<string>;
@@ -90,7 +88,7 @@ class WorkerProcess {
   }
 
   _handlerDelegateFactory(
-    pathUtils: OutputPathUtils,
+    pathUtils: OutputPathHelpers,
     resolver: BuiltInResolver
   ): (resolvedModule: string) => HandlerDelegate {
     return (resolvedModule: string) => ({
@@ -99,7 +97,7 @@ class WorkerProcess {
   }
 
   _processConfig(msg: ProcessConfigMessage) {
-    const pathUtils = new OutputPathUtils(
+    const pathUtils = new OutputPathHelpers(
       msg.config
     );
     const resolver = new BuiltInResolver(
@@ -209,7 +207,7 @@ class WorkerProcess {
   }
 
   _handlerDelegateFactory(
-    outputPathUtils: OutputPathUtils,
+    outputPathHelpers: OutputPathHelpers,
     resolver: BuiltInResolver,
     configFile: string
   ): (resolvedModule: string) => HandlerDelegate 
@@ -272,8 +270,8 @@ class WorkerProcess {
           callback
         );
       },
-      getOutputPaths: outputPathUtils.getOutputPaths.bind(outputPathUtils),
-      generateHash: outputPathUtils.generateHash.bind(outputPathUtils),
+      getOutputPaths: outputPathHelpers.getOutputPaths.bind(outputPathHelpers),
+      generateHash: outputPathHelpers.generateHash.bind(outputPathHelpers),
     });
   }
 
@@ -347,6 +345,7 @@ class WorkerProcess {
             variants: variants || this._allVariants,
             content: response.content,
             contentType: response.contentType,
+            contentHash: response.contentHash,
             perfStats: response.perfStats,
             resolvedModule: msg.resolvedModule,
           });
