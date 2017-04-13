@@ -4,14 +4,19 @@
   "description": "Packt handler for processing css files with postcss",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "NODE_ENV=test jest",
+    "build": "npm run build:clean && npm run build:lib",
+    "build:clean": "rimraf lib",
+    "build:lib": "babel -d lib src --ignore '**/__tests__/**'"
+  },
+  "jest": {
+    "testPathDirs": [
+      "src"
+    ]
   },
   "author": "Glenn Conner",
   "license": "MIT",
   "dependencies": {
     "postcss": "^5.2.5"
-  },
-  "devDependencies": {
-    "jest": "^17.0.0"
   }
 }

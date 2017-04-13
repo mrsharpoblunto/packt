@@ -10,9 +10,6 @@ import type {
 import type {
   MessageType,
 } from './message-types';
-import type {
-  WorkerStatusDescription,
-} from './worker';
 import * as errors from './packt-errors';
 
 const {EventEmitter} = events;

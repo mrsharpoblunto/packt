@@ -13,19 +13,6 @@ import type {
 
 const {EventEmitter} = events;
 
-export type WorkerStatus = 
-  'configuring' |
-  'idle' |
-  'error' |
-  'processing' |
-  'bundling' |
-  'stopped';
-
-export type WorkerStatusDescription = {
-  status: WorkerStatus,
-  description: string,
-};
-
 export default class Worker extends EventEmitter {
   _config: PacktConfig;
   _status: WorkerStatusDescription;

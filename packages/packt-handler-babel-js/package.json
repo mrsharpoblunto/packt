@@ -4,16 +4,21 @@
   "description": "Packt file handler to process js files using Babel",
   "main": "index.js",
   "scripts": {
-    "test": "NODE_ENV=test jest"
+    "test": "NODE_ENV=test jest",
+    "build": "npm run build:clean && npm run build:lib",
+    "build:clean": "rimraf lib",
+    "build:lib": "babel -d lib src --ignore '**/__tests__/**'"
+  },
+  "jest": {
+    "testPathDirs": [
+      "src"
+    ]
   },
   "author": "Glenn Conner",
   "license": "MIT",
   "dependencies": {
-    "babel-core": "^6.18.2",
-    "babel-code-frame": "^6.16.0",
+    "babel-core": "^6.23.1",
+    "babel-code-frame": "^6.22.0",
     "babylon": "^6.13.1"
-  },
-  "devDependencies": {
-    "jest": "^17.0.0"
   }
 }

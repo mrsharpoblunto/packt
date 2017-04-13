@@ -4,15 +4,23 @@
   "description": "Packt bundler for flattening a dependency tree of commonjs modules",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "NODE_ENV=test jest",
+    "build": "npm run build:clean && npm run build:lib",
+    "build:clean": "rimraf lib",
+    "build:lib": "babel -d lib src --ignore '**/__tests__/**'"
+  },
+  "jest": {
+    "testPathDirs": [
+      "src"
+    ]
   },
   "author": "Glenn Conner",
   "license": "MIT",
-  "devDependencies": {
-    "jest": "^17.0.0"
-  },
   "dependencies": {
     "mkdirp": "^0.5.1",
     "uglify-js": "^2.8.12"
+  },
+  "devDependencies": {
+    "packt-types": "^1.0.0"
   }
 }

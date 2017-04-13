@@ -1,6 +1,6 @@
-const t = require('babel-types');
+import t from 'babel-types';
 
-function getLiteralOrConst(node, scope) {
+export function getLiteralOrConst(node, scope) {
   if (node.type === 'Identifier') {
     const name = node.name;
     while (scope) {
@@ -36,7 +36,7 @@ function getLiteralOrConst(node, scope) {
   return null;
 }
 
-function createLiteral(value) {
+export function createLiteral(value) {
   switch (typeof(value)) {
     case 'string':
       return t.stringLiteral(value);
@@ -51,8 +51,3 @@ function createLiteral(value) {
   }
   return null;
 }
-
-module.exports = {
-  getLiteralOrConst: getLiteralOrConst,
-  createLiteral: createLiteral,
-};

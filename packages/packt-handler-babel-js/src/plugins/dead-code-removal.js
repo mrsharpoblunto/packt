@@ -1,10 +1,8 @@
-'use strict';
+import babel from 'babel-core';
+import evaluateExpression from './evaluate-expression-visitor';
+import helpers from './helpers';
 
-const babel = require('babel-core');
-const evaluateExpression = require('./evaluate-expression-visitor');
-const helpers = require('./helpers');
-
-function transform(babel) {
+export default function transform(babel) {
   return {
     visitor: {
       // try to collapse and eliminate dead conditional branches
@@ -29,5 +27,3 @@ function collapseConditional(path) {
     }
   }
 }
-
-module.exports = transform;

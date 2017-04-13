@@ -1,8 +1,7 @@
-const t = require('babel-types');
-const helpers = require('./helpers');
+import t from 'babel-types';
+import helpers from './helpers';
 
-
-module.exports = {
+export default {
   Block: function(path) {
     path.skip();
   },

@@ -1,12 +1,10 @@
-'use strict';
-
-const babel = require('babel-core');
-const constants = require('../constants');
-const evaluateExpression = require('./evaluate-expression-visitor');
-const helpers = require('./helpers');
+import babel from 'babel-core';
+import constants from '../constants';
+import evaluateExpression from './evaluate-expression-visitor';
+import helpers from './helpers';
 const t = babel.types;
 
-function transform(babel) {
+export default function transform(babel) {
   return {
     visitor: {
       MemberExpression: function(path) {
@@ -38,5 +36,3 @@ function transform(babel) {
     },
   };
 }
-
-module.exports = transform;

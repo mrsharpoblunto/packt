@@ -1,8 +1,10 @@
 {
-  "name": "packt-handler-json",
+  "name": "packt-types",
   "version": "1.0.0",
-  "description": "Packt handler for json files",
+  "description": "Shared types used by other Packt packages",
   "main": "index.js",
+  "author": "Glenn Conner",
+  "license": "MIT",
   "scripts": {
     "test": "NODE_ENV=test jest",
     "build": "npm run build:clean && npm run build:lib",
@@ -13,7 +15,5 @@
     "testPathDirs": [
       "src"
     ]
-  },
-  "author": "Glenn Conner",
-  "license": "MIT"
+  }
 }

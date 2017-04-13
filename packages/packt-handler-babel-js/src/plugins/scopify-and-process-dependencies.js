@@ -1,15 +1,10 @@
-/**
- * @flow
- */
-'use strict';
-
-const babel = require('babel-core');
-const constants = require('../constants');
-const helpers = require('./helpers');
-const evaluateExpression = require('./evaluate-expression-visitor');
+import babel from 'babel-core';
+import constants from '../constants';
+import * as helpers from './helpers';
+import evaluateExpression from './evaluate-expression-visitor';
 const t = babel.types;
 
-function transform(babel) {
+export default function transform(babel) {
   return {
     pre() {
       this.exportedSymbols = [];

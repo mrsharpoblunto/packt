@@ -1,28 +1,41 @@
-'use strict';
-const escapes = require('ansi-escapes');
-const workerStatus = require('packt-core/lib/worker-status');
-const errors = require('packt-core/lib/packt-errors');
-const S = require('string');
-const chalk = require('chalk');
+/**
+ * @flow
+ */
+import escapes from 'ansi-escapes';
+import errors from 'packt-types';
+import S from 'string';
+import chalk from 'chalk';
 
 const LEFT_COL_WIDTH = 15;
 const MIN_RIGHT_COL_WIDTH = 5;
 
-class ConsoleReporter {
-  constructor(showProgress) {
-    this._isTTY = process.stdout.isTTY;
+class ConsoleReporter implements Reporter {
+  _isTTY: boolean;
+  _hasUpdated: boolean;
+  _eraseCount: number;
+  _showProgress: boolean;
+  _warnings: { [key: string]: Array<{
+    warning: string,
+    variant: string,
+  }>};
+
+  constructor(showProgress: boolean) {
+    this._isTTY = ((process.stdout): any).isTTY;
     this._hasUpdated = false;
     this._eraseCount = 0;
     this._showProgress = showProgress;
     this._warnings = {};
   }
 
-  onInit(packtVersion, options) {
-    console.log(chalk.bold('Packt ' + packtVersion));
+  onInit(
+    version: string, 
+    options: PacktOptions
+  ) {
+    console.log(chalk.bold('Packt ' + version));
     console.log(chalk.bold('Using config: ') + options.config);
   }
 
-  onLoadConfig(config) {
+  onLoadConfig(config: PacktConfig) {
     console.log(
       chalk.bold('Building variants: ') +
       '[' + Object.keys(config.options).join(',') + ']'
@@ -34,7 +47,7 @@ class ConsoleReporter {
   }
 
   // TODO need summary info about bundles built, module count etc.
-  onUpdateBuildStatus(workers, buildStats) {
+  onUpdateBuildStatus(workers: Array<WorkerStatusDescription>) {
     if (this._isTTY && this._showProgress) {
       if (this._eraseCount) {
         process.stdout.write(escapes.cursorUp(this._eraseCount));
@@ -42,7 +55,7 @@ class ConsoleReporter {
         this._eraseCount = workers.length + 5;
       }
 
-      const windowSize = process.stdout.getWindowSize();
+      const windowSize = ((process.stdout): any).getWindowSize();
       const rightColWidth = Math.max(MIN_RIGHT_COL_WIDTH, windowSize[0] - LEFT_COL_WIDTH - 3);
 
       console.log('+' + S('-').repeat(LEFT_COL_WIDTH + rightColWidth + 1) + '+');
@@ -51,22 +64,22 @@ class ConsoleReporter {
       for (let worker of workers) {
         let message = '|';
         switch (worker.status) {
-          case workerStatus.IDLE:
+          case 'idle':
             message += chalk.dim(S(' Idle').padRight(LEFT_COL_WIDTH));
             break;
-          case workerStatus.CONFIGURING:
+          case 'configuring':
             message += chalk.bgWhite(S(' Configuring').padRight(LEFT_COL_WIDTH));
             break;
-          case workerStatus.ERROR:
+          case 'error':
             message += chalk.bgRed.bold(S(' Error').padRight(LEFT_COL_WIDTH));
             break;
-          case workerStatus.PROCESSING:
+          case 'processing':
             message += chalk.bold.bgGreen(S(' Processing').padRight(LEFT_COL_WIDTH));
             break;
-          case workerStatus.BUNDLING:
+          case 'bundling':
             message += chalk.bgCyan.bold(S(' Bundling').padRight(LEFT_COL_WIDTH));
             break;
-          case workerStatus.STOPPED:
+          case 'stopped':
             message += chalk.bgYellow(S(' Stopped').padRight(LEFT_COL_WIDTH));
             break;
         }
@@ -82,7 +95,11 @@ class ConsoleReporter {
     }
   }
 
-  onBuildWarning(resolvedModule, variants, warning) {
+  onBuildWarning(
+    resolvedModule: string, 
+    variants: Array<string>, 
+    warning: string
+  ) {
     let moduleWarnings = this._warnings[resolvedModule];
     if (!moduleWarnings) {
       moduleWarnings = this._warnings[resolvedModule] = [];
@@ -90,25 +107,37 @@ class ConsoleReporter {
     for (let v of variants) {
       moduleWarnings.push({
         variant: v,
-        warning: warning,
+        warning,
       });
     }
   }
 
-  onBundleWarning(bundleName, variant, warning) {
-    let bundleWarnings = this._warnings[resolvedModule];
+  onBundleWarning(
+    bundleName: string, 
+    variant: string, 
+    warning: string
+  ) {
+    let bundleWarnings = this._warnings[bundleName];
     if (!bundleWarnings) {
       bundleWarnings = this._warnings[bundleName] = [];
     }
     bundleWarnings.push({
-      variant: v,
-      warning: warning,
+      variant,
+      warning,
     });
   }
 
   // TODO need summary data around modules built etc.
   // need to pass through stats on each compiled module as well
-  onFinishBuild(buildTimings, moduleTimings, dependencyGraph) {
+  onFinishBuild(
+    timers: {
+      global: Timer,
+      handlers: Timer,
+      bundlers: Timer,
+    }, 
+    buildStats: PerfStatsDict,
+    bundleStats: PerfStatsDict
+  ) {
     if (this._eraseCount) {
       process.stdout.write(escapes.eraseLines(this._eraseCount + 1));
     }
@@ -129,27 +158,27 @@ class ConsoleReporter {
 
     console.log(chalk.bold('Timing information:'));
 
-    console.log('  Bundle Sort: ' + (buildTimings.global.get('build','bundle-sort')/1000).toFixed(2) + 's');
-    const resolvers = buildTimings.global.getSubcategories('resolvers');
+    console.log('  Bundle Sort: ' + (timers.global.get('build','bundle-sort')/1000).toFixed(2) + 's');
+    const resolvers = timers.global.getSubcategories('resolvers');
     for (let i = 0;i < resolvers.length - 1; ++i) {
       const r = resolvers[i];
-      console.log('  Resolver ' + chalk.bold('custom' + r) + ': ' + (buildTimings.global.get('resolvers',r)/1000).toFixed(2) + 's');
+      console.log('  Resolver ' + chalk.bold('custom' + r) + ': ' + (timers.global.get('resolvers',r)/1000).toFixed(2) + 's');
     }
     console.log('  Resolver ' + chalk.bold('default') + ': ' + (
-      buildTimings.global.get('resolvers',resolvers[resolvers.length - 1])/1000).toFixed(2) + 's');
-    const handlers = buildTimings.handlers.getCategories();
+      timers.global.get('resolvers',resolvers[resolvers.length - 1])/1000).toFixed(2) + 's');
+    const handlers = timers.handlers.getCategories();
     for (let h of handlers) {
-      const io = buildTimings.handlers.get(h,'diskIO') / 1000;
-      const transform = buildTimings.handlers.get(h,'transform') / 1000;
+      const io = timers.handlers.get(h,'diskIO') / 1000;
+      const transform = timers.handlers.get(h,'transform') / 1000;
       const total = io + transform;
 
       console.log('  Handler ' + chalk.bold(h) + ': ' + total.toFixed(2) + 's ' +
         chalk.dim('(' + transform.toFixed(2) + 's Transform, ' + io.toFixed(2) + 's I/O)'));
     }
-    const bundlers = buildTimings.bundlers.getCategories();
+    const bundlers = timers.bundlers.getCategories();
     for (let b of bundlers) {
-      const io = buildTimings.bundlers.get(b,'diskIO') / 1000;
-      const transform = buildTimings.bundlers.get(b,'transform') / 1000;
+      const io = timers.bundlers.get(b,'diskIO') / 1000;
+      const transform = timers.bundlers.get(b,'transform') / 1000;
       const total = io + transform;
 
       console.log('  Bundler ' + chalk.bold(b) + ': ' + total.toFixed(2) + 's ' +
@@ -161,16 +190,16 @@ class ConsoleReporter {
       chalk.green('Build completed in ') + 
       chalk.bold(
         ((
-          buildTimings.global.get('build','modules') +
-          buildTimings.global.get('build','bundle-sort') +
-          buildTimings.global.get('build','bundles')
+          timers.global.get('build','modules') +
+          timers.global.get('build','bundle-sort') +
+          timers.global.get('build','bundles')
         ) /1000).toFixed(2) + 's'
       )
     );
   }
 
 
-  onError(err) {
+  onError(err: Error) {
     let defaultError = false;
     try {
       if (err instanceof errors.PacktConfigError) {

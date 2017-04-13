@@ -6,7 +6,7 @@ import path from 'path';
 import {PacktResolverError} from './packt-errors';
 import type {
   BuiltInResolverOptions,
-} from '../types';
+} from 'packt-types/flowtypes';
 
 export default class BuiltInResolver {
 
