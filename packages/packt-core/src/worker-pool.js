@@ -4,13 +4,9 @@
 import events from 'events';
 import Worker from './worker';
 import type {
-  PacktConfig,
-  BundlerData,
-} from '../types';
-import type {
   MessageType,
 } from './message-types';
-import * as errors from './packt-errors';
+import * as errors from 'packt-types';
 
 const {EventEmitter} = events;
 
@@ -93,15 +89,15 @@ export default class WorkerPool extends EventEmitter {
   }
 
   processBundle(
-    bundle: string, 
+    bundleName: string, 
     variant: string,
     data: BundlerData
   ) {
     this._messageQueue.push({
       type: 'process_bundle',
-      bundleName: bundle,
-      variant: variant,
-      data: data,
+      bundleName,
+      variant,
+      data,
     });
     this._dequeueMessage();
   }

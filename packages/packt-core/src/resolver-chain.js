@@ -4,11 +4,6 @@
 import events from 'events';
 import path from 'path';
 import type {
-  PacktConfig,
-  Resolver,
-  ImportDeclaration,
-} from '../types';
-import type {
   MessageType,
 } from './message-types';
 import BuiltInResolver from './built-in-resolver';

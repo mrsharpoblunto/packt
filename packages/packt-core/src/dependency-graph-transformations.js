@@ -6,10 +6,6 @@ import {
   DependencyGraph,
 } from './dependency-graph';
 import path from 'path';
-import type {
-  PacktConfig,
-  OutputPaths,
-} from '../types';
 import type {WorkingSet} from './working-set';
 import type OutputPathHelpers from './output-path-helpers';
 

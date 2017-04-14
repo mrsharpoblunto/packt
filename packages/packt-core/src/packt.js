@@ -6,14 +6,6 @@ import type {
   MessageType,
 } from './message-types';
 import type {
-  PacktOptions,
-  PacktConfig,
-  PerfStats,
-  PerfStatsDict,
-  SerializedModule,
-  Reporter,
-} from '../types';
-import type {
   WorkingSet,
 } from './working-set';
 import {
@@ -74,7 +66,7 @@ export default class Packt {
     this._bundlerTimer = new Timer();
     this._reporter = reporter;
 
-    this._options = Object.assign({},options);
+    this._options = (({...options}): any);
     this._options.config = path.resolve(workingDirectory, options.config);
 
     const version = require('../package.json').version;

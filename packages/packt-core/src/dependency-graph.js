@@ -1,12 +1,6 @@
 /**
  * @flow
  */
-import type {
-  ExportDeclaration,
-  ImportDeclaration,
-  SerializedModule,
-} from '../types';
-
 export type DependencyNodeImport = {
   node: DependencyNode,
   symbols: Set<string>,

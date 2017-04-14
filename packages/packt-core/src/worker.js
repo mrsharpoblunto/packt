@@ -5,9 +5,6 @@ import child_process from 'child_process';
 import path from 'path';
 import events from 'events';
 import type {
-  PacktConfig
-} from '../types';
-import type {
   MessageType
 } from './message-types';
 
@@ -130,7 +127,7 @@ export default class Worker extends EventEmitter {
   }
 
   status(): WorkerStatusDescription {
-    return { ...this._status };
+    return ({ ...this._status }: any);
   }
 
   stop(): Promise<any> {

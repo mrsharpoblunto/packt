@@ -7,16 +7,6 @@ import type {
   ProcessModuleMessage,
   ProcessBundleMessage,
 } from './message-types';
-import type {
-  OutputPaths,
-  PerfStats,
-  ImportDeclaration,
-  ExportDeclaration,
-  Handler,
-  HandlerDelegate,
-  Bundler,
-  BundlerDelegate,
-} from '../types';
 import path from 'path';
 import BuiltInResolver from './built-in-resolver';
 import OutputPathHelpers from './output-path-helpers';
@@ -25,22 +15,17 @@ class WorkerProcess {
   _allVariants: Array<string>;
   _handlers: Array<{
     pattern: RegExp,
-    invariantOptions: {
-      global: Object,
-      handler: Object,
-    },
-    options: Object,
+    invariantOptions: HandlerOptions,
+    options: { [key: string]: HandlerOptions },
     handler: Handler,
     delegateFactory: (
       resolvedModule: string
     ) => HandlerDelegate,
   }>;
+  _bundlerLookup: { [key: string]: string };
   _bundlers: { [key: string]: {
-    invariantOptions: {
-      global: Object,
-      bundler: Object,
-    },
-    options: Object,
+    invariantOptions: BundlerOptions,
+    options: { [key: string]: BundlerOptions },
     bundler: Bundler,
     delegateFactory: (
       bundleName: string,
@@ -165,6 +150,13 @@ class WorkerProcess {
       }
       this._bundlers[b] = bundler;
     }
+
+    this._bundlerLookup = Object.keys(msg.config.bundles).reduce(
+      (prev, next) => {
+        prev[next] = msg.config.bundles[next].bundler
+        return prev;
+      },{}
+    );
 
     initializing.push.apply(initializing, Object.keys(this._bundlers)
       .map((b) => new Promise((resolve, reject) => {
@@ -362,7 +354,8 @@ class WorkerProcess {
 
 
   _processBundle(msg: ProcessBundleMessage) {
-    const bundler = this._bundlers[msg.data.bundler];
+    const bundlerKey = this._bundlerLookup[msg.bundleName];
+    const bundler = this._bundlers[bundlerKey];
     if (!bundler) {
       this._sendMessage({
         type: 'bundle_content_error',
@@ -390,7 +383,7 @@ class WorkerProcess {
             type: 'bundle_content_error',
             bundleName: msg.bundleName,
             variant: msg.variant,
-            bundler: msg.data.bundler,
+            bundler: bundlerKey,
             error: typeof err === 'string' ? err : err.stack,
           });
         } else if (response) {
@@ -398,7 +391,7 @@ class WorkerProcess {
             type: 'bundle_content',
             bundleName: msg.bundleName,
             variant: msg.variant,
-            bundler: msg.data.bundler,
+            bundler: bundlerKey,
             perfStats: response.perfStats,
           });
         }

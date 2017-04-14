@@ -3,10 +3,6 @@
  */
 import path from 'path';
 import crypto from 'crypto';
-import type {
-  PacktConfig,
-  OutputPaths,
-} from '../types';
 
 const TEMPLATE_REGEX = /\$\{(.*?)\}/g;
 

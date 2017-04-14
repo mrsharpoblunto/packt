@@ -3,10 +3,7 @@
  */
 import fs from 'fs';
 import path from 'path';
-import {PacktResolverError} from './packt-errors';
-import type {
-  BuiltInResolverOptions,
-} from 'packt-types/flowtypes';
+import {PacktResolverError} from 'packt-types';
 
 export default class BuiltInResolver {
 

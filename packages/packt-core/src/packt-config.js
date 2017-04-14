@@ -2,12 +2,8 @@
  * @flow
  */
 import path from 'path';
-import type {
-  BuiltInResolverOptions,
-  PacktConfig,
-} from '../types';
 import BuiltInResolver from './built-in-resolver';
-import {PacktConfigError} from './packt-errors';
+import {PacktConfigError} from 'packt-types';
 import joi from 'joi';
 import os from 'os';
 import chalk from 'chalk';

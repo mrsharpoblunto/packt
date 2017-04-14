@@ -1,10 +1,6 @@
 /**
  * @flow
  */
-import type {
-  PacktConfig,
-} from '../types';
-
 export type WorkingSet = {
   bundles: {
     [key: string]: Array<{
