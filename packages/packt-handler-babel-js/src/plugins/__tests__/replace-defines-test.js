@@ -1,8 +1,8 @@
-const replaceDefines = require('../replace-defines');
-const babel = require('babel-core');
+import replaceDefines from '../replace-defines';
+import {transform as babelTransform} from 'babel-core';
 
 function transform(src, defines) {
-  return babel.transform(
+  return babelTransform(
     src,
     {
       plugins: [

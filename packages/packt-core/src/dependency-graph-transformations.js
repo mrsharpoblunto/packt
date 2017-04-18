@@ -210,6 +210,10 @@ export function splitDynamicBundles(
         // then check each module to see if it is only imported
         // by modules that are also in the dynamic bundle. if not,
         // we should be including that module statically
+        // TODO if we were to check if its only in this & other dynamic bundles
+        // we could get a list of common modules to dynamic children
+        // and apply a similar common module threshold logic to add
+        // a common set for the dynamic children of a static module
         let include = true;
         for (let i in bundleNode.importedBy) {
           const importedByNode = bundleNode.importedBy[i];

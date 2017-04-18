@@ -1,8 +1,6 @@
-import babel from 'babel-core';
 import constants from '../constants';
 import evaluateExpression from './evaluate-expression-visitor';
-import helpers from './helpers';
-const t = babel.types;
+import * as helpers from './helpers';
 
 export default function transform(babel) {
   return {

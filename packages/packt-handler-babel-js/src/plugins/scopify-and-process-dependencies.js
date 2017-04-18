@@ -1,8 +1,7 @@
-import babel from 'babel-core';
+import * as t from 'babel-types';
 import constants from '../constants';
 import * as helpers from './helpers';
 import evaluateExpression from './evaluate-expression-visitor';
-const t = babel.types;
 
 export default function transform(babel) {
   return {
@@ -15,19 +14,17 @@ export default function transform(babel) {
       this.moduleScope = '_' + this.opts.scope + '_';
     },
     post() {
-      //if (this.exportedSymbols.length) {
-        // inform the dependency graph what exported symbols
-        // this module provides, & under what identifier they are
-        // associated in the global scope
-        this.opts.emitter.emit('export', {
-          exported: {
+      // inform the dependency graph what exported symbols
+      // this module provides, & under what identifier they are
+      // associated in the global scope
+      this.opts.delegate.exportsSymbols(
+        this.opts.variants,
+        {
             identifier: this.moduleExport,
             symbols: this.exportedSymbols.slice(0),
             esModule: this.exportedSymbols.esModule,
-          },
-          variants: this.opts.variants,
-        });
-      //}
+        }
+      );
     },
     visitor: {
       Program: {
@@ -179,14 +176,14 @@ export default function transform(babel) {
         }
       },
       ExportAllDeclaration: function(path) {
-        this.opts.emitter.emit('import',{
-          imported: {
+        this.opts.delegate.importsModule(
+          this.opts.variants,
+          {
             source: path.node.source.value,
             symbols: ['*'],
             type: 'static',
-          },
-          variants: this.opts.variants,
-        });
+          }
+        );
         exportSymbol(this.exportedSymbols, '*', true);
         path.replaceWith(t.callExpression(
           t.memberExpression(
@@ -337,14 +334,14 @@ export default function transform(babel) {
           }
 
           if (symbols.length) {
-            this.opts.emitter.emit('import',{
-              imported: {
+            this.opts.delegate.importsModule(
+              this.opts.variants,
+              {
                 source: path.node.source.value,
                 symbols: symbols,
                 type: 'static',
-              },
-              variants: this.opts.variants,
-            });
+              }
+            );
           }
 
           path.replaceWith(
@@ -389,28 +386,28 @@ export default function transform(babel) {
           path.scope.removeBinding(spec.local.name);
         }
 
-        this.opts.emitter.emit('import',{
-          imported: {
+        this.opts.delegate.importsModule(
+          this.opts.variants,
+          {
             source: path.node.source.value,
             symbols: symbols,
             type: 'static',
-          },
-          variants: this.opts.variants,
-        });
+          }
+        );
 
         path.remove();
       },
       CallExpression: {
         exit: function(path) {
           if (path.node.callee.type === 'import') {
-            this.opts.emitter.emit('import',{
-              imported: {
+            this.opts.delegate.importsModule(
+              this.opts.variants,
+              {
                 source: required,
                 symbols: ['*'],
                 type: 'dynamic',
-              },
-              variants: this.opts.variants,
-            });
+              }
+            );
           } else if (
             path.node.callee.name === 'require' &&
             !path.scope.hasBinding('require') &&
@@ -432,14 +429,14 @@ export default function transform(babel) {
 
             path.node.callee.name = constants.PACKT_IMPORT_PLACEHOLDER;
             path.node.arguments.unshift(t.stringLiteral(this.exportAlias.name));
-            this.opts.emitter.emit('import',{
-              imported: {
+            this.opts.delegate.importsModule(
+              this.opts.variants,
+              {
                 source: required,
                 symbols: ['*'],
                 type: 'static',
-              },
-              variants: this.opts.variants,
-            });
+              }
+            );
           }
         },
       },

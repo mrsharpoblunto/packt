@@ -128,7 +128,8 @@ export default class BabelJsHandler implements Handler {
               resolvedModule,
               scopeId,
               key,
-              variant
+              variant,
+              delegate
             )
           );
           stats.transform = Date.now() - start;
@@ -158,7 +159,8 @@ export default class BabelJsHandler implements Handler {
     resolvedModule: string, 
     scopeId: string, 
     variant: string, 
-    options: HandlerOptions
+    options: HandlerOptions,
+    delegate: HandlerDelegate,
   ) {
     const transformOpts = options.handler.transformOpts || {};
 
@@ -188,17 +190,17 @@ export default class BabelJsHandler implements Handler {
 
     if (options.handler.defines) {
       opts.plugins.unshift([
-        require('./plugins/replace-defines'),
+        require('./plugins/replace-defines').default,
         {
           defines: options.handler.defines,
         }
       ]);
     }
-    opts.plugins.unshift(require('./plugins/dead-code-removal'));
+    opts.plugins.unshift(require('./plugins/dead-code-removal').default);
     opts.plugins.unshift([
-      require('./plugins/scopify-and-process-dependencies'),
+      require('./plugins/scopify-and-process-dependencies').default,
       {
-        emitter: this,
+        delegate,
         scope: scopeId,
         variants: [variant],
       },

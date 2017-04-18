@@ -1,0 +1,11 @@
+npm --prefix ./packages/packt-bundler-js run build
+npm --prefix ./packages/packt-bundler-raw run build
+npm --prefix ./packages/packt-cli run build
+npm --prefix ./packages/packt-core run build
+npm --prefix ./packages/packt-handler-babel-js run build
+npm --prefix ./packages/packt-handler-ignore run build
+npm --prefix ./packages/packt-handler-json run build
+npm --prefix ./packages/packt-handler-post-css run build
+npm --prefix ./packages/packt-handler-raw run build
+npm --prefix ./packages/packt-handler-raw-to-js run build
+npm --prefix ./packages/packt-types run build

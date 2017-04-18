@@ -1,6 +1,5 @@
-import babel from 'babel-core';
 import evaluateExpression from './evaluate-expression-visitor';
-import helpers from './helpers';
+import * as helpers from './helpers';
 
 export default function transform(babel) {
   return {
@@ -17,7 +16,7 @@ export default function transform(babel) {
 }
 
 function collapseConditional(path) {
-  path.traverse(evaluateExpression);
+  path.traverse(evaluateExpression,{});
   const value = helpers.getLiteralOrConst(path.node.test, path.scope);
   if (value) {
     if (!value.value && !path.node.alternate) {

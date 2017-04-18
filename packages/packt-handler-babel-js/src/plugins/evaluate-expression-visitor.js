@@ -1,5 +1,5 @@
-import t from 'babel-types';
-import helpers from './helpers';
+import * as t from 'babel-types';
+import * as helpers from './helpers';
 
 export default {
   Block: function(path) {

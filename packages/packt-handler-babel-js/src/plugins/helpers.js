@@ -1,4 +1,4 @@
-import t from 'babel-types';
+import * as t from 'babel-types';
 
 export function getLiteralOrConst(node, scope) {
   if (node.type === 'Identifier') {

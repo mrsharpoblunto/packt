@@ -1,8 +1,8 @@
-const deadCodeRemoval = require('../dead-code-removal');
-const babel = require('babel-core');
+import deadCodeRemoval from '../dead-code-removal';
+import {transform as babelTransform} from 'babel-core';
 
 function transform(src) {
-  return babel.transform(
+  return babelTransform(
     src,
     {
       plugins: [

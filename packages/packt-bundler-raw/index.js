@@ -1,6 +1,8 @@
-if (process.env.NODE_ENV!=='packtdev') {
+if (process.env.NODE_ENV==='packtdev') {
   require('babel-register');
-  module.exports = require('src/bundler').default;
+}
+if (process.env.NODE_ENV==='packtdev' || process.env.NODE_ENV==='test') {
+  module.exports = require('./src/bundler').default;
 } else {
-  module.exports = require('lib/bundler').default;
+  module.exports = require('./lib/bundler').default;
 }
