@@ -76,13 +76,16 @@ export default class Packt {
   start(): Promise<Packt> {
     return this._loadConfig()
       .then((config) => {
+        this._config = config;
         this._reporter.onLoadConfig(config);
         return this._createBuildUtils(config);
       })
       .then((utils) => {
+        this._utils = utils;
         utils.pool.start();
         return this._loadBuildState(utils)
       }).then((state) => {
+        this._state = state;
         return this;
       })
       .catch((err) => this._fatalError(err));
@@ -99,7 +102,7 @@ export default class Packt {
     const state = this._state;
     const config = this._config;
     if (!utils || !state || !config) {
-      return Promise.reject(new Error(
+      return this._fatalError(new Error(
         'Packt build has not been initialized. Make sure to call Start before calling Build'
       ));
     }
@@ -303,7 +306,7 @@ export default class Packt {
             );
             break;
 
-          case 'module_content_warning':
+          case 'module_content_error':
             cleanup(new errors.PacktContentError(
               m.handler,
               m.variants,
@@ -503,7 +506,7 @@ export default class Packt {
     contentMap: ContentMap
   ): Array<SerializedModule> {
     return modules.map((m) =>
-      m.serialize(contentMap.get(m.module, variant))
+      m.serialize(m.contentHash ? contentMap.get(m.module, variant) : '')
     );
   }
   

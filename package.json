@@ -13,6 +13,7 @@
   },
   "scripts": {
     "test": "./scripts/test.sh",
-    "build": "./scripts/build.sh"
+    "build": "./scripts/build.sh",
+    "cli": "NODE_ENV=packtdev node ./packages/packt-cli/index.js"
   }
 }

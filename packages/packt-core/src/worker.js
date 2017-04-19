@@ -10,6 +10,10 @@ import type {
 
 const {EventEmitter} = events;
 
+const WORKER_PROCESS = process.env.NODE_ENV==='packtdev' 
+  ? 'worker-process-dev.js' 
+  : 'worker-process.js';
+
 export default class Worker extends EventEmitter {
   _config: PacktConfig;
   _status: WorkerStatusDescription;
@@ -25,7 +29,7 @@ export default class Worker extends EventEmitter {
   }
 
   start() {
-    const process = child_process.fork(path.join(__dirname,'worker-process.js'), {
+    const process = child_process.fork(path.join(__dirname,WORKER_PROCESS), {
       cwd: this._config.workingDirectory,
     });
     process.on('message',this._onMessage.bind(this));

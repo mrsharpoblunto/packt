@@ -508,5 +508,3 @@ function hasProgramLevelBindingOnly(path, name) {
   }
   return true;
 }
-
-module.exports = transform;

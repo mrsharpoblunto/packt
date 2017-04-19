@@ -22,7 +22,7 @@ module.exports = {
   }, 
 
   resolvers: {
-    default: {
+    builtIn: {
       invariantOptions: {
         searchPaths: [
           __dirname,
@@ -80,11 +80,15 @@ module.exports = {
    */
   handlers: [
     {
+      pattern: '/node_modules/.*\\.js$',
+      require: 'packt-handler-babel-js',
+    },
+    {
       pattern: '\\.js$',
       require: 'packt-handler-babel-js',
       options: {
         base: {
-          transformOpts: {
+          babelOptions: {
             plugins: [
               "transform-flow-strip-types",
             ],
@@ -102,17 +106,6 @@ module.exports = {
         },
         variants: {
         },
-      },
-      invariantOptions: {
-        parserOpts: {
-          plugins: [
-            'flow',
-            'classProperties',
-          ],
-        },
-        ignore: [
-          '/node_modules/',
-        ],
       },
     },
     {

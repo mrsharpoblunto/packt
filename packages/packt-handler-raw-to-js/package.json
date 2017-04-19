@@ -17,6 +17,6 @@
   "author": "Glenn Conner",
   "license": "MIT",
   "dependencies": {
-    "node-mime": "^1.0.0"
+    "mime": "^1.3.4"
   }
 }

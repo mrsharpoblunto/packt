@@ -50,7 +50,7 @@ class WorkerProcess {
 
     process.on('message',(msg: MessageType) => {
       switch (msg.type) {
-        case 'config':
+        case 'process_config':
           this._processConfig(msg);
           break;
 

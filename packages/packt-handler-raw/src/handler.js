@@ -2,7 +2,7 @@
  * @flow
  */
 import fs from 'fs';
-import mime from 'node-mime';
+import mime from 'mime';
 
 mime.default_type = 'text/plain';
 

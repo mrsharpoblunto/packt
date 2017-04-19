@@ -1,12 +1,13 @@
 /**
  * @flow
  */
-import babel from 'babel-core';
+import {transformFromAst} from 'babel-core';
+import OptionsManager from 'babel-core/lib/transformation/file/options/option-manager';
 import codeFrame from 'babel-code-frame';
-import babylon from 'babylon';
+import {parse} from 'babylon';
 import fs from 'fs';
 
-type TransformOptsFunction = (
+type TransformBabelOptionsFunction = (
   context: {
     resolvedModule: string,
     scopeId: string,
@@ -14,16 +15,17 @@ type TransformOptsFunction = (
     options: Object,
     invariantOptions: Object,
   },
-  options: Object
+  babelOptions: Object
 ) => void;
 
 export default class BabelJsHandler implements Handler {
   _invariantOptions: HandlerOptions;
   _handlerInvariants: {
-    noParse: Array<RegExp>,
-    parserOpts: Object,
-    transformOptsProcessor?: TransformOptsFunction,
+    babelOptionsProcessor?: TransformBabelOptionsFunction,
+    parserOptions: Object,
+    loadedParserOptions: boolean,
   };
+  _parserOptions: ?Object;
 
   init(
     invariantOptions: HandlerOptions,
@@ -32,13 +34,13 @@ export default class BabelJsHandler implements Handler {
   ): void {
     this._invariantOptions = invariantOptions;
     this._handlerInvariants = {
-      noParse: (invariantOptions.handler.noParse || []).map((i) => new RegExp(i)),
-      parserOpts: Object.assign(
-        {},
-        invariantOptions.handler.parserOpts || { plugins: [] },
-        { sourceType: 'module' }
-      ),
+      parserOptions: { 
+        sourceType: 'module',
+        plugins: [],
+      },
+      loadedParserOptions: false,
     };
+
     if (invariantOptions.handler.transformOptsProcessor) {
       delegate.resolve(invariantOptions.handler.transformOptsProcessor, 
       (err: ?Error, resolved: ?string) => {
@@ -47,7 +49,7 @@ export default class BabelJsHandler implements Handler {
         }
 
         try {
-          this._handlerInvariants.transformOptsProcessor = require(resolved);
+          this._handlerInvariants.babelOptionsProcessor = require(resolved);
         } catch (ex) {
           callback(ex);
           return;
@@ -65,6 +67,51 @@ export default class BabelJsHandler implements Handler {
     return JSON.parse(JSON.stringify(ast));
   }
 
+  _ensureParserOptions(
+    options: { [key: string]: HandlerOptions }, 
+    delegate: HandlerDelegate
+  ) {
+    if (this._handlerInvariants.loadedParserOptions) {
+      return;
+    }
+
+    // parser plugins are invariant as we only want to parser a given
+    // file once to generate the ast. however because babel options are
+    // variant, we need to create a parser options object which contains
+    // all plugins used across any variant to ensure that all the plugins
+    // in each variant work correctly
+    const pluginSet: Set<string> = new Set();
+    for (let key in options) {
+      try {
+        let opts = options[key].handler.babelOptions;
+        if (!opts) {
+          opts = options[key].handler.babelOptions = {};
+        }
+        const optsManager = new OptionsManager();
+        const loadedOptions = optsManager.init(opts);
+
+        const parserOpts = { plugins: [] };
+        for (let plugin of loadedOptions.plugins) {
+          if (plugin[0].manipulateOptions) {
+            plugin[0].manipulateOptions(opts, parserOpts);
+          }
+        }
+
+        for (let parserPlugin of parserOpts.plugins) {
+          pluginSet.add(parserPlugin);
+        }
+      } catch (ex) {
+        delegate.emitWarning([key],'Unable to load babelOptions object ' + ex.toString());
+      }
+
+    }
+
+    for (let parserPlugin of pluginSet) {
+      this._handlerInvariants.parserOptions.plugins.push(parserPlugin);
+    }
+    this._handlerInvariants.loadedParserOptions = true;
+  }
+
   process(
     resolvedModule: string, 
     scopeId: string, 
@@ -75,6 +122,7 @@ export default class BabelJsHandler implements Handler {
     const stats = {};
     let start = Date.now();
 
+    this._ensureParserOptions(options, delegate);
     fs.readFile(resolvedModule,'utf8',(err,source) => {
       stats.diskIO = Date.now() - start;
       if (err) {
@@ -87,13 +135,13 @@ export default class BabelJsHandler implements Handler {
       let ast;
       try
       {
-        ast = babylon.parse(
+        ast = parse(
           source,
           Object.assign(
             {
               sourceFileName: resolvedModule,
             },
-            this._handlerInvariants.parserOpts
+            this._handlerInvariants.parserOptions
           )
         );
       }
@@ -121,7 +169,7 @@ export default class BabelJsHandler implements Handler {
           delegate.emitWarning([key],message);
         });
         try {
-          const result = babel.transformFromAst(
+          const result = transformFromAst(
             variantAst,
             source,
             this._injectHandlerOptions(
@@ -162,21 +210,21 @@ export default class BabelJsHandler implements Handler {
     options: HandlerOptions,
     delegate: HandlerDelegate,
   ) {
-    const transformOpts = options.handler.transformOpts || {};
+    const babelOptions = options.handler.babelOptions || {};
 
     const opts = Object.assign(
       {},
-      transformOpts,
+      babelOptions,
       {
         filename: resolvedModule,
-        plugins: transformOpts.plugins ? transformOpts.plugins.slice(0) : []
+        plugins: babelOptions.plugins ? babelOptions.plugins.slice(0) : []
       }
     );
 
     // allow custom logic & transforms to be instantiated via a provided
     // module
-    if (this._handlerInvariants.transformOptsProcessor) {
-      this._handlerInvariants.transformOptsProcessor(
+    if (this._handlerInvariants.babelOptionsProcessor) {
+      this._handlerInvariants.babelOptionsProcessor(
         {
           resolvedModule: resolvedModule,
           scopeId: scopeId,
