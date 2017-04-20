@@ -13,7 +13,7 @@ import OutputPathHelpers from './output-path-helpers';
 
 class WorkerProcess {
   _allVariants: Array<string>;
-  _handlers: Array<{
+  _handlers: Array<{|
     pattern: RegExp,
     invariantOptions: HandlerOptions,
     options: { [key: string]: HandlerOptions },
@@ -21,9 +21,9 @@ class WorkerProcess {
     delegateFactory: (
       resolvedModule: string
     ) => HandlerDelegate,
-  }>;
+  |}>;
   _bundlerLookup: { [key: string]: string };
-  _bundlers: { [key: string]: {
+  _bundlers: { [key: string]: {|
     invariantOptions: BundlerOptions,
     options: { [key: string]: BundlerOptions },
     bundler: Bundler,
@@ -31,7 +31,7 @@ class WorkerProcess {
       bundleName: string,
       variant: string
     ) => BundlerDelegate,
-  }};
+  |}};
 
   constructor() {
     this._handlers = [];

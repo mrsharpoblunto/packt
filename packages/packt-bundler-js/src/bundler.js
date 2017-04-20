@@ -21,7 +21,7 @@ export default class JsBundler implements Bundler {
     delegate: BundlerDelegate,
     callback: BundlerInitCallback,
   ) {
-    this._minify = !invariantOptions.bundler.minify;
+    this._minify = invariantOptions.bundler.minify;
     callback();
   }
 

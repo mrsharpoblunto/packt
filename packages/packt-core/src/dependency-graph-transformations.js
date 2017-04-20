@@ -25,7 +25,7 @@ export function generateStaticBundlesFromWorkingSet(
   for (let v in graph.variants) {
     const variant = graph.variants[v];
     const variantGen = result[v] = {};
-    
+
     for (let r in variant.lookups) {
       const module = variant.lookups[r];
       const moduleBundles = getModuleBundles(
@@ -38,13 +38,15 @@ export function generateStaticBundlesFromWorkingSet(
         let bundleGen = variantGen[b];
         if (!bundleGen) {
           bundleGen = variantGen[b] = [];
+          (bundleGen: any).lookupSet = new Set();
         }
         bundleGen.push(module);
+        (bundleGen: any).lookupSet.add(module);
       }
     }
 
     for (let b in variantGen) {
-      variantGen[b] = sortBundle(variantGen[b]);
+      variantGen[b] = sortBundle(variantGen[b], variantGen[b].lookupSet);
     }
   }
   return result;
@@ -132,12 +134,15 @@ function getModuleBundles(
   return bundles;
 }
 
-function sortBundle(modules: Array<DependencyNode>): Array<DependencyNode> {
+function sortBundle(
+  modules: Array<DependencyNode>,
+  moduleSet: Set<DependencyNode>
+): Array<DependencyNode> {
   const sorted = [];
   const visited: Set<DependencyNode> = new Set();
   const tmp: Set<DependencyNode> = new Set();
   for (let m of modules) {
-    if (!visit(m, visited, tmp, sorted, false)) {
+    if (!visit(m, moduleSet, visited, tmp, sorted, false)) {
       throw new Error('cycle detected!');
     }
   }
@@ -146,11 +151,15 @@ function sortBundle(modules: Array<DependencyNode>): Array<DependencyNode> {
 
 function visit(
   node: DependencyNode, 
+  moduleSet: ?Set<DependencyNode>,
   visited: Set<DependencyNode>,
   tempVisited: Set<DependencyNode>,
   output: Array<DependencyNode>,
   staticOnly: boolean,
 ): boolean {
+  if (moduleSet && !moduleSet.has(node)) {
+    return true;
+  }
   if (tempVisited.has(node)) {
     return false;
   }
@@ -159,7 +168,7 @@ function visit(
     for (let i in node.imports) {
       const imported = node.imports[i];
       if (!staticOnly || imported.type === 'static') {
-        visit(imported.node, visited, tempVisited, output, staticOnly);
+        visit(imported.node, moduleSet, visited, tempVisited, output, staticOnly);
       }
     }
     visited.add(node);
@@ -169,7 +178,7 @@ function visit(
   return true;
 }
 
-export type GeneratedBundles = {
+export type GeneratedBundles = {|
   staticBundleMap: { [key: string]: {
     hash: string,
     paths: OutputPaths,
@@ -180,7 +189,7 @@ export type GeneratedBundles = {
   }},
   staticBundles: { [key: string]: Array<DependencyNode> },
   dynamicBundles: { [key: string]: Array<DependencyNode> },
-};
+|};
 
 export function splitDynamicBundles(
   bundleName: string,
@@ -201,7 +210,7 @@ export function splitDynamicBundles(
       const bundle: Array<DependencyNode> = [];
       const dynamicBundle: Array<DependencyNode> = [];
       let bundleHash = '';
-      visit(module, visited, tmp, bundle, true);
+      visit(module, null, visited, tmp, bundle, true);
 
       for (let bundleNode of bundle) {
         if (bundleNode === module) {
@@ -316,14 +325,14 @@ export function generateBundlesFromWorkingSet(
 }
 
 export type GeneratedBundleLookups = {
-  [key: string]: {
+  [key: string]: {|
     assetMap: { [key: string]: string },
     dynamicBundleMap: { [key: string]: string },
     moduleMap: { [key: string]: {
       exportsIdentifier: string,
       exportsESModule: boolean,
     }},
-  },
+  |},
 };
 
 export function generateBundleLookups(

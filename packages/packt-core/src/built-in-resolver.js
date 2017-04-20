@@ -20,14 +20,14 @@ export default class BuiltInResolver {
     };
   };
 
-  _packageCache: { [key: string]: {
+  _packageCache: { [key: string]: {|
     err: ?Error,
     main: ?string,
-  }};
-  _cache: { [key: string]: {
+  |}};
+  _cache: { [key: string]: {|
     err: ?Error,
     isFile: ?boolean,
-  }};
+  |}};
   _waiting: { [key: string]: Array<(err: ?Error, isFile: ?boolean) => void> };
   _options: BuiltInResolverOptions;
 

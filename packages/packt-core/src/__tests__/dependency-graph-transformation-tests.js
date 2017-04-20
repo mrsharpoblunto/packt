@@ -273,16 +273,32 @@ describe('dependency graph transformation tests', () => {
       'bundle-a'
     );
 
-    graph.bundleEntrypoint(
+    graph.imports(
+      '/src/module-1.js',
       '/src/module-2.js',
       ['default'],
-      'bundle-a'
+      {
+        source: './module-2',
+        symbols: ['*'],
+        type: 'static',
+      }
     );
 
     graph.bundleEntrypoint(
       '/src/module-2.js',
       ['default'],
       'lib-bundle'
+    );
+
+    graph.imports(
+      '/src/module-2.js',
+      '/src/module-3.js',
+      ['default'],
+      {
+        source: './module-3',
+        symbols: ['*'],
+        type: 'static',
+      }
     );
 
     const mockWorkingSet = {
@@ -321,6 +337,7 @@ describe('dependency graph transformation tests', () => {
       '/src/module-1.js',  
     ]);
     expect(generatedBundles['default']['lib-bundle'].map(m => m.module)).toEqual([
+      '/src/module-3.js',  
       '/src/module-2.js',  
     ]);
   });

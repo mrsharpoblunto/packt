@@ -9,7 +9,7 @@ import type {
 import BuiltInResolver from './built-in-resolver';
 import {
   PacktError
-} from './packt-errors';
+} from 'packt-types';
 
 export default class ResolverChain extends events.EventEmitter {
   _resolvers: Array<Resolver>;
@@ -45,14 +45,14 @@ export default class ResolverChain extends events.EventEmitter {
   resolve(
     moduleName: string, 
     variants: Array<string>,
-    context: {
+    context: {|
       importedByDeclaration?: ImportDeclaration,
       bundleName?: string,
-    },
-    searchOptions: ?{
+    |},
+    searchOptions: ?{|
       resolvedParentModule?: string, 
       expectFolder?: boolean, 
-    }
+    |}
   ) {
     this._resolvingQueue.add(moduleName);
     ++this._resolving;

@@ -64,7 +64,7 @@ new _$_foobar();`
     );
 
     expect(result.code).toEqual(
-`let _$_exports = {};
+`var _$_exports = {};
 Object.assign(_$_exports, {
   foo: foo,
   bar: bar
@@ -79,7 +79,7 @@ export function bar() {}`
     );
 
     expect(result.code).toEqual(
-`let _$_exports = {};
+`var _$_exports = {};
 class _$_foo {}
 _$_exports.foo = _$_foo
 function _$_bar() {}
@@ -93,7 +93,7 @@ _$_exports.bar = _$_bar`
     );
 
     expect(result.code).toEqual(
-`let _$_exports = {};
+`var _$_exports = {};
 Object.assign(_$_exports, {
   bar: foo
 });`
@@ -113,7 +113,7 @@ function y() {
     );
 
     expect(result.code).toEqual(
-`let _$_exports = {};
+`var _$_exports = {};
 
 _$_exports.foo = "bar";
 function _$_x() {
@@ -137,7 +137,7 @@ function y() {
     );
 
     expect(result.code).toEqual(
-`let _$_exports = {};
+`var _$_exports = {};
 _$_exports.foo = "bar";
 
 function _$_x() {
@@ -156,7 +156,7 @@ export default foo;`
     );
 
     expect(result.code).toEqual(
-`let _$_exports = {};
+`var _$_exports = {};
 var _$_foo = "baz";
 _$_exports.default = _$_foo;`
     );
@@ -168,7 +168,7 @@ _$_exports.default = _$_foo;`
     );
 
     expect(result.code).toEqual(
-`let _$_exports = {};
+`var _$_exports = {};
 function _$_() {}
 _$_exports.default = _$_`
     );
@@ -180,7 +180,7 @@ _$_exports.default = _$_`
     );
 
     expect(result.code).toEqual(
-`let _$_exports = {};
+`var _$_exports = {};
 function _$_foo() {}
 _$_exports.default = _$_foo`
     );
@@ -192,7 +192,7 @@ _$_exports.default = _$_foo`
     );
 
     expect(result.code).toEqual(
-`let _$_exports = {};
+`var _$_exports = {};
 class _$_foo {}
 _$_exports.default = _$_foo`
     );
@@ -204,7 +204,7 @@ _$_exports.default = _$_foo`
     );
 
     expect(result.code).toEqual(
-`let _$_exports = {};
+`var _$_exports = {};
 Object.assign(_$_exports, __packt_import__("_$_exports", "module"));`
     );
     expect(result.opts.delegate.importsModule.mock.calls.length).toBe(1);
@@ -231,7 +231,7 @@ Object.assign(_$_exports, __packt_import__("_$_exports", "module"));`
     );
 
     expect(result.code).toEqual(
-`let _$_exports = {};
+`var _$_exports = {};
 Object.assign(_$_exports, {
   foo: __packt_import__("_$_exports", "module").foo,
   baz: __packt_import__("_$_exports", "module").bar
@@ -263,7 +263,7 @@ function x() {
     );
 
     expect(result.code).toEqual(
-`let _$_exports = {};
+`var _$_exports = {};
 _$_exports = "foo";
 function _$_x() {
   const module = {};
@@ -300,7 +300,7 @@ export {
     );
 
     expect(result.code).toEqual(
-`let _$_exports = {};
+`var _$_exports = {};
 Object.assign(_$_exports, {
   foo: __packt_import__("_$_exports", "bar", true).default
 });`

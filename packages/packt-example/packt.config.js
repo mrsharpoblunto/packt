@@ -82,6 +82,13 @@ module.exports = {
     {
       pattern: '/node_modules/.*\\.js$',
       require: 'packt-handler-babel-js',
+      options: {
+        base: {
+          babelOptions: {
+            babelrc: false,
+          },
+        },
+      },
     },
     {
       pattern: '\\.js$',

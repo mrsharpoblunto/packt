@@ -1,11 +1,11 @@
 /**
  * @flow
  */
-export type DependencyNodeImport = {
+export type DependencyNodeImport = {|
   node: DependencyNode,
   symbols: Set<string>,
   type: 'static' | 'dynamic',
-};
+|};
 
 export class DependencyNode {
   importedBy: { [key: string]: DependencyNode };
@@ -113,20 +113,21 @@ export class DependencyNode {
   }
 
   getImportTypeForBundle(bundleName: string): ('static' | 'dynamic') {
-    let result = 'static';
+    let possiblyDynamic = false;
     for (let key in this.importedBy) {
       const importedBy = this.importedBy[key];
       if (importedBy.bundles.has(bundleName)) {
         const thisImport = importedBy.imports[this.module];
         if (thisImport.type === 'static') {
           return 'static';
+        } else {
+          possiblyDynamic = true;
         }
       }
-      result = 'dynamic';
     }
     // an import can only be dynamic if its never imported statically in the
     // current bundle. Any static imports override the other dynamic import
-    return result;
+    return possiblyDynamic ? 'dynamic' : 'static';
   }
 
   getUsedSymbolsForBundle(bundleName: string): Array<string> {
@@ -168,11 +169,11 @@ export class DependencyNode {
 // during parse, treat dynamic imports the same as static imports
 // When doing bundle sort, determine if a bundle only is being included as a 
 // dynamic import & if so build an additional asset.
-export type DependencyVariant = {
+export type DependencyVariant = {|
   lookups: { [key: string]: DependencyNode },
   identifiers: { [key: string]: ExportDeclaration },
   roots: { [key: string]: DependencyNode },
-};
+|};
 
 export class DependencyGraph {
   variants: { [key: string]: DependencyVariant };

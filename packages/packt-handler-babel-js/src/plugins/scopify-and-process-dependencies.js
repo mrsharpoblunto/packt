@@ -40,7 +40,7 @@ export default function transform(babel) {
             path.unshiftContainer(
               'body',
               t.variableDeclaration(
-                'let',
+                'var',
                 [
                   t.variableDeclarator(
                     this.exportAlias,

@@ -300,16 +300,16 @@ function generateSchema(
 }
 
 function resolveRequire(
-  entry: {
+  entry: {|
     require: string,
-  },
+  |},
   configFile: string,
   resolver: BuiltInResolver,
-): Promise<{
+): Promise<{|
   require: string,
   resolved?: string,
   err?: Error
-}> {
+|}> {
   return new Promise((resolve,reject) => {
     resolver.resolve(
       entry.require,

@@ -20,31 +20,31 @@ import {
   generateBundlesFromWorkingSet,
   generateBundleLookups,
 } from './dependency-graph-transformations';
-import * as errors from './packt-errors';
+import * as errors from 'packt-types';
 import ScopeIdGenerator from './scope-id-generator';
 import OutputPathHelpers from './output-path-helpers';
 import {parseConfig} from './packt-config';
 import {determineInitialWorkingSet} from './working-set';
 
-type BuildState = {
+type BuildState = {|
   contentMap: ContentMap,
   dependencyGraph: DependencyGraph,
   scopeGenerator: ScopeIdGenerator,
-};
+|};
 
-type BuildUtils = {
+type BuildUtils = {|
   pathHelpers: OutputPathHelpers,
   resolvers: ResolverChain,
   pool: WorkerPool,
-};
+|};
 
-type BuildParams = {
+type BuildParams = {|
   workingSet: WorkingSet, 
   timer: Timer,
   config: PacktConfig,
   utils: BuildUtils,
   state: BuildState,
-};
+|};
 
 export default class Packt {
   _timer: Timer;
@@ -253,8 +253,8 @@ export default class Packt {
               );
             } else {
               state.dependencyGraph.imports(
-                resolvedModule,
                 m.resolvedParentModuleOrBundle,
+                resolvedModule,
                 m.variants,
                 m.importedByDeclaration
               );
@@ -336,7 +336,7 @@ export default class Packt {
               m.importDeclaration.source,
               m.variants,
               {
-                importDeclaration: m.importDeclaration,
+                importedByDeclaration: m.importDeclaration,
               },
               {
                 resolvedParentModule: m.resolvedModule,
@@ -402,6 +402,7 @@ export default class Packt {
       state.dependencyGraph,
       generatedBundles
     );
+
 
     timer.accumulate('build',{ 'bundle-sort': Date.now() - start });
 

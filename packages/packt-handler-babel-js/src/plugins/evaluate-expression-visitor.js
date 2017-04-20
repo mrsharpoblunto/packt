@@ -6,7 +6,7 @@ export default {
     path.skip();
   },
   Identifier: function(path) {
-    if (this.skipIdentifier && path.node.name === this.skipIdentifier) {
+    if (this && this.skipIdentifier && path.node.name === this.skipIdentifier) {
       return;
     }
     const value = helpers.getLiteralOrConst(path.node,path.scope);
