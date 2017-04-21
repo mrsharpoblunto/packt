@@ -248,6 +248,7 @@ export default class BabelJsHandler implements Handler {
     opts.plugins.unshift([
       require('./plugins/scopify-and-process-dependencies').default,
       {
+        preserveIdentifiers: !!options.handler.preserveIdentifiers,
         delegate,
         scope: scopeId,
         variants: [variant],

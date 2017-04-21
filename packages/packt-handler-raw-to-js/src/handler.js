@@ -47,7 +47,7 @@ export default class RawToJSHandler implements Handler {
           source = '"' + contentType + ';base64,' + source + '"';
         }
 
-        const transformed = 'var ' + scopeId + '=' + source + ';';
+        const transformed = `window.${scopeId}=${source};`;
         stats.transform = Date.now() - start;
 
         delegate.exportsSymbols(

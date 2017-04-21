@@ -5,23 +5,21 @@ import mkdirp from 'mkdirp';
 import fs from 'fs';
 import uglify from 'uglify-js';
 import path from 'path';
-//import debugRuntime from 'debug-runtime';
-//import runtime from 'runtime';
+import styleLoaderRuntime from './style-loader-runtime';
+import debugJSRuntime from './debug-js-runtime';
+import jsRuntime from './js-runtime';
 
 const PACKT_PLACEHOLDER_PATTERN = /__packt_(\w*?)__\((.*?)\)/g;
 const JS_INDEX = 0;
 const CSS_INDEX = 1;
 
 export default class JsBundler implements Bundler {
-  _minify: boolean;
-  _styleLoaderContent: ?string;
 
   init(
     invariantOptions: BundlerOptions,
     delegate: BundlerDelegate,
     callback: BundlerInitCallback,
   ) {
-    this._minify = invariantOptions.bundler.minify;
     callback();
   }
 
@@ -66,39 +64,33 @@ export default class JsBundler implements Bundler {
       wstream.on('error',(err) => {
         callback(err);
       });
-      if (this._includeRuntime) {
-        // write out packt runtime helpers 
-      }
-      if (!this._minify) {
-        //write out debug runtime helpers
-        // TODO factor this out into a separate module
-        const aliasMap = {};
-        const identifierMap = {};
-        for (let module of jsModules) {
-          const mapEntry = data.moduleMap[module.resolvedModule];
-          const exportsIdentifier = mapEntry.exportsIdentifier;
-          identifierMap[module.resolvedModule] = {
-            identifier: mapEntry.exportsIdentifier,
-            esModule: mapEntry.exportsESModule,
-          };
-          aliasMap[exportsIdentifier] = module.importAliases;
-        }
-        wstream.write(this._bundleRuntime(aliasMap, identifierMap));
-      }
-      if (cssModules.length > 0) {
-        wstream.write(
-          '(' + this._styleLoader(this._minify) + ')(\'' + 
-          data.paths.assetName + '\',\''
-        );
-        wstream.write(JSON.stringify(
-          cssModules.map((c) => c.content).join('')
+
+      if (!options.bundler.omitRuntime) {
+        wstream.write(jsRuntime(
+          options.bundler.minify
         ));
-        wstream.write('\');');
       }
+
+      if (!options.bundler.minify) {
+        wstream.write(debugJSRuntime(data, jsModules));
+      }
+
+      if (cssModules.length > 0) {
+        wstream.write(styleLoaderRuntime(
+          options.bundler.minify,
+          data.paths.assetName,
+          cssModules
+        ));
+      }
+
       if (jsModules.length > 0) {
         for (let module of jsModules) {
-          if (this._minify) {
-            wstream.write(this._minifyJSModule(data, module, delegate));
+          if (options.bundler.minify) {
+            wstream.write(this._minifyJSModule(
+              data,
+              options.bundler.uglifyOptions || {},
+              module, 
+              delegate));
           } else {
             wstream.write(module.content);
             wstream.write(';\n');
@@ -114,6 +106,7 @@ export default class JsBundler implements Bundler {
 
   _minifyJSModule(
     data: BundlerData, 
+    options: Object,
     module: SerializedModule,
     delegate: BundlerDelegate
   ): string {
@@ -128,7 +121,7 @@ export default class JsBundler implements Bundler {
             const resolvedAlias = module.importAliases[args[1]];
             if (!resolvedAlias) {
               throw new Error(
-                'No import alias "' + args[0] + '" found in module "' + 
+                'No import alias "' + args[1] + '" found in module "' + 
                 module.resolvedModule
               );
             }
@@ -139,9 +132,14 @@ export default class JsBundler implements Bundler {
                 '" found in this bundle'
               );
             }
-            console.log(match);
-            console.log(importedModule.exportsIdentifier);
-            return importedModule.exportsIdentifier;
+
+            if (args.length !== 3 || (
+              args[2] === 'default' && !importedModule.exportsESModule
+            )) {
+              return importedModule.exportsIdentifier;
+            } else {
+              return `${importedModule.exportsIdentifier}.${args[2]}`;
+            }
           }
           /*case 'asset': {
             // replace asset paths with their hashed public paths
@@ -162,46 +160,6 @@ export default class JsBundler implements Bundler {
             return match;
         }
       }
-    ), { fromString: true });
-  }
-
-  _styleLoader(minify: boolean): string {
-    if (!this._styleLoaderContent) {
-      this._styleLoaderContent = fs.readFileSync(path.join(__dirname, 'style-loader.js'),'utf8');
-      if (this._minify) {
-        this._styleLoaderContent = this._minifyJS(this._styleLoaderContent);
-      }
-    }
-    return this._styleLoaderContent;
-  }
-
-  _bundleRuntime(
-    aliasMap: { [key: string]: { [key: string]: string } },
-    identifierMap: { [key: string]: {
-      identifier: string,
-      esModule: boolean,
-    }}
-  ) {
-    return (
-      'window.module=window.module||{};' +
-      'window.__packt_alias_map__=' +
-      'Object.assign(window.__packt_alias_map__||{},' + 
-      JSON.stringify(aliasMap)+');' +
-      'window.__packt_identifier_map__=' + 
-      'Object.assign(window.__packt_identifier_map__||{},' + 
-      JSON.stringify(identifierMap)+');' +
-      'window.__packt_import__=function(exportsIdentifier,alias,useDefault){' +
-      'var e=window.__packt_identifier_map__[' +
-      'window.__packt_alias_map__[exportsIdentifier][alias]' +
-      '];' +
-      'var identifier=window[e.identifier];' +
-      'return (!e.esModule&&useDefault)?{default:identifier}:identifier;' +
-      '};'
-    );
-  }
-
-  _minifyJS(content: string): string {
-    // TODO
-    return content;
+    ), { ...options, fromString: true }).code;
   }
 }

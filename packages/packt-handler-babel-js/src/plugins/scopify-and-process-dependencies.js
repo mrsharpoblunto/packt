@@ -30,23 +30,24 @@ export default function transform(babel) {
       Program: {
         enter: function(path) {
           this.exportAlias = path.scope.generateUidIdentifier(
-            this.moduleScope + 'exports'
+            this.moduleScope + 
+            (this.opts.preserveIdentifiers ? 'exports' : '')
           );
           this.moduleExport = this.exportAlias.name;
         },
         exit: function(path) {
           if (this.exportedSymbols.length) {
             // create top level export object
-            path.unshiftContainer(
-              'body',
-              t.variableDeclaration(
-                'var',
-                [
-                  t.variableDeclarator(
-                    this.exportAlias,
-                    t.objectExpression([])
-                  )
-                ]
+            path.unshiftContainer('body', 
+              t.expressionStatement(
+                t.assignmentExpression(
+                  '=',
+                  t.memberExpression(
+                    t.identifier('window'),
+                    this.exportAlias
+                  ),
+                  t.objectExpression([])
+                )
               )
             );
           }
@@ -64,7 +65,8 @@ export default function transform(babel) {
               continue;
             }
             const alias = path.scope.generateUidIdentifier(
-              this.moduleScope + decl.id.name
+              this.moduleScope + 
+              (this.opts.preserveIdentifiers ? decl.id.name : '')
             );
             path.scope.rename(decl.id.name,alias.name);
           }
@@ -80,7 +82,8 @@ export default function transform(babel) {
           !this.hoisted.hasOwnProperty(path.node.id.name)
         ) {
           const alias = path.scope.generateUidIdentifier(
-            this.moduleScope + path.node.id.name
+            this.moduleScope + 
+            (this.opts.preserveIdentifiers ? path.node.id.name : '')
           );
           path.scope.rename(path.node.id.name,alias.name);
         }
@@ -90,7 +93,8 @@ export default function transform(babel) {
         // inserting the unique scope id for this module
         if (!path.scope.parent.parent) {
           const alias = path.scope.generateUidIdentifier(
-            this.moduleScope + path.node.id.name
+            this.moduleScope + 
+            (this.opts.preserveIdentifiers ? path.node.id.name : '')
           );
           path.scope.rename(path.node.id.name,alias.name);
           this.hoisted[alias.name] = true;
@@ -468,23 +472,18 @@ function isUnreachable(path) {
 
 function getImportPlaceholder(name,exportAlias,importAliases) {
   const localImport = importAliases[name];
+  const args = [
+    t.stringLiteral(exportAlias.name),
+    t.stringLiteral(localImport.moduleName),
+  ]
+  if (localImport.symbol !== '*') {
+    args.push(t.stringLiteral(localImport.symbol));
+  }
   const importCall = t.callExpression(
     t.identifier(constants.PACKT_IMPORT_PLACEHOLDER),
-    [
-      t.stringLiteral(exportAlias.name),
-      t.stringLiteral(localImport.moduleName),
-      t.booleanLiteral(localImport.symbol === 'default'),
-    ]
+    args
   );
-
-  if (localImport.symbol !== '*') {
-    return t.memberExpression(
-      importCall,
-      t.identifier(localImport.symbol)
-    );
-  } else {
-    return importCall;
-  }
+  return importCall;
 }
 
 function exportSymbol(exportedSymbols, symbol, esModule) {

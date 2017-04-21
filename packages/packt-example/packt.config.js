@@ -62,7 +62,11 @@ module.exports = {
       require: 'packt-bundler-js',
       invariantOptions: {
         outputPathFormat: '/bundles/${name}${ext}',
-        minify: false,
+      },
+      options: {
+        base: {
+          minify: true,
+        },
       },
     },
     'raw': {
@@ -109,9 +113,8 @@ module.exports = {
             "foo": "bar",
             "__DEV__": false,
             "baz": 1,
-          }
-        },
-        variants: {
+          },
+          preserveIdentifiers: true,
         },
       },
     },
