@@ -114,7 +114,7 @@ module.exports = {
             "__DEV__": false,
             "baz": 1,
           },
-          preserveIdentifiers: true,
+          preserveIdentifiers: false,
         },
       },
     },

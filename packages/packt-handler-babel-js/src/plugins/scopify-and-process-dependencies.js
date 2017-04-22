@@ -11,6 +11,7 @@ export default function transform(babel) {
       this.exportedByValue = {};
       this.hoisted = {};
       this.importAliases = {};
+      this.symbolAliases = {};
       this.moduleScope = '_' + this.opts.scope + '_';
     },
     post() {
@@ -36,6 +37,14 @@ export default function transform(babel) {
           this.moduleExport = this.exportAlias.name;
         },
         exit: function(path) {
+          const aliases = [];
+          for (let alias in this.symbolAliases) {
+            aliases.push(this.symbolAliases[alias].declaration);
+          }
+          if (aliases.length) {
+            path.unshiftContainer('body', aliases);
+          }
+
           if (this.exportedSymbols.length) {
             // create top level export object
             path.unshiftContainer('body', 
@@ -108,8 +117,10 @@ export default function transform(babel) {
         ) {
           const localImport = getImportPlaceholder(
             path.node.key.name,
+            path.scope,
             this.exportAlias,
-            this.importAliases
+            this.importAliases,
+            this.symbolAliases
           );
           path.replaceWith(t.objectProperty(
             path.node.key,
@@ -154,8 +165,10 @@ export default function transform(babel) {
         ) {
           const localImport = getImportPlaceholder(
             path.node.name,
+            path.scope,
             this.exportAlias,
-            this.importAliases
+            this.importAliases,
+            this.symbolAliases
           );
           path.replaceWith(localImport);
           path.skip();
@@ -308,8 +321,10 @@ export default function transform(babel) {
             ) {
               local = getImportPlaceholder(
                 spec.local.name,
+                path.scope,
                 this.exportAlias,
-                this.importAliases
+                this.importAliases,
+                this.symbolAliases
               );
             }
             if (path.node.source) {
@@ -470,20 +485,54 @@ function isUnreachable(path) {
   return false;
 }
 
-function getImportPlaceholder(name,exportAlias,importAliases) {
+function getImportPlaceholder(
+  name,
+  scope,
+  exportAlias,
+  importAliases,
+  symbolAliases
+) {
   const localImport = importAliases[name];
   const args = [
     t.stringLiteral(exportAlias.name),
     t.stringLiteral(localImport.moduleName),
-  ]
-  if (localImport.symbol !== '*') {
-    args.push(t.stringLiteral(localImport.symbol));
+  ];
+
+  if (localImport.symbol === '*') {
+    // for wildcard imports we just inline the import placeholder directly
+    return t.callExpression(
+      t.identifier(constants.PACKT_IMPORT_PLACEHOLDER),
+      args
+    );
+  } else {
+    // but for specific symbol imports, we want to create a local alias
+    // variable that we can refer to, so we can save both the space of
+    // re-referring to the exportIdentifer + symbolName and save an
+    // extra property access.
+    let symbolAlias = symbolAliases[localImport.moduleName+':'+localImport.symbol];
+    if (!symbolAlias) {
+      args.push(t.stringLiteral(localImport.symbol));
+      const identifier = scope.generateUidIdentifier(
+        exportAlias.name
+      );
+      symbolAlias = symbolAliases[localImport.moduleName+':'+localImport.symbol] = {
+        identifier,
+        declaration: t.variableDeclaration(
+          'var',
+          [
+            t.variableDeclarator(
+              identifier, 
+              t.callExpression(
+                t.identifier(constants.PACKT_IMPORT_PLACEHOLDER),
+                args
+              )
+            ),
+          ]
+        ),
+      };
+    }
+    return symbolAlias.identifier;
   }
-  const importCall = t.callExpression(
-    t.identifier(constants.PACKT_IMPORT_PLACEHOLDER),
-    args
-  );
-  return importCall;
 }
 
 function exportSymbol(exportedSymbols, symbol, esModule) {
