@@ -12,7 +12,7 @@ export default function transform(babel) {
       this.hoisted = {};
       this.importAliases = {};
       this.symbolAliases = {};
-      this.moduleScope = '_' + this.opts.scope + '_';
+      this.moduleScope = this.opts.scopeTemplate.replace('${scope}',this.opts.scope);
     },
     post() {
       // inform the dependency graph what exported symbols

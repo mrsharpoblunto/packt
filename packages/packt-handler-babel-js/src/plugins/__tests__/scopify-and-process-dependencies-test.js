@@ -5,6 +5,8 @@ function transform(src, options) {
   const opts = Object.assign(
     {
       scope: '$',
+      scopeTemplate: '${scope}_',
+      preserveIdentifiers: true,
       delegate: {
         importsModule: jest.fn(),
         exportsSymbols: jest.fn(),
@@ -64,7 +66,7 @@ new _$_foobar();`
     );
 
     expect(result.code).toEqual(
-`var _$_exports = {};
+`window._$_exports = {};
 Object.assign(_$_exports, {
   foo: foo,
   bar: bar
@@ -79,7 +81,7 @@ export function bar() {}`
     );
 
     expect(result.code).toEqual(
-`var _$_exports = {};
+`window._$_exports = {};
 class _$_foo {}
 _$_exports.foo = _$_foo
 function _$_bar() {}
@@ -93,7 +95,7 @@ _$_exports.bar = _$_bar`
     );
 
     expect(result.code).toEqual(
-`var _$_exports = {};
+`window._$_exports = {};
 Object.assign(_$_exports, {
   bar: foo
 });`
@@ -113,7 +115,7 @@ function y() {
     );
 
     expect(result.code).toEqual(
-`var _$_exports = {};
+`window._$_exports = {};
 
 _$_exports.foo = "bar";
 function _$_x() {
@@ -137,7 +139,7 @@ function y() {
     );
 
     expect(result.code).toEqual(
-`var _$_exports = {};
+`window._$_exports = {};
 _$_exports.foo = "bar";
 
 function _$_x() {
@@ -156,7 +158,7 @@ export default foo;`
     );
 
     expect(result.code).toEqual(
-`var _$_exports = {};
+`window._$_exports = {};
 var _$_foo = "baz";
 _$_exports.default = _$_foo;`
     );
@@ -168,7 +170,7 @@ _$_exports.default = _$_foo;`
     );
 
     expect(result.code).toEqual(
-`var _$_exports = {};
+`window._$_exports = {};
 function _$_() {}
 _$_exports.default = _$_`
     );
@@ -180,7 +182,7 @@ _$_exports.default = _$_`
     );
 
     expect(result.code).toEqual(
-`var _$_exports = {};
+`window._$_exports = {};
 function _$_foo() {}
 _$_exports.default = _$_foo`
     );
@@ -192,7 +194,7 @@ _$_exports.default = _$_foo`
     );
 
     expect(result.code).toEqual(
-`var _$_exports = {};
+`window._$_exports = {};
 class _$_foo {}
 _$_exports.default = _$_foo`
     );
@@ -204,7 +206,7 @@ _$_exports.default = _$_foo`
     );
 
     expect(result.code).toEqual(
-`var _$_exports = {};
+`window._$_exports = {};
 Object.assign(_$_exports, __packt_import__("_$_exports", "module"));`
     );
     expect(result.opts.delegate.importsModule.mock.calls.length).toBe(1);
@@ -231,7 +233,7 @@ Object.assign(_$_exports, __packt_import__("_$_exports", "module"));`
     );
 
     expect(result.code).toEqual(
-`var _$_exports = {};
+`window._$_exports = {};
 Object.assign(_$_exports, {
   foo: __packt_import__("_$_exports", "module").foo,
   baz: __packt_import__("_$_exports", "module").bar
@@ -263,7 +265,7 @@ function x() {
     );
 
     expect(result.code).toEqual(
-`var _$_exports = {};
+`window._$_exports = {};
 _$_exports = "foo";
 function _$_x() {
   const module = {};
@@ -279,8 +281,9 @@ foo();`,
     );
 
     expect(result.code).toEqual(
-`
-__packt_import__("_$_exports", "bar", true).default();`
+`var _$_exports2 = __packt_import__("_$_exports", "bar", "default");
+
+_$_exports2();`
     );
     expect(result.opts.delegate.importsModule.mock.calls.length).toBe(1);
     expect(result.opts.delegate.importsModule.mock.calls[0][0]).toEqual(['default']);
@@ -300,9 +303,12 @@ export {
     );
 
     expect(result.code).toEqual(
-`var _$_exports = {};
+`window._$_exports = {};
+
+var _$_exports2 = __packt_import__("_$_exports", "bar", "default");
+
 Object.assign(_$_exports, {
-  foo: __packt_import__("_$_exports", "bar", true).default
+  foo: _$_exports2
 });`
     );
   });
@@ -315,9 +321,12 @@ baz();`
     );
 
     expect(result.code).toEqual(
-`
-__packt_import__("_$_exports", "bar", false).foo();
-__packt_import__("_$_exports", "bar", false).baz();`
+`var _$_exports2 = __packt_import__("_$_exports", "bar", "foo");
+
+var _$_exports3 = __packt_import__("_$_exports", "bar", "baz");
+
+_$_exports2();
+_$_exports3();`
     );
     expect(result.opts.delegate.importsModule.mock.calls.length).toBe(1);
     expect(result.opts.delegate.importsModule.mock.calls[0][0]).toEqual(['default']);
@@ -336,9 +345,12 @@ bar();`,
     );
 
     expect(result.code).toEqual(
-`
-__packt_import__("_$_exports", "bar", false).foo();
-__packt_import__("_$_exports", "bar", false).baz();`
+`var _$_exports2 = __packt_import__("_$_exports", "bar", "foo");
+
+var _$_exports3 = __packt_import__("_$_exports", "bar", "baz");
+
+_$_exports2();
+_$_exports3();`
     );
     expect(result.opts.delegate.importsModule.mock.calls.length).toBe(1);
     expect(result.opts.delegate.importsModule.mock.calls[0][0]).toEqual(['default']);
@@ -357,7 +369,7 @@ foobar.baz();`,
 
     expect(result.code).toEqual(
 `
-__packt_import__("_$_exports", "bar", false).baz();`
+__packt_import__("_$_exports", "bar").baz();`
     );
     expect(result.opts.delegate.importsModule.mock.calls.length).toBe(1);
     expect(result.opts.delegate.importsModule.mock.calls[0][0]).toEqual(['default']);
@@ -448,9 +460,12 @@ bar();`
     );
 
     expect(result.code).toBe(
-`
-__packt_import__('_$_exports', 'module', true).default();
-__packt_import__('_$_exports', 'module', false).bar();`
+`var _$_exports2 = __packt_import__('_$_exports', 'module', 'default');
+
+var _$_exports3 = __packt_import__('_$_exports', 'module', 'bar');
+
+_$_exports2();
+_$_exports3();`
     );
   });
 
@@ -462,9 +477,10 @@ bar.baz();`
     );
 
     expect(result.code).toBe(
-`
-__packt_import__('_$_exports', 'module', true).default();
-__packt_import__('_$_exports', 'module', false).baz();`
+`var _$_exports2 = __packt_import__('_$_exports', 'module', 'default');
+
+_$_exports2();
+__packt_import__('_$_exports', 'module').baz();`
     );
   });
 
@@ -490,7 +506,7 @@ class _$_foo {
   constructor() {
     const baz = "baz";
     this.func(baz.length);
-    this.func(__packt_import__('_$_exports', 'module', false).someMember);
+    this.func(__packt_import__('_$_exports', 'module').someMember);
   }
   func() {}
 }`
