@@ -30,7 +30,7 @@ module.exports = {
           path.join(__dirname,'node_modules'),
           path.join(__dirname,'shaders'),
         ],
-        extensions: ['.html','.js','.glsl'],
+        extensions: ['.html','.js','.glsl','.css'],
       },
     },
   },
@@ -65,7 +65,7 @@ module.exports = {
       },
       options: {
         base: {
-          minify: true,
+          //minify: true,
         },
       },
     },
@@ -114,9 +114,13 @@ module.exports = {
             "__DEV__": false,
             "baz": 1,
           },
-          preserveIdentifiers: false,
+          //preserveIdentifiers: false,
         },
       },
+    },
+    {
+      pattern: '\\.css$',
+      require: 'packt-handler-post-css',
     },
     {
       pattern: '\\.glsl$',

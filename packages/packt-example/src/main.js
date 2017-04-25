@@ -5,6 +5,7 @@ import { World, WorldRunner } from 'framework';
 import init from 'world-builder';
 import sims from 'sim';
 import renderers from 'render';
+import 'styles/styles.css';
 
 const canvas = document.getElementById('canvas');
 canvas.focus();

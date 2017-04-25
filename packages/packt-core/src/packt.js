@@ -270,7 +270,7 @@ export default class Packt {
           }
           break;
 
-          case 'module_resolver_error':
+          case 'module_resolve_error':
             cleanup(m.error);
             break;
 

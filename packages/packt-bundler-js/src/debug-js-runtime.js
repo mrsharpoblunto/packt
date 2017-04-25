@@ -27,19 +27,23 @@ export default function debugJSRuntime(
   }
 
   return (
-    'window.module=window.module||{};' +
-    'window.__packt_alias_map__=' +
-    'Object.assign(window.__packt_alias_map__||{},' + 
-    JSON.stringify(aliasMap)+');' +
-    'window.__packt_identifier_map__=' + 
-    'Object.assign(window.__packt_identifier_map__||{},' + 
-    JSON.stringify(identifierMap)+');' +
-    'window.__packt_import__=function(exportsIdentifier,alias,useDefault){' +
-    'var e=window.__packt_identifier_map__[' +
-    'window.__packt_alias_map__[exportsIdentifier][alias]' +
-    '];' +
-    'var identifier=window[e.identifier];' +
-    'return (!e.esModule&&useDefault)?{default:identifier}:identifier;' +
-    '};'
+`window.module=window.module||{};
+window.__packt_alias_map__ = Object.assign(
+  window.__packt_alias_map__||{},
+  ${JSON.stringify(aliasMap)}
+);
+window.__packt_identifier_map__ = Object.assign(
+  window.__packt_identifier_map__||{},
+  ${JSON.stringify(identifierMap)}
+);
+window.__packt_import__ = function(exportsIdentifier, alias, symbol) {
+  var e = window.__packt_identifier_map__[
+    window.__packt_alias_map__[exportsIdentifier][alias]
+  ];
+  var identifier = window[e.identifier];
+  return (!symbol || (symbol ==='default' && !e.esModule)) 
+    ? identifier 
+    : identifier[symbol];
+};`
   );
 }

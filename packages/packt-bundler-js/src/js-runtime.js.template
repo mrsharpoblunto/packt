@@ -1,1 +1,34 @@
 window.module = {};
+
+window.__packt_style__= function(contentHash, content) {
+  if (typeof document !== 'object' || !document.createElement) {
+    global._cssMarkup = global._cssMarkup || [];
+    global._cssMarkup.push({
+      hash: contentHash,
+      css: content,
+    });
+    return;
+  }
+
+  var head = document.getElementsByTagName('head')[0];
+  var styleElement = head.querySelector('[data-packt-hash="' + contentHash + '"]');
+
+  if (!styleElement) {
+    styleElement = document.createElement('style');
+    styleElement.type = 'text/css';
+    styleElement.setAttribute('data-packt-hash',contentHash);
+    head.appendChild(styleElement);
+    if (styleElement.styleSheet) {
+      styleElement.styleSheet.cssText = content;
+    } else {
+      styleElement.appendChild(document.createTextNode(content));
+    }
+  }
+}
+
+window.__packt_dynamic_import__ = function(url, identifier) {
+  // TODO jsonp implementation for dynamic bundles.
+  // this should append the target script to the document body & return
+  // a promise that resolves to the global identifier, once the script
+  // has been appended
+}

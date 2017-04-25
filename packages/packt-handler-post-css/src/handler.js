@@ -150,7 +150,7 @@ export default class PostCssHandler implements Handler {
     },
     options.handler.opts || {}
     );
-    const plugins: Array<string> = options.handler.plugins.slice(0) || [];
+    const plugins: Array<string> = (options.handler.plugins || []).slice(0);
 
     // allow custom logic & transforms to be instantiated via a provided
     // module

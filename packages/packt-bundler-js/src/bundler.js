@@ -5,9 +5,8 @@ import mkdirp from 'mkdirp';
 import fs from 'fs';
 import uglify from 'uglify-js';
 import path from 'path';
-import styleLoaderRuntime from './style-loader-runtime';
 import debugJSRuntime from './debug-js-runtime';
-import jsRuntime from './js-runtime';
+import * as jsRuntime from './js-runtime';
 
 const PACKT_PLACEHOLDER_PATTERN = /__packt_(\w*?)__\((.*?)\)/g;
 const JS_INDEX = 0;
@@ -66,8 +65,8 @@ export default class JsBundler implements Bundler {
       });
 
       if (!options.bundler.omitRuntime) {
-        wstream.write(jsRuntime(
-          options.bundler.minify
+        wstream.write(jsRuntime.impl(
+          !!options.bundler.minify
         ));
       }
 
@@ -76,9 +75,7 @@ export default class JsBundler implements Bundler {
       }
 
       if (cssModules.length > 0) {
-        wstream.write(styleLoaderRuntime(
-          options.bundler.minify,
-          data.paths.assetName,
+        wstream.write(jsRuntime.styleLoader(
           cssModules
         ));
       }
