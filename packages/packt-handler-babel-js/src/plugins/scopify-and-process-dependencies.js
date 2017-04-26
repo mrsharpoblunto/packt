@@ -1,10 +1,13 @@
 import * as t from 'babel-types';
-import constants from '../constants';
+import * as constants from '../constants';
 import * as helpers from './helpers';
 import evaluateExpression from './evaluate-expression-visitor';
 
 export default function transform(babel) {
   return {
+    manipulateOptions(opts, parserOpts) {
+      parserOpts.plugins.push('dynamicImport');
+    },
     pre() {
       this.exportedSymbols = [];
       this.exportedSymbols.esModule = false;
@@ -418,7 +421,37 @@ export default function transform(babel) {
       },
       CallExpression: {
         exit: function(path) {
-          if (path.node.callee.type === 'import') {
+          let required;
+          if (
+            (path.node.callee.type === 'Import' || (
+                path.node.callee.name === 'require' &&
+                !path.scope.hasBinding('require')
+              )
+            ) && !isUnreachable(path)
+          ) {
+            if (path.node.arguments.length !== 1) {
+              throw path.buildCodeFrameError(`Expected a single argument to ${node.callee.name}`);
+            } else if (path.node.arguments[0].type !== 'StringLiteral') {
+              path.traverse(evaluateExpression,{
+                skipIdentifier: path.node.callee.name || 'import',
+              });
+              if (path.node.arguments[0].type !== 'StringLiteral') {
+                throw path.buildCodeFrameError(
+                  `Argument to ${node.callee.name} must be a string literal, or expression that can be evaluated statically at build time`
+                );
+              }
+            }
+            required = path.node.arguments[0].value;
+          } else {
+            return;
+          }
+
+          if (path.node.callee.type === 'Import') {
+            path.node.callee.type = 'Identifier';
+            path.node.callee.name = constants.PACKT_DYNAMIC_IMPORT_PLACEHOLDER;
+            path.node.arguments.unshift(t.stringLiteral(this.exportAlias.name));
+            path.node.arguments.unshift(t.identifier(constants.PACKT_BUNDLE_CONTEXT_PLACEHOLDER));
+
             this.opts.delegate.importsModule(
               this.opts.variants,
               {
@@ -427,27 +460,10 @@ export default function transform(babel) {
                 type: 'dynamic',
               }
             );
-          } else if (
-            path.node.callee.name === 'require' &&
-            !path.scope.hasBinding('require') &&
-            !isUnreachable(path)
-          ) {
-            if (path.node.arguments.length !== 1) {
-              throw path.buildCodeFrameError("Expected a single argument to require");
-            } else if (path.node.arguments[0].type !== 'StringLiteral') {
-              path.traverse(evaluateExpression,{
-                skipIdentifier: 'require',
-              });
-              if (path.node.arguments[0].type !== 'StringLiteral') {
-                throw path.buildCodeFrameError(
-                  "Argument to require must be a string literal, or expression that can be evaluated statically at build time"
-                );
-              }
-            }
-            const required = path.node.arguments[0].value;
-
+          } else {
             path.node.callee.name = constants.PACKT_IMPORT_PLACEHOLDER;
             path.node.arguments.unshift(t.stringLiteral(this.exportAlias.name));
+
             this.opts.delegate.importsModule(
               this.opts.variants,
               {

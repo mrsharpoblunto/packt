@@ -11,19 +11,10 @@ export default function debugJSRuntime(
   jsModules: Array<SerializedModule>
 ): string {
   const aliasMap: { [key: string]: { [key: string]: string } } = {};
-  const identifierMap: { [key: string]: {
-    identifier: string,
-    esModule: boolean,
-  }} = {};
 
   for (let module of jsModules) {
     const mapEntry = data.moduleMap[module.resolvedModule];
-    const exportsIdentifier = mapEntry.exportsIdentifier;
-    identifierMap[module.resolvedModule] = {
-      identifier: mapEntry.exportsIdentifier,
-      esModule: mapEntry.exportsESModule,
-    };
-    aliasMap[exportsIdentifier] = module.importAliases;
+    aliasMap[mapEntry.exportsIdentifier] = module.importAliases;
   }
 
   return (
@@ -34,16 +25,28 @@ window.__packt_alias_map__ = Object.assign(
 );
 window.__packt_identifier_map__ = Object.assign(
   window.__packt_identifier_map__||{},
-  ${JSON.stringify(identifierMap)}
+  ${JSON.stringify(data.moduleMap)}
 );
-window.__packt_import__ = function(exportsIdentifier, alias, symbol) {
+window.__packt_dynamic_bundle_map__ = Object.assign(
+  window.__packt_dynamic_bundle_map__ || {},
+  ${JSON.stringify(data.dynamicBundleMap)}
+);
+window.__packt_import__ = window.__packt_import__ || function(exportsIdentifier, alias, symbol) {
   var e = window.__packt_identifier_map__[
     window.__packt_alias_map__[exportsIdentifier][alias]
   ];
-  var identifier = window[e.identifier];
-  return (!symbol || (symbol ==='default' && !e.esModule)) 
+  var identifier = window[e.exportsIdentifier];
+  return (!symbol || (symbol ==='default' && !e.exportsESModule)) 
     ? identifier 
     : identifier[symbol];
+};
+window.__packt_dynamic_import__ = window.__packt_dynamic_import__ || function(bundle, exportsIdentifier, alias) {
+  var importModule = window.__packt_alias_map__[exportsIdentifier][alias];
+  var url = window.__packt_dynamic_bundle_map__[
+    bundle + ':' + importModule
+  ];
+  var e = window.__packt_identifier_map__[importModule];
+  return window.__packt_dynamic_import_impl__(url, e.exportsIdentifier);
 };`
   );
 }

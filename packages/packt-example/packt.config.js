@@ -65,7 +65,7 @@ module.exports = {
       },
       options: {
         base: {
-          //minify: true,
+          minify: true,
         },
       },
     },

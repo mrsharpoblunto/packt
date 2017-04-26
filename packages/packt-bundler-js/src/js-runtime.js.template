@@ -1,6 +1,6 @@
-window.module = {};
+window.module = window.module || {};
 
-window.__packt_style__= function(contentHash, content) {
+window.__packt_style__= window.__packt_style__ || function(contentHash, content) {
   if (typeof document !== 'object' || !document.createElement) {
     global._cssMarkup = global._cssMarkup || [];
     global._cssMarkup.push({
@@ -26,9 +26,42 @@ window.__packt_style__= function(contentHash, content) {
   }
 }
 
-window.__packt_dynamic_import__ = function(url, identifier) {
-  // TODO jsonp implementation for dynamic bundles.
-  // this should append the target script to the document body & return
-  // a promise that resolves to the global identifier, once the script
-  // has been appended
+
+window.__packt_dynamic_import_impl__ = window.__packt_dynamic_import_impl__ || function(url, identifier) {
+  // dynamic import has already loaded
+  if (window[identifier]) {
+    return Promise.resolve(window[identifier]);
+  }
+
+  var head = document.getElementsByTagName('head')[0];
+  var scriptElement = head.querySelector('script[src="' + url + '"]');
+  var originalOnload;
+  var originalOnerror;
+
+  if (scriptElement) {
+    // dynamic import has started loading already, but isn't finished yet
+    originalOnload = scriptElement.onload;
+    originalOnerror = scriptElement.onerror;
+  } else {
+    // this is the first time the dynamic import has been requested
+    var scriptElement = document.createElement('script');
+    scriptElement.type = 'text/javascript';
+    scriptElement.async = true;
+    scriptElement.src = url;
+    var head = document.getElementsByTagName('head')[0];
+    head.appendChild(scriptElement);
+  }
+  
+  // use the native promise implementation, or whatever polyfill the user
+  // has specified - to keep the runtime size down, we don't supply a polyfill
+  return new Promise(function(resolve, reject) {
+    scriptElement.onload = function() {
+      resolve(window[identifier]);
+      originalOnload && originalOnload();
+    };
+    scriptElement.onerror = function(err) {
+      reject(err);
+      originalOnerror && originalOnError(err);
+    };
+  });
 }

@@ -14,6 +14,7 @@ export default class RawBundler implements Bundler {
     callback();
   }
   process(
+    bundleName: string,
     options: BundlerOptions,
     data: BundlerData,
     delegate: BundlerDelegate,

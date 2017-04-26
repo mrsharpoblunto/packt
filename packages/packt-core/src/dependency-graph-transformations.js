@@ -71,10 +71,10 @@ function getModuleBundles(
     // if this module exists in a libary bundle that this entrypoint bundle
     // depends on, then this module should be externalized into the library
     // bundle and left out of this one
-    if (bundleConfig.type === 'entrypoint' && bundleConfig.depends.size) {
+    if (bundleConfig.type === 'entrypoint' && Object.keys(bundleConfig.depends).length) {
       let isExternal = false;
       for (let b of module.bundles) {
-        if (bundleConfig.depends.has(b)) {
+        if (bundleConfig.depends[b]) {
           isExternal = true;
           break;
         }
@@ -91,13 +91,13 @@ function getModuleBundles(
     if (bundleConfig.commons) {
       // if it does have a common bundle, then we need to see if this module
       // passes the content type check for a common bundle
-      for (let c of bundleConfig.commons) {
+      for (let c in bundleConfig.commons) {
         const commonConfig = config.bundles[c];
         if (
-          !commonConfig.contentTypes.size ||
+          !Object.keys(commonConfig.contentTypes).length ||
           (
             module.contentType && 
-            commonConfig.contentTypes.has(module.contentType)
+            commonConfig.contentTypes[module.contentType]
           )
         ) {
           common = c;
@@ -124,7 +124,7 @@ function getModuleBundles(
     const commonConfig = config.bundles[key];
     // if the module appeared in enough individual bundles, then it should
     // go in the common bundle
-    if ((value.length / commonConfig.dependedBy.size) >= commonConfig.threshold) {
+    if ((value.length / Object.keys(commonConfig.dependedBy).length) >= commonConfig.threshold) {
       bundles.push(key);
     } else {
       // otherwise it should stay individually in all the bundles it appears in

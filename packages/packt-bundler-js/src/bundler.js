@@ -23,6 +23,7 @@ export default class JsBundler implements Bundler {
   }
 
   process(
+    bundleName: string,
     options: BundlerOptions,
     data: BundlerData,
     delegate: BundlerDelegate,
@@ -64,14 +65,15 @@ export default class JsBundler implements Bundler {
         callback(err);
       });
 
-      if (!options.bundler.omitRuntime) {
+      if (!options.bundler.minify) {
+        wstream.write('(function(__packt_bundle_context__){');
+        wstream.write(debugJSRuntime(data, jsModules));
+      }
+
+      if (!data.hasDependencies && !options.bundler.omitRuntime) {
         wstream.write(jsRuntime.impl(
           !!options.bundler.minify
         ));
-      }
-
-      if (!options.bundler.minify) {
-        wstream.write(debugJSRuntime(data, jsModules));
       }
 
       if (cssModules.length > 0) {
@@ -84,6 +86,7 @@ export default class JsBundler implements Bundler {
         for (let module of jsModules) {
           if (options.bundler.minify) {
             wstream.write(this._minifyJSModule(
+              bundleName,
               data,
               options.bundler.uglifyOptions || {},
               module, 
@@ -94,6 +97,10 @@ export default class JsBundler implements Bundler {
           }
         }
       }
+
+      if (!options.bundler.minify) {
+        wstream.write('})("' + bundleName + '")');
+      }
       wstream.end();
 
       perfStats.transform = Date.now() - start;
@@ -101,7 +108,38 @@ export default class JsBundler implements Bundler {
     });
   }
 
+  _splitArgs(args: string): Array<string> {
+    const result = [];
+    let current = '';
+    let inString = false;
+    for (let i = 0;i < args.length;++i) {
+      if (args[i]==='\'' || args[i]==='"') {
+        if (!inString) {
+          inString = true;
+        } else {
+          if (args[i-1]!=='\\') {
+            inString = false;
+          } else {
+            current += args[i];
+          }
+        }
+      } else if (inString) {
+        current += args[i];
+      } else if (args[i] === ',') {
+        result.push(current);
+        current = '';
+      } else if (args[i] !== ' ') {
+        current += args[i];
+      }
+    }
+    if (current) {
+      result.push(current);
+    }
+    return result;
+  }
+
   _minifyJSModule(
+    bundleName: string,
     data: BundlerData, 
     options: Object,
     module: SerializedModule,
@@ -109,9 +147,37 @@ export default class JsBundler implements Bundler {
   ): string {
     return uglify.minify(module.content.replace(
       PACKT_PLACEHOLDER_PATTERN,
-      (match: string, type: string, args: string) => {
-        args = JSON.parse('[' + args.replace(/\'/g,'"') + ']');
+      (match: string, type: string, rawArgs: string) => {
+        const args = this._splitArgs(rawArgs);
         switch (type) {
+          case 'dynamic_import': {
+            if (args[0] !== '__packt_bundle_context__') {
+              throw new Error(
+                'Unexpected bundle context argument in module "' +
+                module.resolvedModule + '". Expected __packt_bundle_context__' +
+                ' but got ' + args[0]
+              );
+            }
+            const resolvedAlias = module.importAliases[args[2]];
+            if (!resolvedAlias) {
+              throw new Error(
+                'No import alias "' + args[2] + '" found in module "' + 
+                module.resolvedModule
+              );
+            }
+            const importedModule = data.moduleMap[resolvedAlias];
+            if (!importedModule) {
+              throw new Error(
+                'No module "' + resolvedAlias + 
+                '" found in this bundle'
+              );
+            }
+
+            return `__packt_dynamic_import_impl__(
+              '${data.dynamicBundleMap[bundleName + ':' + resolvedAlias]}',
+              '${importedModule.exportsIdentifier}'
+            )`;
+          }
           case 'import': {
             // replace imports with the imported modules 
             // exported identifier

@@ -91,9 +91,9 @@ describe('Config',() => {
 
       expect(Object.keys(config.bundles).length).toBe(5);
       expect(config.bundles['entry2.js'].requires.length).toBe(1);
-      expect(config.bundles['entry2.js'].depends.size).toBe(1);
+      expect(Object.keys(config.bundles['entry2.js'].depends).length).toBe(1);
       expect(config.bundles['entry2.js'].requires[0]).toBe('./index.js');
-      expect(config.bundles['entry3.js'].depends.size).toBe(0);
+      expect(Object.keys(config.bundles['entry3.js'].depends).length).toBe(0);
     });
   });
 

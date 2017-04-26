@@ -470,7 +470,7 @@ export default class Packt {
       // instead of passing the bundles off to a bundler for rebundling
       for (let variant in generatedBundles) {
         const generatedVariant = generatedBundles[variant];
-        const bundleType = (bundleMap, bundles) => {
+        const bundleType = (bundleMap, bundles, dynamic) => {
           for (let bundleName in bundleMap) {
             const mapEntry = bundleMap[bundleName];
             const modules = bundles[mapEntry.hash];
@@ -484,6 +484,12 @@ export default class Packt {
                   state.contentMap
                 ),
                 paths: mapEntry.paths,
+                hasDependencies: dynamic || (
+                  config.bundles[bundleName].type === 'entrypoint' && (
+                    Object.keys(config.bundles[bundleName].commons).length!==0 ||
+                    Object.keys(config.bundles[bundleName].depends).length!==0
+                  )
+                ),
                 ...generatedBundleLookups[variant]
               }
             );
@@ -491,11 +497,13 @@ export default class Packt {
         }
         bundleType(
           generatedVariant.dynamicBundleMap, 
-          generatedVariant.dynamicBundles
+          generatedVariant.dynamicBundles,
+          true
         );
         bundleType(
           generatedVariant.staticBundleMap, 
-          generatedVariant.staticBundles
+          generatedVariant.staticBundles,
+          false
         );
       }
     });

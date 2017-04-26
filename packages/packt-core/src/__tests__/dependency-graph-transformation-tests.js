@@ -207,28 +207,34 @@ describe('dependency graph transformation tests', () => {
     const mockConfig = {
       bundles: {
         'bundle-a': {
-          commons: new Set(['common-a-js']),
+          commons: {'common-a-js': true },
         },
         'bundle-b': {
-          commons: new Set(['common-b-js']),
+          commons: {'common-b-js': true },
         },
         'bundle-c': {
-          commons: new Set(['common-b-js','common-css']),
+          commons: {
+            'common-b-js': true,
+            'common-css': true,
+          },
         },
         'common-a-js': {
-          contentTypes: new Set(['text/javascript']),
+          contentTypes: { 'text/javascript': true },
           threshold: 1.0,
-          dependedBy: new Set(['bundle-a']),
+          dependedBy: { 'bundle-a': true },
         },
         'common-b-js': {
-          contentTypes: new Set(['text/javascript']),
+          contentTypes: { 'text/javascript': true },
           threshold: 0.6,
-          dependedBy: new Set(['bundle-b','bundle-c']),
+          dependedBy: {
+            'bundle-b': true,
+            'bundle-c': true,
+          },
         },
         'common-css': {
-          contentTypes: new Set(['text/css']),
+          contentTypes: { 'text/css': true },
           threshold: 0,
-          dependedBy: new Set(['bundle-c']),
+          dependedBy: { 'bundle-c': true },
         },
       }
     }
@@ -313,11 +319,11 @@ describe('dependency graph transformation tests', () => {
       bundles: {
         'bundle-a': {
           type: 'entrypoint',
-          depends: new Set(['lib-bundle']),
+          depends: { 'lib-bundle': true },
         },
         'lib-bundle': {
           type: 'library',
-          dependedBy: new Set(['bundle-a']),
+          dependedBy: { 'bundle-a': true },
         },
       }
     }
@@ -470,7 +476,7 @@ describe('dependency graph transformation tests', () => {
       bundles: {
         'bundle-a.js': {
           type: 'entrypoint',
-          depends: new Set(),
+          depends: {},
           bundler: 'js',
         },
       },
@@ -516,7 +522,7 @@ describe('dependency graph transformation tests', () => {
       'bundle-a.js:/src/module-4.js',
     ]);
 
-    const MODULE6_HASH = 'f82f0c';
+    const MODULE6_HASH = '810980';
     expect(generatedBundles.dynamicBundleMap['bundle-a.js:/src/module-6.js']).toEqual({
       hash: MODULE6_HASH,
       paths: {
@@ -530,7 +536,7 @@ describe('dependency graph transformation tests', () => {
       '/src/module-6.js',
     ]);
 
-    const MODULE4_HASH = '57ed7b4';
+    const MODULE4_HASH = '5527967';
     expect(generatedBundles.dynamicBundleMap['bundle-a.js:/src/module-4.js']).toEqual({
       hash: MODULE4_HASH,
       paths: {
@@ -545,7 +551,7 @@ describe('dependency graph transformation tests', () => {
       '/src/module-4.js',
     ]);
 
-    const BUNDLEA_HASH = '29a463';
+    const BUNDLEA_HASH = 'ef08d6';
     expect(generatedBundles.staticBundleMap['bundle-a.js']).toEqual({
       hash: BUNDLEA_HASH,
       paths: {

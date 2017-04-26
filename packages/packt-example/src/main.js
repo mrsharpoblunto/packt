@@ -57,3 +57,7 @@ if (__DEV__) {
         module.hot.decline();
     }
 }
+
+import('dynamically-loaded').then((exports) => {
+  exports.default();
+});

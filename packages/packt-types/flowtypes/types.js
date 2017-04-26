@@ -42,11 +42,11 @@ export type PacktConfig = {|
         name: string,
         folder: boolean,
       } | string>,
-      depends: Set<string>,
-      contentTypes: Set<string>,
+      depends: { [key: string]: boolean },
+      contentTypes: { [key: string]: boolean },
       threshold: number,
-      dependedBy: Set<string>,
-      commons: Set<string>,
+      dependedBy: { [key: string]: boolean },
+      commons: { [key: string]: boolean },
       bundler: string,
     |}
   },
@@ -253,6 +253,7 @@ export type BundlerData = {
   }},
   modules: Array<SerializedModule>,
   paths: OutputPaths,
+  hasDependencies: boolean,
 };
 
 export type BundlerOptions = {|
@@ -279,6 +280,7 @@ export interface Bundler {
   ) => void,
 
   +process: (
+    bundleName: string,
     options: BundlerOptions,
     data: BundlerData, 
     delegate: BundlerDelegate,

@@ -411,6 +411,47 @@ function _$_bar() {
     });
   });
 
+  it('Records dynamic imports with resolvable expressions',() => {
+    const result = transform(
+`const x = import((!false ? "foo" : 0) + "bar");
+function bar() {
+  const az = "az";
+  const y = import(true ? ("b"+az) : "goo");
+  if (false) {
+    import('unneeded');
+  }
+  x.then(() => console.log('loaded'));
+}`,
+    );
+
+    expect(result.code).toEqual(
+`const _$_x = __packt_dynamic_import__(__packt_bundle_context__, "_$_exports", "foobar");
+function _$_bar() {
+  const az = "az";
+  const y = __packt_dynamic_import__(__packt_bundle_context__, "_$_exports", "baz");
+  if (false) {
+    import('unneeded');
+  }
+  _$_x.then(() => console.log('loaded'));
+}`
+    );
+    // Note the unneeded import is not transformed, or registered due 
+    // to it being unreachable
+    expect(result.opts.delegate.importsModule.mock.calls.length).toBe(2);
+    expect(result.opts.delegate.importsModule.mock.calls[0][0]).toEqual(['default']);
+    expect(result.opts.delegate.importsModule.mock.calls[0][1]).toEqual({
+      source: 'foobar',
+      symbols: ['*'],
+      type: 'dynamic',
+    });
+    expect(result.opts.delegate.importsModule.mock.calls[1][0]).toEqual(['default']);
+    expect(result.opts.delegate.importsModule.mock.calls[1][1]).toEqual({
+      source: 'baz',
+      symbols: ['*'],
+      type: 'dynamic',
+    });
+  });
+
   it('Records requires with resolvable expressions',() => {
     const result = transform(
 `const x = require((!false ? "foo" : 0) + "bar");

@@ -65,11 +65,11 @@ function validate(
       value.workingDirectory = workingDirectory;
       for (let b in value.bundles) {
         value.bundles[b] = {
-          dependedBy: new Set(),
-          commons: new Set(),
+          dependedBy: {},
+          commons: {},
           requires: [],
-          depends: new Set(),
-          contentTypes: new Set(),
+          depends: {},
+          contentTypes: {},
           threshold: 0,
           ...value.bundles[b]
         };
@@ -79,18 +79,24 @@ function validate(
         const currentBundle = value.bundles[b];
         if (currentBundle.type === 'entrypoint') {
           const commonTypes: Set<string> = new Set();
-          const dependencies = typeof(currentBundle.depends) === 'string'
-            ? [currentBundle.depends]
-            : currentBundle.depends;
+          let dependencies = [];
+          if (typeof(currentBundle.depends) === 'string') {
+            dependencies = [currentBundle.depends];
+          } else if (Array.isArray(currentBundle.depends)) {
+            dependencies = currentBundle.depends;
+          }
 
           for (let dep of dependencies) {
             const depBundle = value.bundles[dep];
             if (depBundle.type !==  'entrypoint') {
-              depBundle.dependedBy.add(b);
+              depBundle.dependedBy[b] = true;
             }
             if (depBundle.type === 'common') {
-              depBundle.contentTypes = new Set(depBundle.contentTypes);
-              for (let contentType of depBundle.contentTypes) {
+              depBundle.contentTypes = Array.isArray(depBundle.contentTypes) ? depBundle.contentTypes.reduce((prev, next) => {
+                prev[next] = true;
+                return prev;
+              },{}) : depBundle.contentTypes;
+              for (let contentType in depBundle.contentTypes) {
                 if (commonTypes.has(contentType)) {
                   return reject(new PacktConfigError(
                   {
@@ -103,18 +109,21 @@ function validate(
                 }
                 commonTypes.add(contentType);
               }
-              currentBundle.commons.add(dep);
+              currentBundle.commons[dep] = true;
             }
           }
         }
         if (typeof(value.bundles[b].requires) === 'string') {
           value.bundles[b].requires = [value.bundles[b].requires];
         }
-        value.bundles[b].depends = new Set(
-          typeof(value.bundles[b].depends) === 'string' 
-          ? [value.bundles[b].depends]
-          : value.bundles[b].depends
-        );
+        if (typeof(value.bundles[b].depends) === 'string') {
+          value.bundles[b].depends = { [value.bundles[b].depends]: true };
+        } else if (Array.isArray(value.bundles[b].depends)) {
+          value.bundles[b].depends = (value.bundles[b].depends: any).reduce((prev, next) => {
+            prev[next] = true;
+            return prev;
+          },{});
+        }
       }
       resolve(value);
     });

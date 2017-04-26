@@ -354,7 +354,9 @@ class WorkerProcess {
 
 
   _processBundle(msg: ProcessBundleMessage) {
-    const bundlerKey = this._bundlerLookup[msg.bundleName];
+    const dynamicBundleIndex = msg.bundleName.indexOf(':');
+    const bundleName = dynamicBundleIndex > 0 ? msg.bundleName.substr(0, dynamicBundleIndex) : msg.bundleName;
+    const bundlerKey = this._bundlerLookup[bundleName];
     const bundler = this._bundlers[bundlerKey];
     if (!bundler) {
       this._sendMessage({
@@ -362,18 +364,19 @@ class WorkerProcess {
         bundleName: msg.bundleName,
         variant: msg.variant,
         bundler: '',
-        error: 'No bundler matched the name '+ msg.bundleName,
+        error: 'No bundler matched the name '+ bundleName,
       });
       this._sendMessage({ type: 'task_complete' });
       return;
     }
 
     const delegate = bundler.delegateFactory(
-      msg.bundleName, 
+      bundleName, 
       msg.variant
     );
 
     bundler.bundler.process(
+      bundleName,
       bundler.options[msg.variant],
       msg.data,
       delegate,
