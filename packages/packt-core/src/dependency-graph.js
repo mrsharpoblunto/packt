@@ -18,6 +18,9 @@ export class DependencyNode {
   generatedAssets: { [key: string]: string };
   bundles: Set<string>;
 
+  _symbolCache: { [key: string]: Array<string> };
+  _importCache: { [key: string]: 'static' | 'dynamic' };
+
   constructor(module: string) {
     this.module = module;
     this.importedBy = {};
@@ -32,6 +35,9 @@ export class DependencyNode {
     this.contentHash = null;
     this.generatedAssets = {};
     this.bundles = new Set();
+
+    this._symbolCache = {};
+    this._importCache = {};
   }
 
   /**
@@ -97,6 +103,8 @@ export class DependencyNode {
     if (!importedBy) {
       importedBy = this.importedBy[node.module] = node;
     }
+    this._symbolCache = {};
+    this._importCache = {};
   }
 
   exportsSymbols(exported: ExportDeclaration) {
@@ -113,12 +121,18 @@ export class DependencyNode {
   }
 
   getImportTypeForBundle(bundleName: string): ('static' | 'dynamic') {
+    let cached = this._importCache[bundleName];
+    if (cached) {
+      return cached;
+    }
+
     let possiblyDynamic = false;
     for (let key in this.importedBy) {
       const importedBy = this.importedBy[key];
       if (importedBy.bundles.has(bundleName)) {
         const thisImport = importedBy.imports[this.module];
         if (thisImport.type === 'static') {
+          this._importCache[bundleName] = 'static';
           return 'static';
         } else {
           possiblyDynamic = true;
@@ -127,16 +141,24 @@ export class DependencyNode {
     }
     // an import can only be dynamic if its never imported statically in the
     // current bundle. Any static imports override the other dynamic import
-    return possiblyDynamic ? 'dynamic' : 'static';
+    cached = possiblyDynamic ? 'dynamic' : 'static';
+    this._importCache[bundleName] = cached;
+    return cached;
   }
 
   getUsedSymbolsForBundle(bundleName: string): Array<string> {
+    let cached = this._symbolCache[bundleName];
+    if (cached) {
+      return cached;
+    }
+
     const used = new Set();
     for (let key in this.importedBy) {
       const importedBy = this.importedBy[key];
       if (importedBy.bundles.has(bundleName)) {
         const symbols = importedBy.imports[this.module].symbols;
         if (symbols.has('*')) {
+          this._symbolCache[bundleName] = ['*'];
           return ['*'];
         } else {
           for (let v of symbols) {
@@ -149,6 +171,7 @@ export class DependencyNode {
     for (let v of used) {
       result.push(v);
     }
+    this._symbolCache[bundleName] = result;
     return result;
   }
 
