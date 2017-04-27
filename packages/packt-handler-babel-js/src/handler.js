@@ -123,6 +123,9 @@ export default class BabelJsHandler implements Handler {
     let start = Date.now();
 
     this._ensureParserOptions(options, delegate);
+    stats.transform = Date.now() - start;
+
+    start = Date.now();
     fs.readFile(resolvedModule,'utf8',(err,source) => {
       stats.diskIO = Date.now() - start;
       if (err) {
@@ -131,7 +134,6 @@ export default class BabelJsHandler implements Handler {
       }
 
       start = Date.now();
-
       let ast;
       try
       {
@@ -156,8 +158,13 @@ export default class BabelJsHandler implements Handler {
         return callback(ex);
       }
 
-      const needsDeepCopy = Object.keys(options).length > 1;
+      const variantKeys = Object.keys(options);
+      // divide the parse time up evenly amongst each variant transform
+      const parseTime = (Date.now() - start) / variantKeys.length
+      const needsDeepCopy = variantKeys.length > 1;
+
       for (let key in options) {
+        const vStart = Date.now();
         const variant = options[key];
         const variantAst = needsDeepCopy ? this._cloneAst(ast) : ast;
 
@@ -180,8 +187,7 @@ export default class BabelJsHandler implements Handler {
               delegate
             )
           );
-          stats.transform = Date.now() - start;
-          start = Date.now();
+          stats.transform = Date.now() - vStart + parseTime;
           callback(
             null,
             [key],

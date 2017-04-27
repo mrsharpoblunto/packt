@@ -5,9 +5,10 @@
   "main": "index.js",
   "scripts": {
     "test": "NODE_ENV=test jest",
-    "build": "npm run build:clean && npm run build:lib",
+    "build": "npm run build:clean && npm run build:lib && npm run build:runtime",
     "build:clean": "rimraf lib",
-    "build:lib": "babel -d lib src --ignore '**/__tests__/**'"
+    "build:lib": "babel -d lib src --ignore '**/__tests__/**'",
+    "build:runtime": "cp src/*.js.template lib"
   },
   "jest": {
     "testPathDirs": [

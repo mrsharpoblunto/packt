@@ -48,6 +48,7 @@ export type PacktConfig = {|
       dependedBy: { [key: string]: boolean },
       commons: { [key: string]: boolean },
       bundler: string,
+      bundlerOptions: { [key: string]: Object },
     |}
   },
   bundlers: { [key: string]: {|

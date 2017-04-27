@@ -299,6 +299,16 @@ describe('Config',() => {
           type: 'entrypoint',
           requires: './index.js',
           bundler: 'js',
+          bundlerOptions: {
+            base: {
+              minify: false,
+            },
+            variants: {
+              'prod': {
+                omitRuntime: true,
+              },
+            },
+          },
         },
         'library.js': {
           type: 'library',
@@ -330,6 +340,11 @@ describe('Config',() => {
       bundlers: {
         'js': {
           require: './bundler-js',
+          options: {
+            base: {
+              minify: true,
+            }
+          }
         },
       },
       handlers: [
@@ -369,6 +384,9 @@ describe('Config',() => {
       expect(config.handlers[0].invariantOptions).toBeTruthy();
       expect(config.handlers[0].invariantOptions.strict).toBe(false);
 
+      expect(Object.keys(config.bundles['entry3.js'].bundlerOptions)).toEqual(
+        ['en_US','en_GB','prod','dev']);
+
       expect(Object.keys(config.bundlers['js'].options)).toEqual(
         ['en_US','en_GB','prod','dev']);
 
@@ -382,6 +400,14 @@ describe('Config',() => {
       expect(config.handlers[0].options['prod']).toEqual({
         sourceMaps: false,
         minify: true,
+      });
+
+      expect(config.bundlers['js'].options['dev']).toEqual({
+        minify: true,
+      });
+      expect(config.bundles['entry3.js'].bundlerOptions['prod']).toEqual({
+        omitRuntime: true,
+        minify: false,
       });
     });
   });

@@ -22,7 +22,10 @@ class WorkerProcess {
       resolvedModule: string
     ) => HandlerDelegate,
   |}>;
-  _bundlerLookup: { [key: string]: string };
+  _bundles: { [key: string]: {
+    bundler: string,
+    bundlerOptions: { [key: string]: Object },
+  }};
   _bundlers: { [key: string]: {|
     invariantOptions: BundlerOptions,
     options: { [key: string]: BundlerOptions },
@@ -151,9 +154,13 @@ class WorkerProcess {
       this._bundlers[b] = bundler;
     }
 
-    this._bundlerLookup = Object.keys(msg.config.bundles).reduce(
+    this._bundles = Object.keys(msg.config.bundles).reduce(
       (prev, next) => {
-        prev[next] = msg.config.bundles[next].bundler
+        const bundle = msg.config.bundles[next];
+        prev[next] = {
+          bundler: bundle.bundler,
+          bundlerOptions: bundle.bundlerOptions,
+        };
         return prev;
       },{}
     );
@@ -356,8 +363,8 @@ class WorkerProcess {
   _processBundle(msg: ProcessBundleMessage) {
     const dynamicBundleIndex = msg.bundleName.indexOf(':');
     const bundleName = dynamicBundleIndex > 0 ? msg.bundleName.substr(0, dynamicBundleIndex) : msg.bundleName;
-    const bundlerKey = this._bundlerLookup[bundleName];
-    const bundler = this._bundlers[bundlerKey];
+    const bundle = this._bundles[bundleName];
+    const bundler = this._bundlers[bundle.bundler];
     if (!bundler) {
       this._sendMessage({
         type: 'bundle_content_error',
@@ -375,9 +382,15 @@ class WorkerProcess {
       msg.variant
     );
 
+    const bundlerOptions = { ...bundler.options[msg.variant]  };
+    bundlerOptions.bundler = {
+      ...bundlerOptions.bundler,
+      ...bundle.bundlerOptions[msg.variant],
+    };
+
     bundler.bundler.process(
       bundleName,
-      bundler.options[msg.variant],
+      bundlerOptions,
       msg.data,
       delegate,
       (err: ?(Error | string), response) => {
@@ -386,7 +399,7 @@ class WorkerProcess {
             type: 'bundle_content_error',
             bundleName: msg.bundleName,
             variant: msg.variant,
-            bundler: bundlerKey,
+            bundler: bundle.bundler,
             error: typeof err === 'string' ? err : err.stack,
           });
         } else if (response) {
@@ -394,7 +407,7 @@ class WorkerProcess {
             type: 'bundle_content',
             bundleName: msg.bundleName,
             variant: msg.variant,
-            bundler: bundlerKey,
+            bundler: bundle.bundler,
             perfStats: response.perfStats,
           });
         }

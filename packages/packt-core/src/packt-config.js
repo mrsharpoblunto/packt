@@ -8,7 +8,6 @@ import joi from 'joi';
 import os from 'os';
 import chalk from 'chalk';
 
-
 export function parseConfig(
   filename: string, 
   json: Object
@@ -262,6 +261,10 @@ function generateSchema(
         otherwise: joi.forbidden(),
       }),
       bundler: customJoi.string().bundler(bundlers).allow(null),
+      bundlerOptions: joi.object({
+        base: joi.object({}).default().unknown(),
+        variants: joi.object({}).default().unknown(),
+      }).default(),
     })).min(1).required(),
     bundlers: joi.object({}).pattern(/.*/,joi.object({
       require: customJoi.string().resolvable(resolved).required(),
@@ -363,6 +366,16 @@ function buildVariants(config: PacktConfig): Promise<PacktConfig> {
       }
     }
   }
+  for (let b in config.bundles) {
+    const bundle = config.bundles[b];
+    const extraVariants =
+      Object.keys(bundle.bundlerOptions.variants);
+    for (let extra of extraVariants) {
+      if (!variants.find((v) => v === extra)) {
+        variants.push(extra);
+      }
+    }
+  }
 
   config.hasVariants = !!variants.length;
   config.options = varyOptions(variants, config.options);
@@ -372,6 +385,10 @@ function buildVariants(config: PacktConfig): Promise<PacktConfig> {
   for (let b in config.bundlers) {
     const bundler = config.bundlers[b];
     bundler.options = varyOptions(variants, bundler.options);
+  }
+  for (let b in config.bundles) {
+    const bundle = config.bundles[b];
+    bundle.bundlerOptions = varyOptions(variants, bundle.bundlerOptions);
   }
   return Promise.resolve(config);
 }
