@@ -37,12 +37,13 @@ export default class BabelJsHandler implements Handler {
       parserOptions: { 
         sourceType: 'module',
         plugins: [],
+        ...(invariantOptions.handler.babelParserOptions || {})
       },
       loadedParserOptions: false,
     };
 
-    if (invariantOptions.handler.transformOptsProcessor) {
-      delegate.resolve(invariantOptions.handler.transformOptsProcessor, 
+    if (invariantOptions.handler.babelOptionsProcessor) {
+      delegate.resolve(invariantOptions.handler.babelOptionsProcessor, 
       (err: ?Error, resolved: ?string) => {
         if (err) {
           return callback(err);
@@ -254,7 +255,6 @@ export default class BabelJsHandler implements Handler {
     opts.plugins.unshift([
       require('./plugins/scopify-and-process-dependencies').default,
       {
-        scopeTemplate: options.handler.scopeTemplate || '_${scope}_',
         preserveIdentifiers: !!options.handler.preserveIdentifiers,
         delegate,
         scope: scopeId,

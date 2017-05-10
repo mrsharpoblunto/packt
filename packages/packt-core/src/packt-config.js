@@ -211,13 +211,20 @@ function generateSchema(
       outputPath: joi.string().default(path.join(workingDirectory,'build')),
       cachePath: joi.string().default(path.join(workingDirectory,'.packt-cache')),
       outputPublicPath: joi.string().default('/'),
-      outputHash: joi.any().valid('md5','sha1','sha2').default('md5'),
+      outputHash: joi.any().valid('md5','sha1','sha256').default('md5'),
       outputHashLength: joi.number().min(1).max(16).default(12),
     }).default(),
     options: joi.object({
       base: joi.object({}).default().unknown(),
       variants: joi.object({}).default().unknown(),
     }).default(),
+    // TODO add staticAssets section.
+    // specify folders
+    //invariantOptions: joi.object({
+    //    TODO image optimization options + recursiveSearchForAssetReferences
+    //    outputPathFormat: joi.string().default('/bundles/${name}_${hash}${ext}'),
+    //    assetNameFormat: joi.string().default('${name}${ext}'),
+    //  }).default().unknown(),
     bundles: joi.object({}).pattern(/.*/,joi.object({
       type: joi.any().valid(
         'entrypoint',

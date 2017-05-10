@@ -24,8 +24,7 @@ window.__packt_style__= window.__packt_style__ || function(contentHash, content)
       styleElement.appendChild(document.createTextNode(content));
     }
   }
-}
-
+};
 
 window.__packt_dynamic_import_impl__ = window.__packt_dynamic_import_impl__ || function(url, identifier) {
   // dynamic import has already loaded
@@ -64,4 +63,10 @@ window.__packt_dynamic_import_impl__ = window.__packt_dynamic_import_impl__ || f
       originalOnerror && originalOnError(err);
     };
   });
-}
+};
+
+window.__packt_unresolvable_import__ = window.__packt_unresolvable_import || function(modulePath) {
+  var err = new Error('Packt was unable to resolve the module ' + modulePath + ' at build time');
+  err.code = 'MODULE_NOT_FOUND';
+  throw err;
+};

@@ -4,8 +4,7 @@ import {transform as babelTransform} from 'babel-core';
 function transform(src, options) {
   const opts = Object.assign(
     {
-      scope: '$',
-      scopeTemplate: '${scope}_',
+      scope: '_$_',
       preserveIdentifiers: true,
       delegate: {
         importsModule: jest.fn(),
@@ -83,9 +82,9 @@ export function bar() {}`
     expect(result.code).toEqual(
 `window._$_exports = {};
 class _$_foo {}
-_$_exports.foo = _$_foo
+_$_exports.foo = _$_foo;
 function _$_bar() {}
-_$_exports.bar = _$_bar`
+_$_exports.bar = _$_bar;`
     );
   });
 
@@ -172,7 +171,7 @@ _$_exports.default = _$_foo;`
     expect(result.code).toEqual(
 `window._$_exports = {};
 function _$_() {}
-_$_exports.default = _$_`
+_$_exports.default = _$_;`
     );
   });
 
@@ -184,7 +183,7 @@ _$_exports.default = _$_`
     expect(result.code).toEqual(
 `window._$_exports = {};
 function _$_foo() {}
-_$_exports.default = _$_foo`
+_$_exports.default = _$_foo;`
     );
   });
 
@@ -196,7 +195,7 @@ _$_exports.default = _$_foo`
     expect(result.code).toEqual(
 `window._$_exports = {};
 class _$_foo {}
-_$_exports.default = _$_foo`
+_$_exports.default = _$_foo;`
     );
   });
 
@@ -491,6 +490,25 @@ function _$_bar() {
       symbols: ['*'],
       type: 'static',
     });
+  });
+
+  it('Emits warnings for requires with unresolvable expressions',() => {
+    const result = transform(
+`const x = require("bar" + baz);`,
+    );
+
+    expect(result.code).toEqual(
+`const _$_x = __packt_unresolvable_import__("bar" + baz);`
+    );
+    // Note the unneeded import is not transformed, or registered due 
+    // to it being unreachable
+    expect(result.opts.delegate.importsModule.mock.calls.length).toBe(0);
+    expect(result.opts.delegate.emitWarning.mock.calls.length).toBe(1);
+    expect(result.opts.delegate.emitWarning.mock.calls[0][0]).toEqual(['default']);
+    expect(result.opts.delegate.emitWarning.mock.calls[0][1]).toEqual(
+      'Argument ("bar" + baz) to require should be a string literal, or expression that can be evaluated ' +
+      'statically at build time. This statement will cause an exception if called at runtime'
+    );
   });
 
   it('allows default and named imports in a single statement',() => {

@@ -73,6 +73,40 @@ describe('built in resolver',() => {
     });
   });
 
+  it('resolves an absolute path without a file extension to a file preferentially before a package or index file',() => {
+    return new Promise((resolve,reject) => {
+
+      fs.stat.mockImplementation((path,callback) => {
+        if (
+          path === '/my-project/modules/foobar.css' || 
+          path === '/my-project/modules/foobar.js' ||
+          path === '/my-project/modules/foobar/index.js'
+        ) {
+          callback(null,{
+            isFile: () => true,
+          });
+        } else if (path === '/my-project/modules/foobar') {
+          callback(null,{
+            isFile: () => false,
+          });
+        } else {
+          callback(new Error('not found'));
+        }
+      });
+
+      resolver.resolve('/my-project/modules/foobar','/my-project/modules/foo.js',false,(err,resolved) => {
+        try {
+          expect(err).toBeFalsy();
+          expect(resolved).toEqual('/my-project/modules/foobar.js');
+          resolve();
+        } catch (ex) {
+          reject(ex);
+        }
+      });
+
+    });
+  });
+
   it('resolves a context relative path with a file extension',() => {
     return new Promise((resolve,reject) => {
 
@@ -243,6 +277,40 @@ describe('built in resolver',() => {
 
   });
 
+  it('resolves a relative path with a file extension that is not a default search extension',() => {
+    return new Promise((resolve,reject) => {
+
+      fs.stat.mockImplementation((path,callback) => {
+        try {
+          if (path.indexOf('.css')>=0) {
+            expect(path).toEqual('/my-project/node_modules/foobar.css');
+            callback(null,{
+              isFile: () => true,
+            });
+          } else {
+            callback(null,{
+              isFile: () => false,
+            });
+          }
+        } catch (err) {
+          callback(err);
+        }
+      });
+
+      resolver.resolve('foobar.css','/my-project/modules/foo.js',false,(err,resolved) => {
+        try {
+          expect(err).toBeFalsy();
+          expect(resolved).toEqual('/my-project/node_modules/foobar.css');
+          resolve();
+        } catch (ex) {
+          reject(ex);
+        }
+      });
+
+    });
+
+  });
+
   it('cannot resolve a relative path that resolves to a directory',() => {
     return new Promise((resolve,reject) => {
 
@@ -263,6 +331,8 @@ describe('built in resolver',() => {
           expect(err.attempts).toEqual([
             '/my-project/modules/node_modules/foobar.js',
             '/my-project/node_modules/foobar.js',
+            '/my-project/node_modules/foobar.js.js',
+            '/my-project/node_modules/foobar.js.jsx',
             '/my-project/node_modules/foobar.js/index.js',
             '/my-project/node_modules/foobar.js/index.jsx'
           ])

@@ -1,4 +1,5 @@
 import * as t from 'babel-types';
+import generate from 'babel-generator';
 import * as constants from '../constants';
 import * as helpers from './helpers';
 import evaluateExpression from './evaluate-expression-visitor';
@@ -15,7 +16,7 @@ export default function transform(babel) {
       this.hoisted = {};
       this.importAliases = {};
       this.symbolAliases = {};
-      this.moduleScope = this.opts.scopeTemplate.replace('${scope}',this.opts.scope);
+      this.moduleScope = this.opts.scope;
     },
     post() {
       // inform the dependency graph what exported symbols
@@ -244,18 +245,22 @@ export default function transform(babel) {
             }
             path.replaceWithMultiple([
               decl,
-              t.assignmentExpression(
-                '=',
-                defaultMember,
-                decl.id
+              t.expressionStatement(
+                t.assignmentExpression(
+                  '=',
+                  defaultMember,
+                  decl.id
+                )
               )
             ]);
           } else {
             path.replaceWith(
-              t.assignmentExpression(
-                '=',
-                defaultMember,
-                decl
+              t.expressionStatement(
+                t.assignmentExpression(
+                  '=',
+                  defaultMember,
+                  decl
+                )
               )
             );
           }
@@ -278,10 +283,12 @@ export default function transform(babel) {
             );
             path.replaceWithMultiple([
               path.node.declaration,
-              t.assignmentExpression(
-                '=',
-                namedMember,
-                path.node.declaration.id
+              t.expressionStatement(
+                t.assignmentExpression(
+                  '=',
+                  namedMember,
+                  path.node.declaration.id
+                )
               )
             ]);
           } else if (path.node.declaration.type === 'VariableDeclaration') {
@@ -436,9 +443,15 @@ export default function transform(babel) {
                 skipIdentifier: path.node.callee.name || 'import',
               });
               if (path.node.arguments[0].type !== 'StringLiteral') {
-                throw path.buildCodeFrameError(
-                  `Argument to ${node.callee.name} must be a string literal, or expression that can be evaluated statically at build time`
+                const nodeStr = generate(
+                  path.node.arguments[0],
                 );
+                this.opts.delegate.emitWarning(
+                  this.opts.variants,
+                  `Argument (${nodeStr.code}) to ${path.node.callee.name} should be a string literal, or expression that can be evaluated statically at build time. This statement will cause an exception if called at runtime`
+                );
+                path.node.callee.name = constants.PACKT_UNRESOLVABLE_IMPORT_PLACEHOLDER;
+                return;
               }
             }
             required = path.node.arguments[0].value;

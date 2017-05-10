@@ -38,7 +38,7 @@ export default class ScopeIdGenerator {
       return this._idPool.shift();
     }
 
-    result = '';
+    result = '_';
     let id = this._nextId++;
     while (true) {
       result = DIGITS[id & 0x3f] + result;
@@ -47,6 +47,7 @@ export default class ScopeIdGenerator {
         break;
       }
     }
+    result += '_';
     this._map[resolvedModuleName] = result;
     return result;
   }

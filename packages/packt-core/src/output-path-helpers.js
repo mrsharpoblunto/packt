@@ -3,6 +3,7 @@
  */
 import path from 'path';
 import crypto from 'crypto';
+import {hashConfig} from './config-hasher';
 
 const TEMPLATE_REGEX = /\$\{(.*?)\}/g;
 
@@ -11,8 +12,8 @@ export default class OutputPathHelpers {
   _configHash: string;
 
   constructor(config: PacktConfig) {
+    this._configHash = hashConfig(config);
     this._config = config;
-    this._configHash = this.generateHash(JSON.stringify(config));
   }
 
   getBundlerOutputPaths(

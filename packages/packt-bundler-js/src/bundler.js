@@ -65,42 +65,48 @@ export default class JsBundler implements Bundler {
         callback(err);
       });
 
-      if (!options.bundler.minify) {
-        wstream.write('(function(__packt_bundle_context__){');
-        wstream.write(debugJSRuntime(data, jsModules));
-      }
+      try {
+        if (!options.bundler.minify) {
+          wstream.write('(function(__packt_bundle_context__){');
+          wstream.write(debugJSRuntime(data, jsModules));
+        }
 
-      if (!data.hasDependencies && !options.bundler.omitRuntime) {
-        wstream.write(jsRuntime.impl(
-          !!options.bundler.minify
-        ));
-      }
+        if (!data.hasDependencies && !options.bundler.omitRuntime) {
+          wstream.write(jsRuntime.impl(
+            !!options.bundler.minify
+          ));
+        }
 
-      if (cssModules.length > 0) {
-        wstream.write(jsRuntime.styleLoader(
-          cssModules
-        ));
-      }
+        if (cssModules.length > 0) {
+          wstream.write(jsRuntime.styleLoader(
+            cssModules
+          ));
+        }
 
-      if (jsModules.length > 0) {
-        for (let module of jsModules) {
-          if (options.bundler.minify) {
-            wstream.write(this._minifyJSModule(
-              bundleName,
-              data,
-              options.bundler.uglifyOptions || {},
-              module, 
-              delegate));
-          } else {
-            wstream.write(module.content);
-            wstream.write(';\n');
+        if (jsModules.length > 0) {
+          for (let module of jsModules) {
+            if (options.bundler.minify) {
+              wstream.write(this._minifyJSModule(
+                bundleName,
+                data,
+                options.bundler.uglifyOptions || {},
+                module, 
+                delegate));
+            } else {
+              wstream.write(module.content);
+              wstream.write(';\n');
+            }
           }
         }
+
+        if (!options.bundler.minify) {
+          wstream.write('})("' + bundleName + '")');
+        }
+      } catch (ex) {
+        callback(ex);
+        return;
       }
 
-      if (!options.bundler.minify) {
-        wstream.write('})("' + bundleName + '")');
-      }
       wstream.end();
 
       perfStats.transform = Date.now() - start;

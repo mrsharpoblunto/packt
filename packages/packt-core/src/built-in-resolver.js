@@ -189,37 +189,40 @@ export default class BuiltInResolver {
           context.attempts.pop();
           callback(null, modulePath);
         } else {
-          // modulePath is a folder, check for package.json
-          // then index[+extensions]
-          this._readPackageMain(modulePath,(err,packageMain) => {
-            if (err) {
-              // no package.json present - see if an index file is
-              this._searchExtensions(path.join(modulePath,'index'),0,context,callback);
-            } else if (packageMain) {
-              const main = packageMain;
-              this._stat(main, (err,isFile) => {
-                if (err || !isFile) {
-                  context.attempts.push(main);
-                  this._searchExtensions(main, 0, context, callback);
-                } else {
-                  context.attempts.pop();
-                  callback(null, main);
-                }
-              });
+          // modulePath is a folder. but we should check for the 
+          // presence of a file with a matching extension first.
+          this._searchExtensions(modulePath,0,context,(err,resolved) => {
+            if (resolved) {
+              callback(null, resolved);
+              return;
             }
+
+            // there wasn't a file with a matching name, so try
+            // to match it as a package or index file.
+            // check for package.json then index[+extensions]
+            this._readPackageMain(modulePath,(err,packageMain) => {
+              if (err) {
+                // no package.json present - see if an index file is
+                this._searchExtensions(path.join(modulePath,'index'),0,context,callback);
+              } else if (packageMain) {
+                const main = packageMain;
+                this._stat(main, (err,isFile) => {
+                  if (err || !isFile) {
+                    context.attempts.push(main);
+                    this._searchExtensions(main, 0, context, callback);
+                  } else {
+                    context.attempts.pop();
+                    callback(null, main);
+                  }
+                });
+              }
+            });
           });
         }
       } else {
-        // modulePath is a file, but it has to have an extension matching one of
-        // our configured extensions for it to count as a resolution
-        const ext = path.extname(modulePath);
-        if (!this._options.extensions.find((e) => e === ext)) {
-          context.attempts[context.attempts.length - 1] += ' (ignored due to file extension "' + ext + '". To include this file, add the extension to the resolvers.default.extensions configuration property)';
-          callback(new Error('Unable to resolve ' + modulePath));
-        } else {
-          context.attempts.pop();
-          callback(null,modulePath);
-        }
+        // modulePath is a file
+        context.attempts.pop();
+        callback(null,modulePath);
       }
     });
   }

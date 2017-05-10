@@ -1,0 +1,11 @@
+npm --prefix ./packages/packt-bundler-js run build:clean
+npm --prefix ./packages/packt-bundler-raw run build:clean
+npm --prefix ./packages/packt-cli run build:clean
+npm --prefix ./packages/packt-core run build:clean
+npm --prefix ./packages/packt-handler-babel-js run build:clean
+npm --prefix ./packages/packt-handler-ignore run build:clean
+npm --prefix ./packages/packt-handler-json run build:clean
+npm --prefix ./packages/packt-handler-post-css run build:clean
+npm --prefix ./packages/packt-handler-raw run build:clean
+npm --prefix ./packages/packt-handler-raw-to-js run build:clean
+npm --prefix ./packages/packt-types run build:clean
