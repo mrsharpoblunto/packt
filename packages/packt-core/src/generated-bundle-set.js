@@ -251,7 +251,7 @@ export class GeneratedBundleSet {
           this._dynamicBundles[bundleName + ':' + module.module] = {
             hash,
             paths: this._outputPathHelpers.getBundlerDynamicOutputPaths(
-              hash + path.extname(bundleName),
+              bundleName + '_' + path.basename(module.module),
               hash,
               bundleConfig.bundler,
               this._variant
@@ -267,7 +267,7 @@ export class GeneratedBundleSet {
   }
 
   _extractCommonBundles() {
-    const alreadyChecked: Set<DependencyNode>  = new Set();
+    const alreadyChecked: { [key: string]: boolean }  = {};
     const pendingBundleNames = Object.keys(this._pendingBundles);
     for (let bundleName of pendingBundleNames) {
       const bundleConfig = this._config.bundles[bundleName];
@@ -279,13 +279,13 @@ export class GeneratedBundleSet {
       const extracted: Array<DependencyNode> = [];
 
       for (let module of pendingBundle) {
-        if (alreadyChecked.has(module)) {
-          continue;
-        }
-
         // if it does have a common bundle, then we need to see if this module
         // passes the content type check for a common bundle
         for (let common in bundleConfig.commons) {
+          if (alreadyChecked[common + ':' + module.module]) {
+            continue;
+          }
+
           const commonConfig = this._config.bundles[common];
           const commonBundle = getOrCreate(this._pendingBundles, common, () => new Set());
           if (
@@ -316,8 +316,8 @@ export class GeneratedBundleSet {
             }
             break;
           }
+          alreadyChecked[common + ':' + module.module] = true;
         }
-        alreadyChecked.add(module);
       }
       for (let module of extracted) {
         pendingBundle.delete(module);

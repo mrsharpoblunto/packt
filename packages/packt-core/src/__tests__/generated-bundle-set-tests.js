@@ -1,3 +1,4 @@
+import path from 'path';
 import {
   DependencyNode,
   DependencyGraph,
@@ -44,10 +45,21 @@ function mockEntryPoint(
     variants,
     bundleName
   );
+  let contentType;
+  switch (path.extname(module)) {
+    case '.js':
+      contentType = 'text/javascript';
+      break;
+    case '.css':
+      contentType = 'text/css';
+      break;
+    default:
+      throw new Error('Unexpected content type');
+  }
   graph.setContentMetadata(
     module,
     variants,
-    'text/javascript',
+    contentType,
     module
   );
 }
@@ -59,7 +71,6 @@ function mockDependent(
   variants,
   importDeclaration,
 ) {
-
   graph.imports(
     parentModule,
     module,
@@ -82,21 +93,21 @@ describe('generated bundle set tests', () => {
       graph,
       '/src/entrypoint-a.js',
       ['default'],
-      'bundle-a'
+      'bundle-a.js'
     );
 
     mockEntryPoint(
       graph,
       '/src/entrypoint-b.js',
       ['default'],
-      'bundle-b'
+      'bundle-b.js'
     );
 
     mockEntryPoint(
       graph,
       '/src/entrypoint-c.js',
       ['default'],
-      'bundle-c'
+      'bundle-c.js'
     );
 
     mockDependent(
@@ -148,32 +159,211 @@ describe('generated bundle set tests', () => {
     );
 
     return parseMockConfig({
-      "bundles": {
-        "bundle-a": {
-          type: "entrypoint",
-          requires: ["/src/entrypoint-a.js"],
-          bundler: "js",
+      bundles: {
+        'bundle-a.js': {
+          type: 'entrypoint',
+          requires: ['/src/entrypoint-a.js'],
+          bundler: 'js',
         },
-        "bundle-b": {
-          type: "entrypoint",
-          requires: ["/src/entrypoint-b.js"],
-          bundler: "js",
+        'bundle-b.js': {
+          type: 'entrypoint',
+          requires: ['/src/entrypoint-b.js'],
+          bundler: 'js',
         },
-        "bundle-c": {
-          type: "entrypoint",
-          requires: ["/src/entrypoint-c.js"],
-          bundler: "js",
-        },
-      },
-      "bundlers": {
-        "js": {
-          "require": "bundler.js",
+        'bundle-c.js': {
+          type: 'entrypoint',
+          requires: ['/src/entrypoint-c.js'],
+          bundler: 'js',
         },
       },
-      "handlers": [
+      bundlers: {
+        'js': {
+          require: 'bundler.js',
+        },
+      },
+      handlers: [
         {
-          "pattern": ".js",
-          "require": "handler.js",
+          pattern: '.js',
+          require: 'handler.js',
+        },
+      ],
+    }).then((config) => {
+      const workingSet = generateMockWorkingSet(config);
+      const outputPaths = new OutputPathHelpers(config);
+      const generatedBundles = new GeneratedBundleSet(
+        'default',
+        graph.variants['default'],
+        workingSet,
+        config,
+        outputPaths
+      );
+
+      expect(Object.keys(generatedBundles.getBundles())).toEqual([
+        'bundle-a.js',
+        'bundle-b.js',
+        'bundle-c.js',
+      ]);
+
+      const bundleA = generatedBundles.getStaticBundle('bundle-a.js');
+      expect(bundleA.modules.map(m => m.module)).toEqual([
+        '/src/fourth-level-component.js',  
+        '/src/third-level-component.js',  
+        '/src/second-level-component.js',  
+        '/src/entrypoint-a.js',  
+      ]);
+      expect(bundleA.paths).toEqual({
+        assetName: `bundle-a.js`,
+        outputParentPath: `/build/bundles`,
+        outputPath: `/build/bundles/bundle-a_${bundleA.hash}.js`,
+        outputPublicPath: `/bundles/bundle-a_${bundleA.hash}.js`,
+      });
+
+      const bundleB = generatedBundles.getStaticBundle('bundle-b.js');
+      expect(bundleB.modules.map(m => m.module)).toEqual([
+        '/src/fourth-level-component.js',  
+        '/src/third-level-component.js',  
+        '/src/entrypoint-b.js',  
+      ]);
+      expect(bundleB.paths).toEqual({
+        assetName: `bundle-b.js`,
+        outputParentPath: `/build/bundles`,
+        outputPath: `/build/bundles/bundle-b_${bundleB.hash}.js`,
+        outputPublicPath: `/bundles/bundle-b_${bundleB.hash}.js`,
+      });
+
+      const bundleC = generatedBundles.getStaticBundle('bundle-c.js');
+      expect(bundleC.modules.map(m => m.module)).toEqual([
+        '/src/entrypoint-c.js',  
+      ]);
+      expect(bundleC.paths).toEqual({
+        assetName: `bundle-c.js`,
+        outputParentPath: `/build/bundles`,
+        outputPath: `/build/bundles/bundle-c_${bundleC.hash}.js`,
+        outputPublicPath: `/bundles/bundle-c_${bundleC.hash}.js`,
+      });
+    });
+  });
+
+  it('puts modules in common bundles', () => {
+    const graph = new DependencyGraph();
+
+    mockEntryPoint(
+      graph,
+      '/src/module-1.js',
+      ['default'],
+      'bundle-a'
+    );
+
+    mockEntryPoint(
+      graph,
+      '/src/module-1.js',
+      ['default'],
+      'bundle-b'
+    );
+
+    mockEntryPoint(
+      graph,
+      '/src/module-1.js',
+      ['default'],
+      'bundle-c'
+    );
+
+    mockEntryPoint(
+      graph,
+      '/src/module-2.js',
+      ['default'],
+      'bundle-b'
+    );
+
+    mockEntryPoint(
+      graph,
+      '/src/module-3.js',
+      ['default'],
+      'bundle-c'
+    );
+
+    mockEntryPoint(
+      graph,
+      '/src/module-4.css',
+      ['default'],
+      'bundle-b'
+    );
+
+    mockEntryPoint(
+      graph,
+      '/src/module-5.css',
+      ['default'],
+      'bundle-c'
+    );
+
+    return parseMockConfig({
+      bundles: {
+        'bundle-a': {
+          type: 'entrypoint',
+          requires: [
+            '/src/module-1.js',
+          ],
+          bundler: 'js',
+          depends: [
+            'common-a-js',
+          ],
+        },
+        'bundle-b': {
+          type: 'entrypoint',
+          requires: [
+            '/src/module-1.js',
+            '/src/module-2.js',
+            '/src/module-4.css',
+          ],
+          depends: [
+            'common-b-js',
+          ],
+          bundler: 'js',
+        },
+        'bundle-c': {
+          type: 'entrypoint',
+          requires: [
+            '/src/module-1.js',
+            '/src/module-3.js',
+            '/src/module-5.css',
+          ],
+          depends: [
+            'common-b-js',
+            'common-css',
+          ],
+          bundler: 'js',
+        },
+        'common-a-js': {
+          type: 'common',
+          contentTypes: ['text/javascript'],
+          threshold: 1.0,
+          bundler: 'js',
+        },
+        'common-b-js': {
+          type: 'common',
+          contentTypes: ['text/javascript'],
+          threshold: 0.6,
+          bundler: 'js',
+        },
+        'common-css': {
+          type: 'common',
+          contentTypes: ['text/css'],
+          threshold: 0,
+          bundler: 'css',
+        },
+      },
+      bundlers: {
+        'js': {
+          require: 'bundler.js',
+        },
+        'css': {
+          require: 'bundler.js',
+        },
+      },
+      handlers: [
+        {
+          pattern: '.js',
+          require: 'handler.js',
         },
       ],
     }).then((config) => {
@@ -191,219 +381,44 @@ describe('generated bundle set tests', () => {
         'bundle-a',
         'bundle-b',
         'bundle-c',
+        'common-a-js',
+        'common-b-js',
+        'common-css',
       ]);
       expect(generatedBundles.getStaticBundle('bundle-a').modules.map(m => m.module)).toEqual([
-        '/src/fourth-level-component.js',  
-        '/src/third-level-component.js',  
-        '/src/second-level-component.js',  
-        '/src/entrypoint-a.js',  
+        // all of bundle a is extracted into common-a-js
       ]);
       expect(generatedBundles.getStaticBundle('bundle-b').modules.map(m => m.module)).toEqual([
-        '/src/fourth-level-component.js',  
-        '/src/third-level-component.js',  
-        '/src/entrypoint-b.js',  
+        '/src/module-2.js',  
+        '/src/module-4.css',  
       ]);
       expect(generatedBundles.getStaticBundle('bundle-c').modules.map(m => m.module)).toEqual([
-        '/src/entrypoint-c.js',  
+        '/src/module-3.js',  
+      ]);
+      expect(generatedBundles.getStaticBundle('common-a-js').modules.map(m => m.module)).toEqual([
+        '/src/module-1.js',  
+      ]);
+      expect(generatedBundles.getStaticBundle('common-b-js').modules.map(m => m.module)).toEqual([
+        '/src/module-1.js',  
+      ]);
+      expect(generatedBundles.getStaticBundle('common-css').modules.map(m => m.module)).toEqual([
+        '/src/module-5.css',  
       ]);
     });
   });
 
-  /*it('puts modules in common bundles', () => {
-    const graph = new DependencyGraph();
-
-    graph.bundleEntrypoint(
-      '/src/module-1.js',
-      ['default'],
-      'bundle-a'
-    );
-    graph.setContentMetadata(
-      '/src/module-1.js',
-      ['default'],
-      'text/javascript',
-      'xxxx',
-    );
-
-    graph.bundleEntrypoint(
-      '/src/module-1.js',
-      ['default'],
-      'bundle-b'
-    );
-
-    graph.bundleEntrypoint(
-      '/src/module-1.js',
-      ['default'],
-      'bundle-c'
-    );
-
-    graph.bundleEntrypoint(
-      '/src/module-2.js',
-      ['default'],
-      'bundle-b'
-    );
-    graph.setContentMetadata(
-      '/src/module-2.js',
-      ['default'],
-      'text/javascript',
-      'xxxx',
-    );
-
-    graph.bundleEntrypoint(
-      '/src/module-3.js',
-      ['default'],
-      'bundle-c'
-    );
-    graph.setContentMetadata(
-      '/src/module-3.js',
-      ['default'],
-      'text/javascript',
-      'xxxx',
-    );
-
-    graph.bundleEntrypoint(
-      '/src/module-4.css',
-      ['default'],
-      'bundle-b'
-    );
-    graph.setContentMetadata(
-      '/src/module-4.css',
-      ['default'],
-      'text/css',
-      'xxxx',
-    );
-
-    graph.bundleEntrypoint(
-      '/src/module-5.css',
-      ['default'],
-      'bundle-c'
-    );
-    graph.setContentMetadata(
-      '/src/module-5.css',
-      ['default'],
-      'text/css',
-      'xxxx'
-    );
-
-    const mockWorkingSet = {
-      bundles: {
-        'bundle-a': [],
-        'bundle-b': [],
-        'bundle-c': [],
-      },
-      commonBundles: new Set(['common-a-js','common-b-js','common-css']),
-    };
-
-    const mockConfig = {
-      invariantOptions: {
-        outputHash: 'md5',
-        outputHashLength: 6,
-        outputPath: '/build',
-        outputPublicPath: '/',
-      },
-      bundles: {
-        'bundle-a': {
-          commons: {'common-a-js': true },
-          bundler: 'js',
-        },
-        'bundle-b': {
-          commons: {'common-b-js': true },
-          bundler: 'js',
-        },
-        'bundle-c': {
-          commons: {
-            'common-b-js': true,
-            'common-css': true,
-          },
-          bundler: 'js',
-        },
-        'common-a-js': {
-          contentTypes: { 'text/javascript': true },
-          threshold: 1.0,
-          dependedBy: { 'bundle-a': true },
-          bundler: 'js',
-        },
-        'common-b-js': {
-          contentTypes: { 'text/javascript': true },
-          threshold: 0.6,
-          dependedBy: {
-            'bundle-b': true,
-            'bundle-c': true,
-          },
-          bundler: 'js',
-        },
-        'common-css': {
-          contentTypes: { 'text/css': true },
-          threshold: 0,
-          dependedBy: { 'bundle-c': true },
-          bundler: 'css',
-        },
-      },
-      bundlers: {
-        'js': {
-          invariantOptions: {
-            outputPathFormat: '${hash}/${name}${ext}',
-            assetNameFormat: '${name}${ext}',
-          },
-          options: {
-            'default': {},
-          }
-        },
-        'css': {
-          invariantOptions: {
-            outputPathFormat: '${hash}/${name}${ext}',
-            assetNameFormat: '${name}${ext}',
-          },
-          options: {
-            'default': {},
-          }
-        }
-      }
-    }
-
-    const outputPathHelpers = new OutputPathHelpers(mockConfig);
-    const generatedBundles = generateBundlesFromWorkingSet(
-      graph,
-      mockWorkingSet,
-      mockConfig,
-      outputPathHelpers
-    );
-
-    expect(generatedBundles['default'].staticBundleMap).toEqual([
-      'common-a-js',
-      'common-b-js',
-      'common-c-js',
-      'bundle-b',
-      'bundle-c',
-      'common-css',
-    ]);
-    expect(generatedBundles['default'].staticBundleMap['common-a-js'].map(m => m.module)).toEqual([
-      '/src/module-1.js',  
-    ]);
-    expect(generatedBundles['default']['common-b-js'].map(m => m.module)).toEqual([
-      '/src/module-1.js',  
-    ]);
-    expect(generatedBundles['default']['bundle-b'].map(m => m.module)).toEqual([
-      '/src/module-2.js',  
-      '/src/module-4.css',  
-    ]);
-    expect(generatedBundles['default']['bundle-c'].map(m => m.module)).toEqual([
-      '/src/module-3.js',  
-    ]);
-    expect(generatedBundles['default']['common-css'].map(m => m.module)).toEqual([
-      '/src/module-5.css',  
-    ]);
-});
-
   it('Externalizes modules in a dependent library bundle', () => {
     const graph = new DependencyGraph();
 
-    graph.bundleEntrypoint(
+    mockEntryPoint(
+      graph,
       '/src/module-1.js',
       ['default'],
       'bundle-a'
     );
 
-    graph.imports(
+    mockDependent(
+      graph,
       '/src/module-1.js',
       '/src/module-2.js',
       ['default'],
@@ -414,13 +429,15 @@ describe('generated bundle set tests', () => {
       }
     );
 
-    graph.bundleEntrypoint(
+    mockEntryPoint(
+      graph,
       '/src/module-2.js',
       ['default'],
       'lib-bundle'
     );
 
-    graph.imports(
+    mockDependent(
+      graph,
       '/src/module-2.js',
       '/src/module-3.js',
       ['default'],
@@ -431,63 +448,74 @@ describe('generated bundle set tests', () => {
       }
     );
 
-    const mockWorkingSet = {
-      bundles: {
-        'bundle-a': [],
-        'lib-bundle': [],
-      },
-      commonBundles: new Set(),
-    };
-
-    const mockConfig = {
+    return parseMockConfig({
       bundles: {
         'bundle-a': {
           type: 'entrypoint',
-          depends: { 'lib-bundle': true },
+          requires: [
+            '/src/module-1.js',
+          ],
+          bundler: 'js',
+          depends: [
+            'lib-bundle',
+          ],
         },
         'lib-bundle': {
           type: 'library',
-          dependedBy: { 'bundle-a': true },
+          requires: [
+            '/src/module-2.js',
+          ],
+          bundler: 'js',
         },
-      }
-    }
+      },
+      bundlers: {
+        'js': {
+          require: 'bundler.js',
+        },
+      },
+      handlers: [
+        {
+          pattern: '.js',
+          require: 'handler.js',
+        },
+      ],
+    }).then((config) => {
+      const workingSet = generateMockWorkingSet(config);
+      const outputPaths = new OutputPathHelpers(config);
+      const generatedBundles = new GeneratedBundleSet(
+        'default',
+        graph.variants['default'],
+        workingSet,
+        config,
+        outputPaths
+      );
 
-    const generatedBundles = generateStaticBundlesFromWorkingSet(
-      graph,
-      mockWorkingSet,
-      mockConfig
-    );
-
-    expect(Object.keys(generatedBundles)).toEqual(['default']);
-    expect(Object.keys(generatedBundles['default'])).toEqual([
-      'bundle-a',
-      'lib-bundle',
-    ]);
-    expect(generatedBundles['default']['bundle-a'].map(m => m.module)).toEqual([
-      '/src/module-1.js',  
-    ]);
-    expect(generatedBundles['default']['lib-bundle'].map(m => m.module)).toEqual([
-      '/src/module-3.js',  
-      '/src/module-2.js',  
-    ]);
+      expect(Object.keys(generatedBundles.getBundles())).toEqual([
+        'bundle-a',
+        'lib-bundle',
+      ]);
+      expect(generatedBundles.getStaticBundle('bundle-a').modules.map(m => m.module)).toEqual([
+        '/src/module-1.js',  
+      ]);
+      expect(generatedBundles.getStaticBundle('lib-bundle').modules.map(m => m.module)).toEqual([
+        '/src/module-3.js',  
+        '/src/module-2.js',  
+      ]);
+    });
   });
-
+  
   it('Creates dynamic sub-bundles', () => {
     const graph = new DependencyGraph();
 
-    graph.bundleEntrypoint(
+    mockEntryPoint(
+      graph,
       '/src/module-1.js',
       ['default'],
       'bundle-a.js'
     );
-    graph.setContentMetadata(
-      '/src/module-1.js',
-      ['default'],
-      'text/javascript',
-      '1'
-    );
 
-    graph.imports(
+    mockDependent(
+      graph,
       '/src/module-1.js',
       '/src/module-2.js',
       ['default'],
@@ -497,14 +525,9 @@ describe('generated bundle set tests', () => {
         type: 'static',
       }
     );
-    graph.setContentMetadata(
-      '/src/module-2.js',
-      ['default'],
-      'text/javascript',
-      '2'
-    );
 
-    graph.imports(
+    mockDependent(
+      graph,
       '/src/module-1.js',
       '/src/module-3.js',
       ['default'],
@@ -514,14 +537,9 @@ describe('generated bundle set tests', () => {
         type: 'static',
       }
     );
-    graph.setContentMetadata(
-      '/src/module-3.js',
-      ['default'],
-      'text/javascript',
-      '3'
-    );
 
-    graph.imports(
+    mockDependent(
+      graph,
       '/src/module-1.js',
       '/src/module-4.js',
       ['default'],
@@ -531,14 +549,9 @@ describe('generated bundle set tests', () => {
         type: 'dynamic',
       }
     );
-    graph.setContentMetadata(
-      '/src/module-4.js',
-      ['default'],
-      'text/javascript',
-      '4'
-    );
 
-    graph.imports(
+    mockDependent(
+      graph,
       '/src/module-4.js',
       '/src/module-5.js',
       ['default'],
@@ -548,14 +561,9 @@ describe('generated bundle set tests', () => {
         type: 'static',
       }
     );
-    graph.setContentMetadata(
-      '/src/module-5.js',
-      ['default'],
-      'text/javascript',
-      '5'
-    );
 
-    graph.imports(
+    mockDependent(
+      graph,
       '/src/module-5.js',
       '/src/module-3.js',
       ['default'],
@@ -566,7 +574,8 @@ describe('generated bundle set tests', () => {
       }
     );
 
-    graph.imports(
+    mockDependent(
+      graph,
       '/src/module-5.js',
       '/src/module-6.js',
       ['default'],
@@ -576,125 +585,195 @@ describe('generated bundle set tests', () => {
         type: 'dynamic',
       }
     );
-    graph.setContentMetadata(
-      '/src/module-6.js',
-      ['default'],
-      'text/javascript',
-      '6'
-    );
 
-    const mockWorkingSet = {
-      bundles: {
-        'bundle-a.js': [],
-      },
-      commonBundles: new Set(),
-    };
-
-    const mockConfig = {
-      invariantOptions: {
-        outputHash: 'md5',
-        outputHashLength: 6,
-        outputPath: '/build',
-        outputPublicPath: '/',
-      },
+    return parseMockConfig({
       bundles: {
         'bundle-a.js': {
           type: 'entrypoint',
-          depends: {},
+          requires: [
+            '/src/module-1.js',
+          ],
           bundler: 'js',
         },
       },
       bundlers: {
         'js': {
-          invariantOptions: {
-            outputPathFormat: '${hash}/${name}${ext}',
-            assetNameFormat: '${name}${ext}',
-          },
-          options: {
-            'default': {},
-          }
-        }
-      }
-    };
+          require: 'bundler.js',
+        },
+      },
+      handlers: [
+        {
+          pattern: '.js',
+          require: 'handler.js',
+        },
+      ],
+    }).then((config) => {
+      const workingSet = generateMockWorkingSet(config);
+      const outputPaths = new OutputPathHelpers(config);
+      const generatedBundles = new GeneratedBundleSet(
+        'default',
+        graph.variants['default'],
+        workingSet,
+        config,
+        outputPaths
+      );
 
-    const generatedStaticBundles = generateStaticBundlesFromWorkingSet(
+      expect(Object.keys(generatedBundles.getBundles())).toEqual([
+        'bundle-a.js',
+        'bundle-a.js:/src/module-4.js',
+        'bundle-a.js:/src/module-6.js',
+      ]);
+
+      expect(generatedBundles.getStaticBundle('bundle-a.js').modules.map((m) => m.module)).toEqual([
+        '/src/module-2.js', 
+        '/src/module-3.js', 
+        '/src/module-1.js', 
+      ]);
+
+      const module4Bundle = generatedBundles.getDynamicBundle('bundle-a.js:/src/module-4.js');
+      expect(module4Bundle.modules.map((m) => m.module)).toEqual([
+        '/src/module-5.js', 
+        '/src/module-4.js', 
+      ]);
+      expect(module4Bundle.paths).toEqual({
+        assetName: `bundle-a.js_module-4.js`,
+        outputParentPath: `/build/bundles/dynamic`,
+        outputPath: `/build/bundles/dynamic/${module4Bundle.hash}.js`,
+        outputPublicPath: `/bundles/dynamic/${module4Bundle.hash}.js`,
+      });
+
+      const module6Bundle = generatedBundles.getDynamicBundle('bundle-a.js:/src/module-6.js');
+      expect(module6Bundle.modules.map((m) => m.module)).toEqual([
+        '/src/module-6.js', 
+      ]);
+      expect(module6Bundle.paths).toEqual({
+        assetName: `bundle-a.js_module-6.js`,
+        outputParentPath: `/build/bundles/dynamic`,
+        outputPath: `/build/bundles/dynamic/${module6Bundle.hash}.js`,
+        outputPublicPath: `/bundles/dynamic/${module6Bundle.hash}.js`,
+      });
+    });
+  });
+
+  it('Dynamic bundle modules arent considered as common bundle candidates', () => {
+    const graph = new DependencyGraph();
+
+    mockEntryPoint(
       graph,
-      mockWorkingSet,
-      mockConfig
-    );
-
-    const generatedBundles = {
-      dynamicBundleMap: {},
-      dynamicBundles: {},
-      denormalizedStaticBundles: {},
-    };
-
-    const outputPathHelpers = new OutputPathHelpers(mockConfig);
-
-    splitDynamicBundles(
-      'bundle-a.js',
-      'default',
-      generatedStaticBundles['default']['bundle-a.js'],
-      mockConfig,
-      outputPathHelpers,
-      generatedBundles
-    );
-
-    expect(Object.keys(generatedBundles.dynamicBundleMap)).toEqual([
-      'bundle-a.js:/src/module-6.js',
-      'bundle-a.js:/src/module-4.js',
-    ]);
-
-    const MODULE6_HASH = '810980';
-    expect(generatedBundles.dynamicBundleMap['bundle-a.js:/src/module-6.js']).toEqual({
-      hash: MODULE6_HASH,
-      paths: {
-        assetName: `${MODULE6_HASH}.js`,
-        outputParentPath: `/build/${MODULE6_HASH}`,
-        outputPath: `/build/${MODULE6_HASH}/${MODULE6_HASH}.js`,
-        outputPublicPath: `/${MODULE6_HASH}/${MODULE6_HASH}.js`,
-      },
-    });
-    expect(generatedBundles.dynamicBundles[MODULE6_HASH].map(m => m.module)).toEqual([
-      '/src/module-6.js',
-    ]);
-
-    const MODULE4_HASH = '5527967';
-    expect(generatedBundles.dynamicBundleMap['bundle-a.js:/src/module-4.js']).toEqual({
-      hash: MODULE4_HASH,
-      paths: {
-        assetName: `${MODULE4_HASH}.js`,
-        outputParentPath: `/build/${MODULE4_HASH}`,
-        outputPath: `/build/${MODULE4_HASH}/${MODULE4_HASH}.js`,
-        outputPublicPath: `/${MODULE4_HASH}/${MODULE4_HASH}.js`,
-      },
-    });
-    expect(generatedBundles.dynamicBundles[MODULE4_HASH].map(m => m.module)).toEqual([
-      '/src/module-5.js',
-      '/src/module-4.js',
-    ]);
-
-    const BUNDLEA_HASH = 'ef08d6';
-    expect(generatedBundles.staticBundleMap['bundle-a.js']).toEqual({
-      hash: BUNDLEA_HASH,
-      paths: {
-        assetName: `bundle-a.js`,
-        outputParentPath: `/build/${BUNDLEA_HASH}`,
-        outputPath: `/build/${BUNDLEA_HASH}/bundle-a.js`,
-        outputPublicPath: `/${BUNDLEA_HASH}/bundle-a.js`,
-      },
-    });
-    expect(generatedBundles.staticBundles[BUNDLEA_HASH].map(m => m.module)).toEqual([
-      '/src/module-2.js',
-      '/src/module-3.js',
       '/src/module-1.js',
-    ]);
+      ['default'],
+      'bundle-a.js'
+    );
+
+    mockDependent(
+      graph,
+      '/src/module-1.js',
+      '/src/module-2.js',
+      ['default'],
+      {
+        source: './module-2',
+        symbols: ['*'],
+        type: 'static',
+      }
+    );
+
+    mockDependent(
+      graph,
+      '/src/module-1.js',
+      '/src/module-3.js',
+      ['default'],
+      {
+        source: './module-3',
+        symbols: ['*'],
+        type: 'dynamic',
+      }
+    );
+
+    mockDependent(
+      graph,
+      '/src/module-3.js',
+      '/src/module-4.js',
+      ['default'],
+      {
+        source: './module-4',
+        symbols: ['*'],
+        type: 'static',
+      }
+    );
+
+    return parseMockConfig({
+      bundles: {
+        'bundle-a.js': {
+          type: 'entrypoint',
+          requires: [
+            '/src/module-1.js',
+          ],
+          depends: [
+            'common.js',
+          ],
+          bundler: 'js',
+        },
+        'common.js': {
+          type: 'common',
+          contentTypes: ['text/javascript'],
+          threshold: 0,
+          bundler: 'js',
+        }
+      },
+      bundlers: {
+        'js': {
+          require: 'bundler.js',
+        },
+      },
+      handlers: [
+        {
+          pattern: '.js',
+          require: 'handler.js',
+        },
+      ],
+    }).then((config) => {
+      const workingSet = generateMockWorkingSet(config);
+      const outputPaths = new OutputPathHelpers(config);
+      const generatedBundles = new GeneratedBundleSet(
+        'default',
+        graph.variants['default'],
+        workingSet,
+        config,
+        outputPaths
+      );
+
+      expect(Object.keys(generatedBundles.getBundles())).toEqual([
+        'bundle-a.js',
+        'common.js',
+        'bundle-a.js:/src/module-3.js',
+      ]);
+
+      expect(generatedBundles.getStaticBundle('bundle-a.js').modules.map((m) => m.module)).toEqual([
+        // everything in bundle-a should have been extracted to common.js
+      ]);
+
+      // even though modules 3&4 appeared above the common threshold in bundle-a, they are not added
+      // to the common set because they were imported dynamically
+      const module3Bundle = generatedBundles.getDynamicBundle('bundle-a.js:/src/module-3.js');
+      expect(module3Bundle.modules.map((m) => m.module)).toEqual([
+        '/src/module-4.js', 
+        '/src/module-3.js', 
+      ]);
+
+      // only statically imported bundles from bundle-a got put in commons
+      const commonBundle = generatedBundles.getStaticBundle('common.js');
+      expect(commonBundle.modules.map((m) => m.module)).toEqual([
+        '/src/module-2.js', 
+        '/src/module-1.js', 
+      ]);
+    });
   });
 
   it('Generates bundle maps', () => {
     const graph = new DependencyGraph();
 
-    graph.bundleEntrypoint(
+    mockEntryPoint(
+      graph,
       '/src/entrypoint-a.js',
       ['default'],
       'bundle-a'
@@ -717,7 +796,8 @@ describe('generated bundle set tests', () => {
       '/build/asset-a.png'
     );
 
-    graph.bundleEntrypoint(
+    mockEntryPoint(
+      graph,
       '/src/entrypoint-b.js',
       ['default'],
       'bundle-b'
@@ -740,38 +820,82 @@ describe('generated bundle set tests', () => {
       '/build/asset-b.png'
     );
 
-    const mockGeneratedBundles = {
-      'default': {
-        dynamicBundleMap: {
-          'bundle-a:/src/dynamic-bundle': {
-            paths: {
-              outputPublicPath: '/dynamic-bundle.js',
-            },
-          },
+    mockDependent(
+      graph,
+      '/src/entrypoint-a.js',
+      '/src/dynamic-bundle.js',
+      ['default'],
+      {
+        source: './dynamic-bundle',
+        symbols: ['*'],
+        type: 'dynamic',
+      }
+    );
+
+    return parseMockConfig({
+      bundles: {
+        'bundle-a': {
+          type: 'entrypoint',
+          requires: [
+            '/src/entrypoint-a.js',
+          ],
+          bundler: 'js',
+        },
+        'bundle-b': {
+          type: 'entrypoint',
+          requires: [
+            '/src/entrypoint-b.js',
+          ],
+          bundler: 'js',
         },
       },
-    };
-
-    const lookups = generateBundleLookups(graph, mockGeneratedBundles);
-
-    expect(Object.keys(lookups)).toEqual(['default']);
-    expect(lookups['default'].assetMap).toEqual({
-      'asset-a':'/build/asset-a.png',
-      'asset-b':'/build/asset-b.png',
-    });
-    expect(lookups['default'].moduleMap).toEqual({
-      '/src/entrypoint-a.js': {
-        exportsIdentifier: '_',
-        exportsESModule: true,
+      bundlers: {
+        'js': {
+          require: 'bundler.js',
+        },
       },
-      '/src/entrypoint-b.js': {
-        exportsIdentifier: '$',
-        exportsESModule: false,
-      },
+      handlers: [
+        {
+          pattern: '.js',
+          require: 'handler.js',
+        },
+      ],
+    }).then((config) => {
+      const workingSet = generateMockWorkingSet(config);
+      const outputPaths = new OutputPathHelpers(config);
+      const generatedBundles = new GeneratedBundleSet(
+        'default',
+        graph.variants['default'],
+        workingSet,
+        config,
+        outputPaths
+      );
+
+      const lookups = generateBundleLookups(graph, { 'default': generatedBundles });
+
+      expect(Object.keys(lookups)).toEqual(['default']);
+      expect(lookups['default'].assetMap).toEqual({
+        'asset-a':'/build/asset-a.png',
+        'asset-b':'/build/asset-b.png',
+      });
+      expect(lookups['default'].moduleMap).toEqual({
+        '/src/dynamic-bundle.js': {
+          exportsIdentifier: '',
+          exportsESModule: false,
+        },
+        '/src/entrypoint-a.js': {
+          exportsIdentifier: '_',
+          exportsESModule: true,
+        },
+        '/src/entrypoint-b.js': {
+          exportsIdentifier: '$',
+          exportsESModule: false,
+        },
+      });
+      expect(lookups['default'].dynamicBundleMap).toEqual({
+        'bundle-a:/src/dynamic-bundle.js': `/bundles/dynamic/${generatedBundles.getDynamicBundle('bundle-a:/src/dynamic-bundle.js').hash}.js`,
+      });
     });
-    expect(lookups['default'].dynamicBundleMap).toEqual({
-      'bundle-a:/src/dynamic-bundle': '/dynamic-bundle.js', 
-    });
-  });*/
+  });
 
 });
