@@ -16,11 +16,42 @@ export default class OutputPathHelpers {
     this._config = config;
   }
 
-  getBundlerOutputPaths(
+  getBundlerStaticOutputPaths(
     name: string, 
     hash: string, 
     bundler: string,
     variant: string
+  ): OutputPaths  {
+    return this._getBundlerOutputPaths(
+      name,
+      hash,
+      bundler,
+      variant,
+      (invariantOptions) => invariantOptions.staticOutputPathFormat
+    );
+  }
+
+  getBundlerDynamicOutputPaths(
+    name: string, 
+    hash: string, 
+    bundler: string,
+    variant: string
+  ): OutputPaths  {
+    return this._getBundlerOutputPaths(
+      name,
+      hash,
+      bundler,
+      variant,
+      (invariantOptions) => invariantOptions.dynamicOutputPathFormat
+    );
+  }
+
+  _getBundlerOutputPaths(
+    name: string, 
+    hash: string, 
+    bundler: string,
+    variant: string,
+    formatter: (Object) => string,
   ): OutputPaths  {
     const b = this._config.bundlers[bundler];
     if (!b) {
@@ -44,7 +75,7 @@ export default class OutputPathHelpers {
         invariantOptions: b.invariantOptions,
         options: v || {},
       },
-      b.invariantOptions.outputPathFormat,
+      formatter(b.invariantOptions),
       b.invariantOptions.assetNameFormat
     );
   }

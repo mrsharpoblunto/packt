@@ -86,7 +86,8 @@ describe('Config',() => {
       expect(Object.keys(config.bundlers).length).toBe(1);
       expect(config.bundlers['js'].invariantOptions).toBeTruthy();
       expect(config.bundlers['js'].require).toBe('/path/to/bundler.js');
-      expect(config.bundlers['js'].invariantOptions.outputPathFormat).toBe('/bundles/${name}_${hash}${ext}');
+      expect(config.bundlers['js'].invariantOptions.staticOutputPathFormat).toBe('/bundles/${name}_${hash}${ext}');
+      expect(config.bundlers['js'].invariantOptions.dynamicOutputPathFormat).toBe('/bundles/dynamic/${hash}${ext}');
       expect(config.bundlers['js'].options).toBeTruthy();
 
       expect(Object.keys(config.bundles).length).toBe(5);

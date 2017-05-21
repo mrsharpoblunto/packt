@@ -5,6 +5,8 @@ export type ContentMapEntry = {
   content: string,
 };
 
+export type ReadOnlyContentMapVariant = (resolved: string) => string;
+
 export default class ContentMap {
   _content: { [key: string]: {
     variants: { [key: string]: ContentMapEntry },
@@ -19,6 +21,12 @@ export default class ContentMap {
     variant: string
   ): string {
     return this._content[resolved].variants[variant].content;
+  }
+
+  readOnlyVariant(
+    variant: string
+  ): ReadOnlyContentMapVariant {
+    return (resolved: string) => this.get(resolved, variant);
   }
 
   addIfNotPresent(resolved: string,ifNotPresent: Function) {

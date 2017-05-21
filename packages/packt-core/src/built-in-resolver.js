@@ -5,7 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import {PacktResolverError} from 'packt-types';
 
-export default class BuiltInResolver {
+export default class BuiltInResolver implements Resolver {
 
   static defaultOptions = (
     workingDirectory: string

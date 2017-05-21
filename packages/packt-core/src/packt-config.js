@@ -8,24 +8,32 @@ import joi from 'joi';
 import os from 'os';
 import chalk from 'chalk';
 
+export type ParseOptions = {
+  resolver: Resolver,
+};
+
 export function parseConfig(
   filename: string, 
-  json: Object
+  json: Object,
+  options: ?ParseOptions,
 ): Promise<PacktConfig> {
   const workingDirectory = path.dirname(filename);
 
-  return validate(filename, workingDirectory, json)
+  return validate(filename, workingDirectory, json, options)
     .then((validated) => buildVariants(validated))
 }
 
 function validate(
   configFile: string,
   workingDirectory: string, 
-  json: Object
+  json: Object,
+  opts: ?ParseOptions,
 ): Promise<PacktConfig> {
-  const resolver = new BuiltInResolver(
-    BuiltInResolver.defaultOptions(workingDirectory)
-  );
+  const options = opts || {
+    resolver: new BuiltInResolver(
+      BuiltInResolver.defaultOptions(workingDirectory)
+    ),
+  };
 
   const resolvers = Array.isArray(json.resolvers && json.resolvers.custom) ?
     json.resolvers.custom : [];
@@ -34,9 +42,9 @@ function validate(
     Object.keys(json.bundlers) : [];
 
   return Promise.all(
-    resolvers.map(c => resolveRequire(c, configFile, resolver))
-      .concat(handlers.map(h => resolveRequire(h, configFile, resolver)))
-      .concat(bundlers.map(b => resolveRequire(json.bundlers[b], configFile, resolver)))
+    resolvers.map(c => resolveRequire(c, configFile, options.resolver))
+      .concat(handlers.map(h => resolveRequire(h, configFile, options.resolver)))
+      .concat(bundlers.map(b => resolveRequire(json.bundlers[b], configFile, options.resolver)))
       ).then((resolved) => new Promise((resolve,reject) => {
     const libraries = (json.bundles && typeof(json.bundles) === 'object') ?
       Object.keys(json.bundles).filter(
@@ -276,7 +284,8 @@ function generateSchema(
     bundlers: joi.object({}).pattern(/.*/,joi.object({
       require: customJoi.string().resolvable(resolved).required(),
       invariantOptions: joi.object({
-        outputPathFormat: joi.string().default('/bundles/${name}_${hash}${ext}'),
+        staticOutputPathFormat: joi.string().default('/bundles/${name}_${hash}${ext}'),
+        dynamicOutputPathFormat: joi.string().default('/bundles/dynamic/${hash}${ext}'),
         assetNameFormat: joi.string().default('${name}${ext}'),
       }).default().unknown(),
       options: joi.object({
@@ -323,7 +332,7 @@ function resolveRequire(
     require: string,
   |},
   configFile: string,
-  resolver: BuiltInResolver,
+  resolver: Resolver,
 ): Promise<{|
   require: string,
   resolved?: string,

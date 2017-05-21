@@ -46,6 +46,7 @@ export default class Worker extends EventEmitter {
     switch (message.type) {
       case 'bundle_content':
       case 'bundle_content_error':
+      case 'bundle_warning':
       case 'module_content':
       case 'module_import':
       case 'module_export':

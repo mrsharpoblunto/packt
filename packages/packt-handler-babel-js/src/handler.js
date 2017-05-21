@@ -82,6 +82,7 @@ export default class BabelJsHandler implements Handler {
     // all plugins used across any variant to ensure that all the plugins
     // in each variant work correctly
     const pluginSet: Set<string> = new Set();
+    const builtIns = this._builtInPlugins();
     for (let key in options) {
       try {
         let opts = options[key].handler.babelOptions;
@@ -92,6 +93,12 @@ export default class BabelJsHandler implements Handler {
         const loadedOptions = optsManager.init(opts);
 
         const parserOpts = { plugins: [] };
+        for (let b in builtIns) {
+          const plugin = builtIns[b]();
+          if (plugin.manipulateOptions) {
+            plugin.manipulateOptions(opts, parserOpts);
+          }
+        }
         for (let plugin of loadedOptions.plugins) {
           if (plugin[0].manipulateOptions) {
             plugin[0].manipulateOptions(opts, parserOpts);
@@ -243,17 +250,18 @@ export default class BabelJsHandler implements Handler {
       );
     }
 
+    const plugins = this._builtInPlugins();
     if (options.handler.defines) {
       opts.plugins.unshift([
-        require('./plugins/replace-defines').default,
+        plugins['replace-defines'],
         {
           defines: options.handler.defines,
         }
       ]);
     }
-    opts.plugins.unshift(require('./plugins/dead-code-removal').default);
+    opts.plugins.unshift(plugins['dead-code-removal']);
     opts.plugins.unshift([
-      require('./plugins/scopify-and-process-dependencies').default,
+      plugins['scopify-and-process-dependencies'],
       {
         preserveIdentifiers: !!options.handler.preserveIdentifiers,
         delegate,
@@ -262,5 +270,18 @@ export default class BabelJsHandler implements Handler {
       },
     ]);
     return opts;
+  }
+
+  _builtInPlugins(): { 
+    [key: string]: () => { manipulateOptions?: (opts: Object, parserOpts: Object) => void  } 
+  } {
+    return [
+      'replace-defines',
+      'dead-code-removal',
+      'scopify-and-process-dependencies',
+    ].reduce((prev, next) => {
+      prev[next] = require(`./plugins/${next}`).default;
+      return prev;
+    },{});
   }
 }

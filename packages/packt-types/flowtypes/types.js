@@ -54,7 +54,8 @@ export type PacktConfig = {|
   bundlers: { [key: string]: {|
     require: string,
     invariantOptions: {
-      outputPathFormat: string,
+      dynamicOutputPathFormat: string,
+      staticOutputPathFormat: string,
       assetNameFormat: string,
     },
     options: { [key: string]: Object },

@@ -12,7 +12,7 @@ describe('output path utils',() => {
       },
     });
 
-    expect(helpers.generateHash('hello world')).toBe('773db');
+    expect(helpers.generateHash('hello world').length).toBe(5);
   });
 
   it('generates fixed length sha1 hashes',() => {
@@ -23,7 +23,7 @@ describe('output path utils',() => {
       },
     });
 
-    expect(helpers.generateHash('hello world')).toBe('457ccad');
+    expect(helpers.generateHash('hello world').length).toBe(7);
   });
 
   it('Hashes vary by config',() => {
@@ -83,7 +83,8 @@ describe('output path utils',() => {
       bundlers: {
         'js': {
           invariantOptions: {
-            outputPathFormat: '/bundles/${options.lang}_${name}${ext}/${hash}${ext}',
+            staticOutputPathFormat: '/bundles/${options.lang}_${name}${ext}/${hash}${ext}',
+            dynamicOutputPathFormat: '/bundles/dynamic/${name}${ext}',
             assetNameFormat: '${name}',
           },
           options: {
@@ -95,10 +96,16 @@ describe('output path utils',() => {
       },
     });
 
-    expect(helpers.getBundlerOutputPaths('foobar.js', 'xyzzy', 'js', 'en_US')).toEqual({
+    expect(helpers.getBundlerStaticOutputPaths('foobar.js', 'xyzzy', 'js', 'en_US')).toEqual({
       outputPath: '/opt/build/bundles/en_US_foobar.js/xyzzy.js',
       outputParentPath: '/opt/build/bundles/en_US_foobar.js',
       outputPublicPath: '/static/bundles/en_US_foobar.js/xyzzy.js',
+      assetName: 'foobar',
+    });
+    expect(helpers.getBundlerDynamicOutputPaths('foobar.js', 'xyzzy', 'js', 'en_US')).toEqual({
+      outputPath: '/opt/build/bundles/dynamic/foobar.js',
+      outputParentPath: '/opt/build/bundles/dynamic',
+      outputPublicPath: '/static/bundles/dynamic/foobar.js',
       assetName: 'foobar',
     });
 
