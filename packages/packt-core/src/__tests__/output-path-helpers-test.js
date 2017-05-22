@@ -72,6 +72,28 @@ describe('output path utils',() => {
     });
   });
 
+  it('Generates correct paths for asset map',() => {
+    const helpers = new OutputPathHelpers({
+      invariantOptions: {
+        outputHash: 'sha1',
+        outputHashLength: 7,
+        outputPath: '/opt/build',
+        outputPublicPath: '/static',
+        assetMapOutputPathFormat: '${name}${ext}',
+      },
+      options: {
+        'default': {
+        },
+      },
+    });
+    expect(helpers.getAssetMapOutputPaths()).toEqual({
+      outputPath: '/opt/build/assets.json',
+      outputParentPath: '/opt/build',
+      outputPublicPath: '/static/assets.json',
+      assetName: 'assets.json',
+    });
+  });
+
   it('Generates paths from bundler templates', () => {
     const helpers = new OutputPathHelpers({
       invariantOptions: {
@@ -83,13 +105,13 @@ describe('output path utils',() => {
       bundlers: {
         'js': {
           invariantOptions: {
-            staticOutputPathFormat: '/bundles/${options.lang}_${name}${ext}/${hash}${ext}',
+            staticOutputPathFormat: '/bundles/${variant}_${options.param}_${name}${ext}/${hash}${ext}',
             dynamicOutputPathFormat: '/bundles/dynamic/${name}${ext}',
             assetNameFormat: '${name}',
           },
           options: {
             'en_US': {
-              lang: 'en_US',
+              param: '1',
             }
           }
         }
@@ -97,9 +119,9 @@ describe('output path utils',() => {
     });
 
     expect(helpers.getBundlerStaticOutputPaths('foobar.js', 'xyzzy', 'js', 'en_US')).toEqual({
-      outputPath: '/opt/build/bundles/en_US_foobar.js/xyzzy.js',
-      outputParentPath: '/opt/build/bundles/en_US_foobar.js',
-      outputPublicPath: '/static/bundles/en_US_foobar.js/xyzzy.js',
+      outputPath: '/opt/build/bundles/en_US_1_foobar.js/xyzzy.js',
+      outputParentPath: '/opt/build/bundles/en_US_1_foobar.js',
+      outputPublicPath: '/static/bundles/en_US_1_foobar.js/xyzzy.js',
       assetName: 'foobar',
     });
     expect(helpers.getBundlerDynamicOutputPaths('foobar.js', 'xyzzy', 'js', 'en_US')).toEqual({

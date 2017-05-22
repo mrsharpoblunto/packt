@@ -22,12 +22,17 @@ export default class OutputPathHelpers {
     bundler: string,
     variant: string
   ): OutputPaths  {
-    return this._getBundlerOutputPaths(
+    const b = this._config.bundlers[bundler];
+    if (!b) {
+      throw new Error('No bundler named '+bundler+' has been configured');
+    }
+    return this._getOutputPaths(
       name,
       hash,
-      bundler,
       variant,
-      (invariantOptions) => invariantOptions.staticOutputPathFormat
+      b,
+      (invariantOptions) => invariantOptions.staticOutputPathFormat,
+      (invariantOptions) => invariantOptions.assetNameFormat
     );
   }
 
@@ -37,29 +42,42 @@ export default class OutputPathHelpers {
     bundler: string,
     variant: string
   ): OutputPaths  {
-    return this._getBundlerOutputPaths(
-      name,
-      hash,
-      bundler,
-      variant,
-      (invariantOptions) => invariantOptions.dynamicOutputPathFormat
-    );
-  }
-
-  _getBundlerOutputPaths(
-    name: string, 
-    hash: string, 
-    bundler: string,
-    variant: string,
-    formatter: (Object) => string,
-  ): OutputPaths  {
     const b = this._config.bundlers[bundler];
     if (!b) {
       throw new Error('No bundler named '+bundler+' has been configured');
     }
+    return this._getOutputPaths(
+      name,
+      hash,
+      variant,
+      b,
+      (invariantOptions) => invariantOptions.dynamicOutputPathFormat,
+      (invariantOptions) => invariantOptions.assetNameFormat
+    );
+  }
+
+  getAssetMapOutputPaths(): OutputPaths {
+    return this._getOutputPaths(
+      'assets.json',
+      '',
+      '',
+      this._config,
+      (invariantOptions) => invariantOptions.assetMapOutputPathFormat,
+      (invariantOptions) => 'assets.json',
+    );
+  }
+
+  _getOutputPaths(
+    name: string, 
+    hash: string, 
+    variant: string,
+    configRoot: Object,
+    pathFormatter: (Object) => string,
+    nameFormatter: (Object) => string,
+  ): OutputPaths  {
     let v;
     if (variant) {
-      v = b.options[variant];
+      v = configRoot.options[variant];
       if (!v) {
         throw new Error(
           'No config variant ' + variant +
@@ -72,11 +90,12 @@ export default class OutputPathHelpers {
       name,
       hash,
       {
-        invariantOptions: b.invariantOptions,
+        invariantOptions: configRoot.invariantOptions,
         options: v || {},
+        variant,
       },
-      formatter(b.invariantOptions),
-      b.invariantOptions.assetNameFormat
+      pathFormatter(configRoot.invariantOptions),
+      nameFormatter(configRoot.invariantOptions),
     );
   }
 

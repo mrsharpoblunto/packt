@@ -17,6 +17,7 @@ import WorkerPool from './worker-pool';
 import ResolverChain from './resolver-chain';
 import Timer from './timer';
 import ContentMap from './content-map';
+import AssetMap from './asset-map';
 import type {ReadOnlyContentMapVariant} from './content-map';
 import {generateBundleSets} from './generated-bundle-set';
 import type {GeneratedBundleData} from './generated-bundle-set';
@@ -33,6 +34,7 @@ import {determineInitialWorkingSet} from './working-set';
 
 type BuildState = {|
   contentMap: ContentMap,
+  assetMap: AssetMap,
   dependencyGraph: DependencyGraph,
   scopeGenerator: ScopeIdGenerator,
 |};
@@ -210,6 +212,7 @@ export default class Packt {
     // if the tree requires changes
     return Promise.resolve({
       scopeGenerator,
+      assetMap: new AssetMap(utils.pathHelpers),
       contentMap: new ContentMap(),
       dependencyGraph: new DependencyGraph(),
     });
@@ -418,7 +421,13 @@ export default class Packt {
 
     timer.accumulate('build',{ 'bundle-sort': Date.now() - start });
 
-    return new Promise((resolve,reject) => {
+    start = Date.now();
+    return state.assetMap.update(
+      state.dependencyGraph,
+      generatedBundleSets,
+    ).then(() => new Promise((resolve,reject) => {
+      timer.accumulate('build',{ 'asset-map': Date.now() - start });
+
       start = Date.now();
       const bundleStats: PerfStatsDict = {};
       const bundlerTimer = new Timer();
@@ -476,6 +485,12 @@ export default class Packt {
         }
       });
 
+      // TODO because we dedupe bundles to module hashes, we could
+      // detect when a bundle has already been generated with a given hash &
+      // if the output name is different, just cp the file to the new name
+      // instead of passing the bundles off to a bundler for rebundling
+      // We'd have to wait until the end of bundling to do this as we want
+      // to ensure that all the bundles we were going to copy are complete
       for (let variant in generatedBundleSets) {
         const generatedVariant = generatedBundleSets[variant];
         this._processBundles(
@@ -487,7 +502,7 @@ export default class Packt {
           utils,
         );
       }
-    });
+    }));
   }
 
   _processBundles(
@@ -498,10 +513,6 @@ export default class Packt {
     config: PacktConfig,
     utils: BuildUtils,
   ) {
-    // TODO because we dedupe bundles to module hashes, we could
-    // detect when a bundle has already been generated with a given hash &
-    // if the output name is different, just cp the file to the new name
-    // instead of passing the bundles off to a bundler for rebundling
     for (let bundleName in bundles) {
       const bundle = bundles[bundleName];
       utils.pool.processBundle(

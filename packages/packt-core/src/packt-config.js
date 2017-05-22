@@ -221,6 +221,7 @@ function generateSchema(
       outputPublicPath: joi.string().default('/'),
       outputHash: joi.any().valid('md5','sha1','sha256').default('md5'),
       outputHashLength: joi.number().min(1).max(16).default(12),
+      assetMapOutputPathFormat: joi.string().default('/${name}${ext}'),
     }).default(),
     options: joi.object({
       base: joi.object({}).default().unknown(),
