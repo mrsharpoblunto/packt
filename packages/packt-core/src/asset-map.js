@@ -69,11 +69,10 @@ export default class AssetMap {
   _removeFile(filename: string): Promise<any> {
     return new Promise((resolve, reject) => {
       fs.unlink(filename, (err) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve();
-        }
+        // we don't care if the call fails - it might
+        // if we're removing multiple dynamic modules with
+        // the same filesystem destination
+        resolve();
       });
     });
   }

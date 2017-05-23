@@ -3,6 +3,7 @@
  */
 import path from 'path';
 import rimraf from 'rimraf';
+import mkdirp from 'mkdirp';
 import type {
   MessageType,
 } from './message-types';
@@ -485,47 +486,34 @@ export default class Packt {
         }
       });
 
-      // TODO because we dedupe bundles to module hashes, we could
-      // detect when a bundle has already been generated with a given hash &
-      // if the output name is different, just cp the file to the new name
-      // instead of passing the bundles off to a bundler for rebundling
-      // We'd have to wait until the end of bundling to do this as we want
-      // to ensure that all the bundles we were going to copy are complete
+      const duplicateBundles: Set<string> = new Set();
       for (let variant in generatedBundleSets) {
         const generatedVariant = generatedBundleSets[variant];
-        this._processBundles(
-          variant,
-          generatedVariant.getBundles(),
-          generatedBundleLookups[variant],
-          state.contentMap.readOnlyVariant(variant),
-          config,
-          utils,
-        );
+        const bundleLookups = generatedBundleLookups[variant];
+        const contentMap = state.contentMap.readOnlyVariant(variant);
+        const bundles = generatedVariant.getBundles();
+        for (let bundleName in bundles) {
+          const bundle = bundles[bundleName];
+          // certain bundles, especially dynamic bundles may be 
+          // indepdendently generated via different static parents - 
+          // but since the output is the same, theres no point
+          // generating these over and over
+          if (!duplicateBundles.has(bundle.paths.outputPath)) {
+            duplicateBundles.add(bundle.paths.outputPath);
+            utils.pool.processBundle(
+              bundleName,
+              variant,
+              serializeBundle({
+                bundleName,
+                bundle,
+                bundleLookups,
+                contentMap,
+                config
+              })
+            );
+          }
+        }
       }
     }));
-  }
-
-  _processBundles(
-    variant: string,
-    bundles: { [bundleName: string]: GeneratedBundleData },
-    bundleLookups: GeneratedBundleLookupVariant,
-    contentMap: ReadOnlyContentMapVariant,
-    config: PacktConfig,
-    utils: BuildUtils,
-  ) {
-    for (let bundleName in bundles) {
-      const bundle = bundles[bundleName];
-      utils.pool.processBundle(
-        bundleName,
-        variant,
-        serializeBundle({
-          bundleName,
-          bundle,
-          bundleLookups,
-          contentMap,
-          config
-        })
-      );
-    }
   }
 }
