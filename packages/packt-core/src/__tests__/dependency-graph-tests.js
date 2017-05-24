@@ -68,8 +68,14 @@ describe('dependency graph tests', () => {
     const defaultVariant = graph.variants['default'];
 
     expect(Object.keys(defaultVariant.roots)).toEqual([
+      'bundle-a',
+      'bundle-b', 
+    ]);
+    expect(Array.from(defaultVariant.roots['bundle-a']).map((m) => m.module)).toEqual([
       '/src/entrypoint-a.js',
-      '/src/entrypoint-b.js', 
+    ]);
+    expect(Array.from(defaultVariant.roots['bundle-b']).map((m) => m.module)).toEqual([
+      '/src/entrypoint-b.js',
     ]);
     expect(Object.keys(defaultVariant.lookups)).toEqual([
       '/src/entrypoint-a.js',
@@ -79,14 +85,14 @@ describe('dependency graph tests', () => {
       '/src/fourth-level-component.js',
     ]);
 
-    const entrypointA = defaultVariant.roots['/src/entrypoint-a.js'];
+    const entrypointA = defaultVariant.lookups['/src/entrypoint-a.js'];
     expect(entrypointA.importedBy).toEqual({});
     expect(Object.keys(entrypointA.imports)).toEqual(['/src/second-level-component.js']);
     expect(Object.keys(entrypointA.importAliases)).toEqual(['./second-level-component']);
     expect(entrypointA.bundles.size).toEqual(1);
     expect(entrypointA.bundles.has('bundle-a')).toBe(true);
 
-    const entrypointB = defaultVariant.roots['/src/entrypoint-b.js'];
+    const entrypointB = defaultVariant.lookups['/src/entrypoint-b.js'];
     expect(entrypointB.importedBy).toEqual({});
     expect(Object.keys(entrypointB.imports)).toEqual(['/src/third-level-component.js']);
     expect(Object.keys(entrypointB.importAliases)).toEqual(['./third-level-component']);

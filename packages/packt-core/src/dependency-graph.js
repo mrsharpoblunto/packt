@@ -1,6 +1,8 @@
 /**
  * @flow
  */
+import {getOrCreate} from './helpers';
+
 export type DependencyNodeImport = {|
   node: DependencyNode,
   symbols: Set<string>,
@@ -195,7 +197,7 @@ export class DependencyNode {
 export type DependencyVariant = {|
   lookups: { [key: string]: DependencyNode },
   identifiers: { [key: string]: ExportDeclaration },
-  roots: { [key: string]: DependencyNode },
+  roots: { [bundleName: string]: Set<DependencyNode> },
 |};
 
 export class DependencyGraph {
@@ -272,11 +274,9 @@ export class DependencyGraph {
     for (let v of variants) {
       const variant = this._getVariant(v);
       const node = this._getNode(resolvedModule, variant);
-      let root = variant.roots[resolvedModule];
-      if (!root) {
-        root = variant.roots[resolvedModule] = node;
-      }
-      root.bundles.add(bundleName);
+      const root = getOrCreate(variant.roots, bundleName, () => new Set());
+      root.add(node);
+      node.bundles.add(bundleName);
     }
   }
 

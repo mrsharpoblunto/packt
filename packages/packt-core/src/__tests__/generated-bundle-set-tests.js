@@ -540,6 +540,18 @@ describe('generated bundle set tests', () => {
 
     mockDependent(
       graph,
+      '/src/module-3.js',
+      '/src/module-3-a.js',
+      ['default'],
+      {
+        source: './module-3-a',
+        symbols: ['*'],
+        type: 'static',
+      }
+    );
+
+    mockDependent(
+      graph,
       '/src/module-1.js',
       '/src/module-4.js',
       ['default'],
@@ -626,6 +638,7 @@ describe('generated bundle set tests', () => {
 
       expect(generatedBundles.getStaticBundle('bundle-a.js').modules.map((m) => m.module)).toEqual([
         '/src/module-2.js', 
+        '/src/module-3-a.js', 
         '/src/module-3.js', 
         '/src/module-1.js', 
       ]);

@@ -36,6 +36,8 @@ function visit(
   staticOnly: boolean,
   output: Array<DependencyNode>,
 ): boolean {
+  // when we sort, sometimes we want to ensure that
+  // sorting doesn't pull in children of the selected nodes
   if (whitelist && !whitelist.has(node)) {
     return true;
   }
@@ -112,7 +114,7 @@ export class GeneratedBundleSet {
       graphVariant, 
       workingSet
     );
-    this._extractDynamicBundles();
+    this._extractDynamicBundles(graphVariant);
     this._extractCommonBundles();
     this._finalizeStaticBundles();
   }
@@ -204,12 +206,28 @@ export class GeneratedBundleSet {
     return bundles;
   }
 
-  _extractDynamicBundles() {
+  _extractDynamicBundles(
+    graphVariant: DependencyVariant,
+  ) {
     const tmp: Set<DependencyNode> = new Set();
     for (let bundleName in this._pendingBundles) {
       const pendingBundle = this._pendingBundles[bundleName];
       const bundleConfig = this._config.bundles[bundleName];
       const extracted: Array<DependencyNode> = [];
+
+      let staticVisited: ?Set<DependencyNode> = null;
+      const isStaticallyImported = (node: DependencyNode):boolean => {
+        if (!staticVisited) {
+          staticVisited = new Set();
+          const roots = graphVariant.roots[bundleName];
+          for (let m of roots) {
+            if (!visit(m, null, staticVisited, tmp, true, [])) {
+              throw new Error('cycle detected!');
+            }
+          }
+        }
+        return staticVisited.has(node);
+      }
 
       for (let module of pendingBundle) {
         if (module.getImportTypeForBundle(bundleName) === 'dynamic') {
@@ -217,26 +235,14 @@ export class GeneratedBundleSet {
           const visited: Set<DependencyNode> = new Set();
           const possibleDynamicModules: Array<DependencyNode> = [];
           const modules: Array<DependencyNode> = [];
-          visit(module, null, visited, tmp, true, possibleDynamicModules);
+          if (!visit(module, null, visited, tmp, true, possibleDynamicModules)) {
+            throw new Error('cycle detected');
+          }
 
           for (let possibleModule of possibleDynamicModules) {
-            // then check each module to see if it is only imported
-            // by modules that are also in the dynamic bundle. if not,
-            // we should be including that module statically
-            let include = true;
-            if (possibleModule !== module) {
-              for (let i in possibleModule.importedBy) {
-                const importedBy = possibleModule.importedBy[i];
-                if (
-                  importedBy.bundles.has(bundleName) &&
-                  !visited.has(importedBy)
-                ) {
-                  include = false;
-                  break;
-                }
-              }
-            }
-            if (include) {
+            // if no static import from the root of the bundle imports this,
+            // then add it to the dynamic bundle
+            if (!isStaticallyImported(possibleModule)) {
               modules.push(possibleModule);
               extracted.push(possibleModule);
             }
