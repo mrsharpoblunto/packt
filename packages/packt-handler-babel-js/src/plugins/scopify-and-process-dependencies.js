@@ -395,6 +395,9 @@ export default function transform(babel) {
 
         const declarators = [];
         for (let spec of path.node.specifiers) {
+          if (spec.importKind === 'type') {
+            continue;
+          }
           let symbol;
           switch (spec.type) {
             case 'ImportNamespaceSpecifier':
