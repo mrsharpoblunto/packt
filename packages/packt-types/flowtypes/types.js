@@ -43,6 +43,9 @@ export type PacktConfig = {|
         folder: boolean,
       } | string>,
       depends: { [key: string]: boolean },
+      dynamicChildren: {
+        preserveDuplicates: boolean,
+      },
       contentTypes: { [key: string]: boolean },
       threshold: number,
       dependedBy: { [key: string]: boolean },

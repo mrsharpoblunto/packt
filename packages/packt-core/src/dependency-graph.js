@@ -291,7 +291,7 @@ export class DependencyGraph {
       const node = this._getNode(resolvedModule, variant);
       const importedNode = this._getNode(resolvedImportedModule, variant);
       node.importsNode(importedNode, imported);
-      importedNode.importedByNode(node, imported.type);
+      importedNode.importedByNode(node);
     }
   }
 }

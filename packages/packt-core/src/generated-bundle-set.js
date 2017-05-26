@@ -95,6 +95,11 @@ export class GeneratedBundleSet {
   _config: PacktConfig;
   _outputPathHelpers: OutputPathHelpers;
   _pendingBundles: { [bundleName: string]: Set<DependencyNode> };
+  _pendingDynamicBundles: Array<{
+    parentBundleName: string,
+    rootModule: DependencyNode,
+    modules: Set<DependencyNode>,
+  }>;
 
   constructor(
     variant: string,
@@ -116,6 +121,7 @@ export class GeneratedBundleSet {
     );
     this._extractDynamicBundles(graphVariant);
     this._extractCommonBundles();
+    this._finalizeDynamicBundles();
     this._finalizeStaticBundles();
   }
 
@@ -209,6 +215,7 @@ export class GeneratedBundleSet {
   _extractDynamicBundles(
     graphVariant: DependencyVariant,
   ) {
+    this._pendingDynamicBundles = [];
     const tmp: Set<DependencyNode> = new Set();
     for (let bundleName in this._pendingBundles) {
       const pendingBundle = this._pendingBundles[bundleName];
@@ -230,40 +237,38 @@ export class GeneratedBundleSet {
       }
 
       for (let module of pendingBundle) {
-        if (module.getImportTypeForBundle(bundleName) === 'dynamic') {
+        if (
+          module.getImportTypeForBundle(bundleName) === 'dynamic' &&
+          !graphVariant.roots[bundleName].has(module)
+        ) {
           // get the subtree of dependencies from this dynamic import
           const visited: Set<DependencyNode> = new Set();
           const possibleDynamicModules: Array<DependencyNode> = [];
-          const modules: Array<DependencyNode> = [];
+          const modules: Set<DependencyNode> = new Set();
           if (!visit(module, null, visited, tmp, true, possibleDynamicModules)) {
             throw new Error('cycle detected');
           }
 
           for (let possibleModule of possibleDynamicModules) {
-            // if no static import from the root of the bundle imports this,
-            // then add it to the dynamic bundle
             if (!isStaticallyImported(possibleModule)) {
-              modules.push(possibleModule);
+              // if no static import from the root of the bundle imports this,
+              // then add it to the dynamic bundle
+              modules.add(possibleModule);
               extracted.push(possibleModule);
+            } else if (bundleConfig.dynamicChildren.preserveDuplicates) {
+              // if it is statically imported from the root of the bundle, we may still
+              // want to include it in the bundle, but only if this bundle is configured
+              // to preserve duplicates - in which case we will include it in the dynamic
+              // bundle, but not extract it from the parent bundle
+              modules.add(possibleModule);
             }
           }
 
-          // calculate the bundle hash and add the modules to the final dynamic bundle.
-          // They're already in the right order as visit sorts them for us
-          const hash = this._outputPathHelpers.generateHash(
-            modules.reduce((result, module) => result + (module.contentHash || ''), '')
-          );
-
-          this._dynamicBundles[bundleName + ':' + module.module] = {
-            hash,
-            paths: this._outputPathHelpers.getBundlerDynamicOutputPaths(
-              bundleName + '_' + path.basename(module.module),
-              hash,
-              bundleConfig.bundler,
-              this._variant
-            ),
-          };
-          this._modules[hash] = modules;
+          this._pendingDynamicBundles.push({
+            parentBundleName: bundleName,
+            rootModule: module,
+            modules,
+          });
         }
       }
       for (let module of extracted) {
@@ -329,6 +334,45 @@ export class GeneratedBundleSet {
         pendingBundle.delete(module);
       }
     }
+  }
+
+  _finalizeDynamicBundles() {
+    for (let bundle of this._pendingDynamicBundles) {
+      const bundleConfig = this._config.bundles[bundle.parentBundleName];
+      // if any module in this dynamic bundle also exists in this 
+      // parent bundles common set, we should remove it from the 
+      // dynamic bundle
+      for (let common in bundleConfig.commons) {
+        const commonModules = this._pendingBundles[common];
+        if (commonModules) {
+          for (let module of commonModules) {
+            if (bundle.modules.has(module)) {
+              bundle.modules.delete(module);
+            }
+          }
+        }
+      }
+
+      const modules: Array<DependencyNode> = Array.from(bundle.modules);
+
+      // calculate the bundle hash and add the modules to the final dynamic bundle.
+      // They're already in the right order as visit sorts them for us
+      const hash = this._outputPathHelpers.generateHash(
+        modules.reduce((result, module) => result + (module.contentHash || ''), '')
+      );
+
+      this._dynamicBundles[bundle.parentBundleName + ':' + bundle.rootModule.module] = {
+        hash,
+        paths: this._outputPathHelpers.getBundlerDynamicOutputPaths(
+          bundle.parentBundleName + '_' + path.basename(bundle.rootModule.module),
+          hash,
+          bundleConfig.bundler,
+          this._variant
+        ),
+      };
+      this._modules[hash] = modules;
+    }
+    this._pendingDynamicBundles = [];
   }
 
   _finalizeStaticBundles() {

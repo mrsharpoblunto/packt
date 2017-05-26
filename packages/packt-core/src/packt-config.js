@@ -78,6 +78,9 @@ function validate(
           depends: {},
           contentTypes: {},
           threshold: 0,
+          dynamicChildren: {
+            preserveDuplicates: false,
+          },
           ...value.bundles[b]
         };
       }
@@ -264,6 +267,13 @@ function generateSchema(
           joi.array().items(customJoi.string().library(libraries)),
           customJoi.string().library(libraries)
         ).default([]),
+        otherwise: joi.forbidden(),
+      }),
+      dynamicChildren: joi.when('type', {
+        is: 'entrypoint',
+        then: joi.object({
+          preserveDuplicates: joi.boolean().default(false),
+        }),
         otherwise: joi.forbidden(),
       }),
       contentTypes: joi.when('type', {

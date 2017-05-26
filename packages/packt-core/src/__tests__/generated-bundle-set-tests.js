@@ -782,6 +782,352 @@ describe('generated bundle set tests', () => {
     });
   });
 
+  it('Dynamic sub-bundles have resources common to the parent extracted to the parents common module', () => {
+    const graph = new DependencyGraph();
+
+    mockEntryPoint(
+      graph,
+      '/src/module-a.js',
+      ['default'],
+      'bundle-a.js'
+    );
+
+    mockEntryPoint(
+      graph,
+      '/src/module-3.js',
+      ['default'],
+      'bundle-a.js'
+    );
+
+    mockDependent(
+      graph,
+      '/src/module-a.js',
+      '/src/module-2.js',
+      ['default'],
+      {
+        source: './module-2',
+        symbols: ['*'],
+        type: 'dynamic',
+      }
+    );
+
+    mockDependent(
+      graph,
+      '/src/module-2.js',
+      '/src/module-3.js',
+      ['default'],
+      {
+        source: './module-3',
+        symbols: ['*'],
+        type: 'static',
+      }
+    );
+
+    mockDependent(
+      graph,
+      '/src/module-2.js',
+      '/src/module-4.js',
+      ['default'],
+      {
+        source: './module-4',
+        symbols: ['*'],
+        type: 'static',
+      }
+    );
+
+    mockEntryPoint(
+      graph,
+      '/src/module-b.js',
+      ['default'],
+      'bundle-b.js'
+    );
+
+    mockEntryPoint(
+      graph,
+      '/src/module-4.js',
+      ['default'],
+      'bundle-b.js'
+    );
+
+    mockDependent(
+      graph,
+      '/src/module-b.js',
+      '/src/module-2.js',
+      ['default'],
+      {
+        source: './module-2',
+        symbols: ['*'],
+        type: 'dynamic',
+      }
+    );
+
+    mockEntryPoint(
+      graph,
+      '/src/module-c.js',
+      ['default'],
+      'bundle-c.js'
+    );
+
+    mockEntryPoint(
+      graph,
+      '/src/module-3.js',
+      ['default'],
+      'bundle-c.js'
+    );
+
+    return parseMockConfig({
+      bundles: {
+        'bundle-a.js': {
+          type: 'entrypoint',
+          requires: [
+            '/src/module-a.js',
+            '/src/module-3.js',
+          ],
+          depends: ['common.js'],
+          bundler: 'js',
+        },
+        'bundle-b.js': {
+          type: 'entrypoint',
+          requires: [
+            '/src/module-b.js',
+            '/src/module-4.js',
+          ],
+          depends: ['common.js'],
+          bundler: 'js',
+        },
+        'bundle-c.js': {
+          type: 'entrypoint',
+          requires: [
+            '/src/module-c.js',
+            '/src/module-3.js',
+          ],
+          depends: ['common.js'],
+          bundler: 'js',
+        },
+        'common.js': {
+          type: 'common',
+          contentTypes: ['text/javascript'],
+          threshold: 0.5,
+          bundler: 'js',
+        }
+      },
+      bundlers: {
+        'js': {
+          require: 'bundler.js',
+        },
+      },
+      handlers: [
+        {
+          pattern: '.js',
+          require: 'handler.js',
+        },
+      ],
+    }).then((config) => {
+      const workingSet = generateMockWorkingSet(config);
+      const outputPaths = new OutputPathHelpers(config);
+      const generatedBundles = new GeneratedBundleSet(
+        'default',
+        graph.variants['default'],
+        workingSet,
+        config,
+        outputPaths
+      );
+
+      expect(Object.keys(generatedBundles.getBundles())).toEqual([
+        'bundle-a.js',
+        'bundle-b.js',
+        'bundle-c.js',
+        'common.js',
+        'bundle-a.js:/src/module-2.js',
+        'bundle-b.js:/src/module-2.js',
+      ]);
+
+      expect(generatedBundles.getStaticBundle('bundle-a.js').modules.map((m) => m.module)).toEqual([
+        '/src/module-a.js', 
+      ]);
+      expect(generatedBundles.getStaticBundle('bundle-b.js').modules.map((m) => m.module)).toEqual([
+        '/src/module-4.js', 
+        '/src/module-b.js', 
+      ]);
+      expect(generatedBundles.getStaticBundle('bundle-c.js').modules.map((m) => m.module)).toEqual([
+        '/src/module-c.js', 
+      ]);
+      expect(generatedBundles.getStaticBundle('common.js').modules.map((m) => m.module)).toEqual([
+        '/src/module-3.js', 
+      ]);
+
+      const module3aBundle = generatedBundles.getDynamicBundle('bundle-a.js:/src/module-2.js');
+      expect(module3aBundle.modules.map((m) => m.module)).toEqual([
+        '/src/module-4.js', 
+        '/src/module-2.js', 
+      ]);
+      const module3bBundle = generatedBundles.getDynamicBundle('bundle-b.js:/src/module-2.js');
+      expect(module3bBundle.modules.map((m) => m.module)).toEqual([
+        '/src/module-2.js', 
+      ]);
+    });
+  });
+
+  it('Duplicate dynamic children can be preserved', () => {
+    const graph = new DependencyGraph();
+
+    mockEntryPoint(
+      graph,
+      '/src/module-a.js',
+      ['default'],
+      'bundle-a.js'
+    );
+
+    mockEntryPoint(
+      graph,
+      '/src/module-3.js',
+      ['default'],
+      'bundle-a.js'
+    );
+
+    mockDependent(
+      graph,
+      '/src/module-a.js',
+      '/src/module-2.js',
+      ['default'],
+      {
+        source: './module-2',
+        symbols: ['*'],
+        type: 'dynamic',
+      }
+    );
+
+    mockDependent(
+      graph,
+      '/src/module-2.js',
+      '/src/module-3.js',
+      ['default'],
+      {
+        source: './module-3',
+        symbols: ['*'],
+        type: 'static',
+      }
+    );
+
+    mockDependent(
+      graph,
+      '/src/module-2.js',
+      '/src/module-4.js',
+      ['default'],
+      {
+        source: './module-4',
+        symbols: ['*'],
+        type: 'static',
+      }
+    );
+
+    mockEntryPoint(
+      graph,
+      '/src/module-b.js',
+      ['default'],
+      'bundle-b.js'
+    );
+
+    mockEntryPoint(
+      graph,
+      '/src/module-4.js',
+      ['default'],
+      'bundle-b.js'
+    );
+
+    mockDependent(
+      graph,
+      '/src/module-b.js',
+      '/src/module-2.js',
+      ['default'],
+      {
+        source: './module-2',
+        symbols: ['*'],
+        type: 'dynamic',
+      }
+    );
+
+    return parseMockConfig({
+      bundles: {
+        'bundle-a.js': {
+          type: 'entrypoint',
+          requires: [
+            '/src/module-a.js',
+            '/src/module-3.js',
+          ],
+          dynamicChildren: {
+            preserveDuplicates: false,
+          },
+          bundler: 'js',
+        },
+        'bundle-b.js': {
+          type: 'entrypoint',
+          requires: [
+            '/src/module-b.js',
+            '/src/module-4.js',
+          ],
+          dynamicChildren: {
+            preserveDuplicates: true,
+          },
+          bundler: 'js',
+        },
+      },
+      bundlers: {
+        'js': {
+          require: 'bundler.js',
+        },
+      },
+      handlers: [
+        {
+          pattern: '.js',
+          require: 'handler.js',
+        },
+      ],
+    }).then((config) => {
+      const workingSet = generateMockWorkingSet(config);
+      const outputPaths = new OutputPathHelpers(config);
+      const generatedBundles = new GeneratedBundleSet(
+        'default',
+        graph.variants['default'],
+        workingSet,
+        config,
+        outputPaths
+      );
+
+      expect(Object.keys(generatedBundles.getBundles())).toEqual([
+        'bundle-a.js',
+        'bundle-b.js',
+        'bundle-a.js:/src/module-2.js',
+        'bundle-b.js:/src/module-2.js',
+      ]);
+
+      expect(generatedBundles.getStaticBundle('bundle-a.js').modules.map((m) => m.module)).toEqual([
+        '/src/module-a.js', 
+        '/src/module-3.js', 
+      ]);
+      expect(generatedBundles.getStaticBundle('bundle-b.js').modules.map((m) => m.module)).toEqual([
+        '/src/module-4.js', 
+        '/src/module-b.js', 
+      ]);
+
+      // this bundle has had module-3 removed because it is statically present in bundle-a, and bundle-a
+      // is configured to remove any modules from dynamic bundles that are also statically included
+      const module3aBundle = generatedBundles.getDynamicBundle('bundle-a.js:/src/module-2.js');
+      expect(module3aBundle.modules.map((m) => m.module)).toEqual([
+        '/src/module-4.js', 
+        '/src/module-2.js', 
+      ]);
+      // this bundle still has module-3 because bundle-b has been configured to preserve duplicates in
+      // the parent & dynamic child bundles
+      const module3bBundle = generatedBundles.getDynamicBundle('bundle-b.js:/src/module-2.js');
+      expect(module3bBundle.modules.map((m) => m.module)).toEqual([
+        '/src/module-3.js', 
+        '/src/module-4.js', 
+        '/src/module-2.js', 
+      ]);
+    });
+  });
+
   it('Generates bundle maps', () => {
     const graph = new DependencyGraph();
 
