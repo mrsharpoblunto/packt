@@ -148,8 +148,7 @@ export default class Packt {
                 bundlers: bundlerTimer,
               },
               buildStats,
-              bundleStats,
-              state.dependencyGraph
+              bundleStats
             );
           });
         });
@@ -232,7 +231,7 @@ export default class Packt {
   }> {
     return new Promise((resolve, reject) => {
       const updateReporter = setInterval(() => {
-        this._reporter.onUpdateBuildStatus(utils.pool.status());
+        this._reporter.onUpdateBuildStatus(utils.pool.status(), buildStats, null);
       },100);
 
       const start = Date.now();
@@ -434,7 +433,7 @@ export default class Packt {
       const bundlerTimer = new Timer();
 
       const updateReporter = this._reporter ? setInterval(() => {
-        this._reporter.onUpdateBuildStatus(utils.pool.status());
+        this._reporter.onUpdateBuildStatus(utils.pool.status(), null, bundleStats);
       },100) : null;
 
       const cleanup = (err,result) => {

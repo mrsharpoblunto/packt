@@ -42,6 +42,8 @@ export default class RawHandler implements Handler {
 
         let source = new Buffer(data).toString(encoding);
 
+        stats.preSize = data.length;
+        stats.postSize = source.length;
         stats.transform = Date.now() - start;
 
         delegate.exportsSymbols(

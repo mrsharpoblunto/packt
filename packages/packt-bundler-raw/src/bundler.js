@@ -28,6 +28,8 @@ export default class RawBundler implements Bundler {
       const perfStats = {
         transform: 0,
         diskIO: 0,
+        preSize: 0,
+        postSize: 0,
       };
 
       const start = Date.now();
@@ -42,6 +44,8 @@ export default class RawBundler implements Bundler {
         callback(err);
       });
       for (let module of data.modules) {
+        perfStats.preSize += module.content.length;
+        perfStats.postSize += module.content.length;
         wstream.write(
           module.content, 
           module.contentType.indexOf('text/')===0?'utf8':'base64'

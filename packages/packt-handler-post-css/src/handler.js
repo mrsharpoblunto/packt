@@ -100,6 +100,9 @@ export default class PostCssHandler implements Handler {
           .process(variantAst, configOpts.opts)
           .then((result) => {
             stats.transform = Date.now() - vStart + parseTime;
+            stats.preSize = source.length;
+            stats.postSize = result.css.length;
+
             start = Date.now();
             for (let warning of result.warnings()) {
               delegate.emitWarning(

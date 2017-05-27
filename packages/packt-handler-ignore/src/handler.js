@@ -30,6 +30,11 @@ export default class IgnoreHandler implements Handler {
         perfStats: {
           diskIO: 0,
           transform: 0,
+          // the presize isn't accurate here - but this handler is here
+          // for the sake of perf, so it wouldn't make sense to load the
+          // file just to get this info
+          preSize: 0,
+          postSize: 0,
         },
       }
     );

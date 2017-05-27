@@ -48,7 +48,9 @@ export default class RawToJSHandler implements Handler {
         }
 
         const transformed = `window.${scopeId}=${source};`;
+        stats.preSize = source.length;
         stats.transform = Date.now() - start;
+        stats.postSize = transformed.length;
 
         delegate.exportsSymbols(
           Object.keys(options),

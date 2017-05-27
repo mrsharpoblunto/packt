@@ -196,6 +196,8 @@ export default class BabelJsHandler implements Handler {
             )
           );
           stats.transform = Date.now() - vStart + parseTime;
+          stats.preSize = source.length;
+          stats.postSize = result.code.length;
           callback(
             null,
             [key],

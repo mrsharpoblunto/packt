@@ -9,7 +9,10 @@ const argv = yargs
   .usage('Usage: $0 [options]')
   .default('config','packt.config.js')
   .default('module-scopes','')
-  .boolean('progress',true)
+  .boolean('progress')
+  .default('progress', true)
+  .boolean('verbose')
+  .default('verbose', true)
   .help('h')
   .alias('h','help')
   .argv;
@@ -18,7 +21,7 @@ if (!argv.help) {
   const packt = new Packt(
     process.cwd(),
     argv,
-    new ConsoleReporter(argv.progress)
+    new ConsoleReporter(argv.progress, argv.verbose)
   );
 
   packt.start()

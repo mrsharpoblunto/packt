@@ -34,7 +34,12 @@ export default class JsBundler implements Bundler {
         return callback(err);
       }
 
-      const perfStats = {};
+      const perfStats = {
+        preSize: 0,
+        postSize: 0,
+        transform: 0,
+        diskIO: 0,
+      };
       let start = Date.now();
 
       const cssModules = [];
@@ -65,52 +70,58 @@ export default class JsBundler implements Bundler {
         callback(err);
       });
 
+      const write = (content: string) => {
+        perfStats.postSize += content.length;
+        wstream.write(content);
+      };
+
       try {
         if (!options.bundler.minify) {
-          wstream.write('(function(__packt_bundle_context__){');
-          wstream.write(debugJSRuntime(data, jsModules));
+          write('(function(__packt_bundle_context__){');
+          write(debugJSRuntime(data, jsModules));
         }
 
         if (!data.hasDependencies && !options.bundler.omitRuntime) {
-          wstream.write(jsRuntime.impl(
+          write(jsRuntime.impl(
             !!options.bundler.minify
           ));
         }
 
         if (cssModules.length > 0) {
-          wstream.write(jsRuntime.styleLoader(
+          perfStats.preSize += cssModules.reduce((p, n) => p + n.content.length, 0);
+          write(jsRuntime.styleLoader(
             cssModules
           ));
         }
 
         if (jsModules.length > 0) {
           for (let module of jsModules) {
+            perfStats.preSize += module.content.length;
             if (options.bundler.minify) {
-              wstream.write(this._minifyJSModule(
+              write(this._minifyJSModule(
                 bundleName,
                 data,
                 options.bundler.uglifyOptions || {},
                 module, 
                 delegate));
             } else {
-              wstream.write(module.content);
-              wstream.write(';\n');
+              write(module.content);
+              write(';\n');
             }
           }
         }
 
         if (!options.bundler.minify) {
-          wstream.write('})("' + bundleName + '")');
+          write('})("' + bundleName + '")');
         }
       } catch (ex) {
         callback(ex);
         return;
       }
 
-      wstream.end();
-
       perfStats.transform = Date.now() - start;
       start = Date.now();
+      wstream.end();
     });
   }
 

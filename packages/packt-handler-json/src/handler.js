@@ -32,7 +32,9 @@ export default class JsonHandler implements Handler {
         start = Date.now();
         const result = JSON.parse(source);
         stats.transform = Date.now() - start;
+        stats.preSize = source.length;
         const transformed = 'var ' + scopeId + '=' + source + ';';
+        stats.postSize = transformed.length;
 
         delegate.exportsSymbols(
           Object.keys(options),

@@ -102,6 +102,8 @@ export type Timer = {
 export type PerfStats = {|
   diskIO: number,
   transform: number,
+  preSize: number,
+  postSize: number,
 |};
 
 export type PerfStatsDict = { [key: string]: PerfStats };
@@ -123,7 +125,11 @@ export interface Reporter {
   onInit(version: string, options: PacktOptions): void,
   onLoadConfig(config: PacktConfig): void,
   onStartBuild(): void,
-  onUpdateBuildStatus(workerStatus: Array<WorkerStatusDescription>): void,
+  onUpdateBuildStatus(
+    workerStatus: Array<WorkerStatusDescription>,
+    buildStats: ?PerfStatsDict,
+    bundleStats: ?PerfStatsDict
+  ): void,
   onBuildWarning(
     resolvedModule: string,
     variants: Array<string>,
