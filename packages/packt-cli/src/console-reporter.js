@@ -67,17 +67,10 @@ class ConsoleReporter implements Reporter {
         this._eraseCount = workers.length + 5;
       }
 
-      if (buildStats) {
-        const bs = buildStats;
-        this._buildCount = Object.keys(bs).reduce((p,n) => p + Object.keys(bs[n] || {}).length, 0);
-      } else if (bundleStats) {
-        const bs = bundleStats;
-        this._bundleCount = Object.keys(bs).reduce((p,n) => p + Object.keys(bs[n] || {}).length, 0);
-      }
-
       const windowSize = ((process.stdout): any).getWindowSize();
       const width = Math.max(MIN_RIGHT_COL_WIDTH, windowSize[0] - 2);
 
+      this._updateStatsCounts(buildStats,bundleStats);
       this._showTableHeader(`Building (completed ${this._buildCount} modules, ${this._bundleCount} bundles)`, width);
       for (let worker of workers) {
         let message = '';
@@ -211,6 +204,7 @@ class ConsoleReporter implements Reporter {
       }
     }
 
+    this._updateStatsCounts(buildStats, bundleStats);
     console.log(
       chalk.green(
        `Build (${this._buildCount} modules, ${this._bundleCount} bundles) completed in `
@@ -223,6 +217,20 @@ class ConsoleReporter implements Reporter {
         ) /1000).toFixed(2) + 's'
       )
     );
+  }
+
+  _updateStatsCounts(
+    buildStats: ?{ [variant: string]: PerfStatsDict },
+    bundleStats: ?{ [variant: string]: PerfStatsDict }
+  ) {
+    if (buildStats) {
+      const bs = buildStats;
+      this._buildCount = Object.keys(bs).reduce((p,n) => p + Object.keys(bs[n] || {}).length, 0);
+    }
+    if (bundleStats) {
+      const bs = bundleStats;
+      this._bundleCount = Object.keys(bs).reduce((p,n) => p + Object.keys(bs[n] || {}).length, 0);
+    }
   }
 
   _showBundleInfo(bundleStats: { [variant: string]: PerfStatsDict }) {

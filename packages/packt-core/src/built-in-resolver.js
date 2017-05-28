@@ -5,6 +5,16 @@ import fs from 'fs';
 import path from 'path';
 import {PacktResolverError} from 'packt-types';
 
+// when resolving a package entrypoint, we prefer the es6 entrypoint 'module'
+// as it allows us to optimize the module using tree-shaking. If this is not
+// present, then the optimized browser specific entrypoint is picked, and
+// finally the standard main entrypoint
+const MAIN_CANDIDATES = [
+  'module', 
+  'browser', 
+  'main'
+];
+
 export default class BuiltInResolver implements Resolver {
 
   static defaultOptions = (
@@ -302,25 +312,19 @@ export default class BuiltInResolver implements Resolver {
         try {
           const packageJson = JSON.parse(data);
           let entry;
-          // prefer browser to main. TODO make this configurable for
-          // node based packt builds... do we need to distinguish between
-          // core & node_modules based modules somehow
-          if (!packageJson.browser) {
-            if (!packageJson.main) {
-              entry = {
-                err: new Error('No browser or main property found in package.json'),
-                main: null,
-              };
-            } else {
+          for (let c of MAIN_CANDIDATES) {
+            if (packageJson[c]) {
               entry = {
                 err: null,
-                main: path.join(packagePath,packageJson.main),
+                main: path.join(packagePath,packageJson[c]),
               };
+              break;
             }
-          } else {
+          }
+          if (!entry) {
             entry = {
-              err: null,
-              main: path.join(packagePath,packageJson.browser),
+              err: new Error('No property matching [' + candidates.join(',') + '] found in package.json'),
+              main: null,
             };
           }
           this._packageCache[packagePath] = entry;
