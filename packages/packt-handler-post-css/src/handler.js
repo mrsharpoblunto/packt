@@ -57,10 +57,11 @@ export default class PostCssHandler implements Handler {
     delegate: HandlerDelegate,
     callback: HandlerProcessCallback
   ) {
+    const variantKeys = Object.keys(options);
     const stats = {};
     let start = Date.now();
     fs.readFile(resolvedModule,'utf8',(err,source) => {
-      stats.diskIO = Date.now() - start;
+      stats.diskIO = (Date.now() - start) / variantKeys.length;
       if (err) {
         callback(err);
         return;
@@ -79,7 +80,6 @@ export default class PostCssHandler implements Handler {
         return callback(ex);
       }
 
-      const variantKeys = Object.keys(options);
       // divide the parse time up evenly amongst each variant transform
       const parseTime = (Date.now() - start) / variantKeys.length
       const needsDeepCopy = variantKeys.length > 1;

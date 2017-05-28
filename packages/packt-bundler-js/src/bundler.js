@@ -11,6 +11,11 @@ import * as jsRuntime from './js-runtime';
 const PACKT_PLACEHOLDER_PATTERN = /__packt_(\w*?)__\((.*?)\)/g;
 const JS_INDEX = 0;
 const CSS_INDEX = 1;
+const DEFAULT_UGLIFY_OPTIONS = {
+  mangle: {
+    toplevel: true,
+  },
+};
 
 export default class JsBundler implements Bundler {
 
@@ -75,6 +80,8 @@ export default class JsBundler implements Bundler {
         wstream.write(content);
       };
 
+      const uglifyWarning = uglify.AST_Node.warn_function;
+      uglify.AST_Node.warn_function = delegate.emitWarning;
       try {
         if (!options.bundler.minify) {
           write('(function(__packt_bundle_context__){');
@@ -95,26 +102,37 @@ export default class JsBundler implements Bundler {
         }
 
         if (jsModules.length > 0) {
+          let jsContent = '';
           for (let module of jsModules) {
             perfStats.preSize += module.content.length;
             if (options.bundler.minify) {
-              write(this._minifyJSModule(
+              jsContent += this._stripJSRuntime(
                 bundleName,
                 data,
-                options.bundler.uglifyOptions || {},
                 module, 
-                delegate));
+                delegate
+              );
             } else {
               write(module.content);
               write(';\n');
             }
+          }
+          if (jsContent.length) {
+            write(uglify.minify(jsContent, {
+              ...(
+                options.bundler.uglifyOptions || DEFAULT_UGLIFY_OPTIONS
+              ),
+              fromString: true
+            }).code);
           }
         }
 
         if (!options.bundler.minify) {
           write('})("' + bundleName + '")');
         }
+        uglify.AST_Node.warn_function = uglifyWarning;
       } catch (ex) {
+        uglify.AST_Node.warn_function = uglifyWarning;
         callback(ex);
         return;
       }
@@ -155,14 +173,13 @@ export default class JsBundler implements Bundler {
     return result;
   }
 
-  _minifyJSModule(
+  _stripJSRuntime(
     bundleName: string,
     data: BundlerData, 
-    options: Object,
     module: SerializedModule,
     delegate: BundlerDelegate
   ): string {
-    return uglify.minify(module.content.replace(
+    return module.content.replace(
       PACKT_PLACEHOLDER_PATTERN,
       (match: string, type: string, rawArgs: string) => {
         const args = this._splitArgs(rawArgs);
@@ -240,6 +257,6 @@ export default class JsBundler implements Bundler {
             return match;
         }
       }
-    ), { ...options, fromString: true }).code;
+    ) + ';\n';
   }
 }

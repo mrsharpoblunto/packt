@@ -32,6 +32,7 @@ import ScopeIdGenerator from './scope-id-generator';
 import OutputPathHelpers from './output-path-helpers';
 import {parseConfig} from './packt-config';
 import {determineInitialWorkingSet} from './working-set';
+import {getOrCreate} from './helpers';
 
 type BuildState = {|
   contentMap: ContentMap,
@@ -226,7 +227,7 @@ export default class Packt {
     utils,
     state,
   }: BuildParams): Promise<{
-    buildStats: PerfStatsDict,
+    buildStats: { [variant: string]: PerfStatsDict },
     handlerTimer: Timer
   }> {
     return new Promise((resolve, reject) => {
@@ -235,7 +236,7 @@ export default class Packt {
       },100);
 
       const start = Date.now();
-      const buildStats: PerfStatsDict = {};
+      const buildStats: { [variant: string]: PerfStatsDict } = {};
       const handlerTimer = new Timer();
 
       const cleanup = (err: ?Error) => {
@@ -305,7 +306,14 @@ export default class Packt {
             break;
 
           case 'module_content':
-            buildStats[m.resolvedModule] = m.perfStats;
+            for (let variant of m.variants) {
+              getOrCreate(buildStats, variant,()=> ({}))[m.resolvedModule] = {
+                transform: m.perfStats.transform / m.variants.length,
+                diskIO: m.perfStats.diskIO / m.variants.length,
+                preSize: m.perfStats.preSize,
+                postSize: m.perfStats.postSize,
+              };
+            }
             handlerTimer.accumulate(m.handler,m.perfStats);
             handlerTimer.accumulate(m.handler,{ modules: m.variants.length });
 
@@ -402,7 +410,7 @@ export default class Packt {
     utils,
     state,
   }: BuildParams): Promise<{
-    bundleStats: PerfStatsDict,
+    bundleStats: { [variant: string]: PerfStatsDict },
     bundlerTimer: Timer,
   }> {
     let start = Date.now();
@@ -429,7 +437,7 @@ export default class Packt {
       timer.accumulate('build',{ 'asset-map': Date.now() - start });
 
       start = Date.now();
-      const bundleStats: PerfStatsDict = {};
+      const bundleStats: { [variant: string]: PerfStatsDict } = {};
       const bundlerTimer = new Timer();
 
       const updateReporter = this._reporter ? setInterval(() => {
@@ -456,7 +464,7 @@ export default class Packt {
         switch (m.type) {
           case 'bundle_content':
             bundlerTimer.accumulate(m.bundler,m.perfStats);
-            bundleStats[m.bundleName] = m.perfStats;
+            getOrCreate(bundleStats, m.variant,() => ({}))[m.bundleName] = m.perfStats;
             break;
 
           case 'bundle_content_error':

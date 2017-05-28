@@ -169,10 +169,7 @@ export class DependencyNode {
         }
       }
     }
-    const result = [];
-    for (let v of used) {
-      result.push(v);
-    }
+    const result = Array.from(used);
     this._symbolCache[bundleName] = result;
     return result;
   }

@@ -57,8 +57,8 @@ class ConsoleReporter implements Reporter {
 
   onUpdateBuildStatus(
     workers: Array<WorkerStatusDescription>,
-    buildStats: ?PerfStatsDict,
-    bundleStats: ?PerfStatsDict
+    buildStats: ?{ [variant: string]: PerfStatsDict },
+    bundleStats: ?{ [variant: string]: PerfStatsDict }
   ) {
     if (this._isTTY && this._showProgress) {
       if (this._eraseCount) {
@@ -68,9 +68,11 @@ class ConsoleReporter implements Reporter {
       }
 
       if (buildStats) {
-        this._buildCount = Object.keys(buildStats).length;
+        const bs = buildStats;
+        this._buildCount = Object.keys(bs).reduce((p,n) => p + Object.keys(bs[n] || {}).length, 0);
       } else if (bundleStats) {
-        this._bundleCount = Object.keys(bundleStats).length;
+        const bs = bundleStats;
+        this._bundleCount = Object.keys(bs).reduce((p,n) => p + Object.keys(bs[n] || {}).length, 0);
       }
 
       const windowSize = ((process.stdout): any).getWindowSize();
@@ -100,7 +102,7 @@ class ConsoleReporter implements Reporter {
             break;
         }
         message += `${VSPLIT} `;
-        let description = S(worker.description.split("").reverse().join("")).truncate(width - LEFT_COL_WIDTH - 3,'...');
+        let description = S(worker.description.split("").reverse().join("")).truncate(width - LEFT_COL_WIDTH - 5,'...');
         description = S(description.split("").reverse().join("")).padRight(width - LEFT_COL_WIDTH - 2);
         message += description;
         this._showTableRow(message, width);
@@ -150,8 +152,8 @@ class ConsoleReporter implements Reporter {
       handlers: Timer,
       bundlers: Timer,
     }, 
-    buildStats: PerfStatsDict,
-    bundleStats: PerfStatsDict
+    buildStats: { [variant: string]: PerfStatsDict },
+    bundleStats: { [variant: string]: PerfStatsDict }
   ) {
     if (this._eraseCount) {
       process.stdout.write(escapes.eraseLines(this._eraseCount + 1));
@@ -174,7 +176,7 @@ class ConsoleReporter implements Reporter {
     if (this._verboseOutput) {
       console.log(chalk.bold('Timing information:'));
 
-      console.log(`  Bundle Sort: ${(timers.global.get('build','bundle-sort')/1000).toFixed(2)}s'`);
+      console.log(`  Bundle Sort: ${(timers.global.get('build','bundle-sort')/1000).toFixed(2)}s`);
       const resolvers = timers.global.getSubcategories('resolvers');
       for (let i = 0;i < resolvers.length - 1; ++i) {
         const r = resolvers[i];
@@ -223,24 +225,27 @@ class ConsoleReporter implements Reporter {
     );
   }
 
-  _showBundleInfo(bundleStats: PerfStatsDict) {
+  _showBundleInfo(bundleStats: { [variant: string]: PerfStatsDict }) {
     const windowSize = ((process.stdout): any).getWindowSize();
     const width = Math.max(MIN_RIGHT_COL_WIDTH, windowSize[0] - 2);
 
-    this._showTableHeader('Generated bundles', width);
-    const sortedBundles = Object.keys(bundleStats);
-    sortedBundles.sort((a,b) => bundleStats[b].postSize - bundleStats[a].postSize);
-    for (let bundleName of sortedBundles) {
-      const bundle = bundleStats[bundleName];
-      bundleName = S(bundleName.split("").reverse().join("")).truncate(width - LEFT_COL_WIDTH - 3,'...');
-      bundleName = bundleName.split("").reverse().join("");
-      this._showTableRow(
-        ` ${S((bundle.postSize/1024).toFixed(2) + 'kB').padRight(LEFT_COL_WIDTH)}${VSPLIT} ${bundleName} `,
-        width
-      );
+    for (let variantName in bundleStats) {
+      const variant = bundleStats[variantName]; 
+      this._showTableHeader(`${variantName}: Generated bundles`, width);
+      const sortedBundles = Object.keys(variant);
+      sortedBundles.sort((a,b) => variant[b].postSize - variant[a].postSize);
+      for (let bundleName of sortedBundles) {
+        const bundle = variant[bundleName];
+        bundleName = S(bundleName.split("").reverse().join("")).truncate(width - LEFT_COL_WIDTH - 5,'...');
+        bundleName = bundleName.split("").reverse().join("");
+        this._showTableRow(
+          ` ${S((bundle.postSize/1024).toFixed(2) + 'kB').padRight(LEFT_COL_WIDTH)}${VSPLIT} ${bundleName} `,
+          width
+        );
+      }
+      this._showTableFooter(width);
+      console.log();
     }
-    this._showTableFooter(width);
-    console.log();
   }
 
   _showTableHeader(heading: string, width: number) {

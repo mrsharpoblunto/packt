@@ -43,6 +43,7 @@ export default class WorkerPool extends EventEmitter {
       case 'module_export':
       case 'module_generated_asset':
       case 'module_warning':
+      case 'bundle_warning':
       case 'module_content_error':
       case 'bundle_content_error':
         this._emitMessage(message);

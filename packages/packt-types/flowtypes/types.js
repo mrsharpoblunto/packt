@@ -127,8 +127,8 @@ export interface Reporter {
   onStartBuild(): void,
   onUpdateBuildStatus(
     workerStatus: Array<WorkerStatusDescription>,
-    buildStats: ?PerfStatsDict,
-    bundleStats: ?PerfStatsDict
+    buildStats: ?{ [variant: string]: PerfStatsDict },
+    bundleStats: ?{ [variant: string]: PerfStatsDict },
   ): void,
   onBuildWarning(
     resolvedModule: string,
@@ -146,8 +146,8 @@ export interface Reporter {
       handlers: Timer,
       bundlers: Timer,
     |},
-    buildStats: PerfStatsDict,
-    bundleStats: PerfStatsDict,
+    buildStats: { [variant: string]: PerfStatsDict },
+    bundleStats: { [variant: string]: PerfStatsDict },
   ): void,
   onError(error: Error): void,
 };
