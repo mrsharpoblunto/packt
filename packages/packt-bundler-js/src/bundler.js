@@ -9,10 +9,15 @@ import debugJSRuntime from './debug-js-runtime';
 import * as jsRuntime from './js-runtime';
 
 const PACKT_PLACEHOLDER_PATTERN = /__packt_(\w*?)__\((.*?)\)/g;
+const PACKT_SYMBOL_PATTERN = /\/\*<__packt_symbol__(\w*)>\*\/(.*?)\/\*<\/__packt_symbol__(\w*)>\*\/(,)?/g
+
 const JS_INDEX = 0;
 const CSS_INDEX = 1;
 const DEFAULT_UGLIFY_OPTIONS = {
   mangle: {
+    toplevel: true,
+  },
+  compress: {
     toplevel: true,
   },
 };
@@ -106,7 +111,7 @@ export default class JsBundler implements Bundler {
           for (let module of jsModules) {
             perfStats.preSize += module.content.length;
             if (options.bundler.minify) {
-              jsContent += this._stripJSRuntime(
+              jsContent += this._stripSymbolsAndRuntime(
                 bundleName,
                 data,
                 module, 
@@ -173,13 +178,34 @@ export default class JsBundler implements Bundler {
     return result;
   }
 
-  _stripJSRuntime(
+  _stripSymbolsAndRuntime(
     bundleName: string,
     data: BundlerData, 
     module: SerializedModule,
     delegate: BundlerDelegate
   ): string {
-    return module.content.replace(
+    let content = module.content;
+
+    // only treeshake if the module is an ES module and it wasn't imported
+    // anywhere as a wildcard
+    if (
+      data.moduleMap[module.resolvedModule].exportsESModule && 
+      !(
+        module.usedSymbols.length === 1 && module.usedSymbols[0] === '*'
+      )
+    ) {
+      content = content.replace(
+        PACKT_SYMBOL_PATTERN,
+        (match: string, symbol: string, content: string, symbolEnd: string, trailingComma: ?string) => {
+          if (module.usedSymbols.indexOf(symbol)>=0) {
+            return content + (trailingComma || '');
+          } else {
+            return '';
+          }
+        });
+    }
+
+    return content.replace(
       PACKT_PLACEHOLDER_PATTERN,
       (match: string, type: string, rawArgs: string) => {
         const args = this._splitArgs(rawArgs);
