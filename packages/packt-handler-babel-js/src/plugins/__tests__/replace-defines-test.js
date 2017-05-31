@@ -18,7 +18,19 @@ function transform(src, defines) {
 }
 
 describe('Replaces all compile time defines',() => {
-  it('replaces process.env settings',() => {
+  it('replaces process.env settings when defined in config',() => {
+    const output = transform(
+`var foo = process.env.FOO;`
+    ,{
+      'process.env.FOO': 'production',
+    });
+
+    expect(output).toBe(
+`var foo = "production";`
+    );
+  });
+
+  it('replaces process.env settings from the current process.env',() => {
     process.env.FOO = "test";
     const output = transform(
 `var foo = process.env.FOO;`

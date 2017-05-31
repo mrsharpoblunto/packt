@@ -15,7 +15,9 @@ export default function transform(babel) {
           path.node.object.property.name === 'env' &&
           path.node.property.type === 'Identifier'
         ) {
-          const value = process.env[path.node.property.name];
+          let value = this.opts.defines.hasOwnProperty(`process.env.${path.node.property.name}`)
+            ? this.opts.defines[`process.env.${path.node.property.name}`]
+            : process.env[path.node.property.name];
           const literalValue = helpers.createLiteral(value);
           if (literalValue) {
             path.replaceWith(literalValue);
