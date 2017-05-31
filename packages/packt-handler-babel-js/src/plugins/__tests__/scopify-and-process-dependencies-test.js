@@ -67,8 +67,8 @@ new _$_foobar();`
     expect(result.code).toEqual(
 `window._$_exports = {};
 Object.assign(_$_exports, {
-  foo: foo,
-  bar: bar
+  /*<__packt_symbol__foo>*/foo: foo /*</__packt_symbol__foo>*/,
+  /*<__packt_symbol__bar>*/bar: bar /*</__packt_symbol__bar>*/
 });`
     );
   });
@@ -81,10 +81,10 @@ export function bar() {}`
 
     expect(result.code).toEqual(
 `window._$_exports = {};
-class _$_foo {}
-_$_exports.foo = _$_foo;
-function _$_bar() {}
-_$_exports.bar = _$_bar;`
+/*<__packt_symbol__foo>*/class _$_foo {}
+_$_exports.foo = _$_foo; /*</__packt_symbol__foo>*/
+/*<__packt_symbol__bar>*/function _$_bar() {}
+_$_exports.bar = _$_bar; /*</__packt_symbol__bar>*/`
     );
   });
 
@@ -96,7 +96,7 @@ _$_exports.bar = _$_bar;`
     expect(result.code).toEqual(
 `window._$_exports = {};
 Object.assign(_$_exports, {
-  bar: foo
+  /*<__packt_symbol__bar>*/bar: foo /*</__packt_symbol__bar>*/
 });`
     );
   });
@@ -159,7 +159,7 @@ export default foo;`
     expect(result.code).toEqual(
 `window._$_exports = {};
 var _$_foo = "baz";
-_$_exports.default = _$_foo;`
+/*<__packt_symbol__default>*/_$_exports.default = _$_foo; /*</__packt_symbol__default>*/`
     );
   });
 
@@ -170,8 +170,8 @@ _$_exports.default = _$_foo;`
 
     expect(result.code).toEqual(
 `window._$_exports = {};
-function _$_() {}
-_$_exports.default = _$_;`
+/*<__packt_symbol__default>*/function _$_() {}
+_$_exports.default = _$_; /*</__packt_symbol__default>*/`
     );
   });
 
@@ -182,8 +182,8 @@ _$_exports.default = _$_;`
 
     expect(result.code).toEqual(
 `window._$_exports = {};
-function _$_foo() {}
-_$_exports.default = _$_foo;`
+/*<__packt_symbol__default>*/function _$_foo() {}
+_$_exports.default = _$_foo; /*</__packt_symbol__default>*/`
     );
   });
 
@@ -194,8 +194,8 @@ _$_exports.default = _$_foo;`
 
     expect(result.code).toEqual(
 `window._$_exports = {};
-class _$_foo {}
-_$_exports.default = _$_foo;`
+/*<__packt_symbol__default>*/class _$_foo {}
+_$_exports.default = _$_foo; /*</__packt_symbol__default>*/`
     );
   });
 
@@ -234,8 +234,8 @@ Object.assign(_$_exports, __packt_import__("_$_exports", "module"));`
     expect(result.code).toEqual(
 `window._$_exports = {};
 Object.assign(_$_exports, {
-  foo: __packt_import__("_$_exports", "module").foo,
-  baz: __packt_import__("_$_exports", "module").bar
+  /*<__packt_symbol__foo>*/foo: __packt_import__("_$_exports", "module").foo /*</__packt_symbol__foo>*/,
+  /*<__packt_symbol__baz>*/baz: __packt_import__("_$_exports", "module").bar /*</__packt_symbol__baz>*/
 });`
     );
     expect(result.opts.delegate.importsModule.mock.calls.length).toBe(1);
@@ -307,7 +307,7 @@ export {
 var _$_exports2 = __packt_import__("_$_exports", "bar", "default");
 
 Object.assign(_$_exports, {
-  foo: _$_exports2
+  /*<__packt_symbol__foo>*/foo: _$_exports2 /*</__packt_symbol__foo>*/
 });`
     );
   });

@@ -253,6 +253,7 @@ export type SerializedModule = {
   content: string,
   contentHash: string,
   contentType: string,
+  usedSymbols: Array<string>,
 };
 
 export type BundlerData = {

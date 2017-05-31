@@ -20,7 +20,7 @@ export class DependencyNode {
   generatedAssets: { [key: string]: string };
   bundles: Set<string>;
 
-  _symbolCache: { [key: string]: Array<string> };
+  _symbolCache: { [key: string]: Set<string> };
   _importCache: { [key: string]: 'static' | 'dynamic' };
 
   constructor(module: string) {
@@ -148,20 +148,21 @@ export class DependencyNode {
     return cached;
   }
 
-  getUsedSymbolsForBundle(bundleName: string): Array<string> {
+  getUsedSymbolsForBundle(bundleName: string): Set<string> {
     let cached = this._symbolCache[bundleName];
     if (cached) {
       return cached;
     }
 
-    const used = new Set();
+    let used = new Set();
     for (let key in this.importedBy) {
       const importedBy = this.importedBy[key];
       if (importedBy.bundles.has(bundleName)) {
         const symbols = importedBy.imports[this.module].symbols;
         if (symbols.has('*')) {
-          this._symbolCache[bundleName] = ['*'];
-          return ['*'];
+          used = new Set(['*']);
+          this._symbolCache[bundleName] = used;
+          return used;
         } else {
           for (let v of symbols) {
             used.add(v);
@@ -169,12 +170,14 @@ export class DependencyNode {
         }
       }
     }
-    const result = Array.from(used);
-    this._symbolCache[bundleName] = result;
-    return result;
+    this._symbolCache[bundleName] = used;
+    return used;
   }
 
-  serialize(content: string): SerializedModule {
+  serialize(
+    usedSymbols: Array<string>,
+    content: string
+  ): SerializedModule {
     return {
       importAliases: Object.keys(this.importAliases).reduce((p,n) => {
         p[n] = this.importAliases[n].node.module;
@@ -184,6 +187,7 @@ export class DependencyNode {
       contentHash: this.contentHash || '',
       contentType: this.contentType || '',
       content,
+      usedSymbols,
     }
   }
 }

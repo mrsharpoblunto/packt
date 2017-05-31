@@ -244,24 +244,24 @@ export default function transform(babel) {
               this.hoisted[decl.id.name] = true;
             }
             path.replaceWithMultiple([
-              decl,
-              t.expressionStatement(
+              symbolMarkerStart(decl, 'default'),
+              symbolMarkerEnd(t.expressionStatement(
                 t.assignmentExpression(
                   '=',
                   defaultMember,
                   decl.id
                 )
-              )
+              ), 'default')
             ]);
           } else {
             path.replaceWith(
-              t.expressionStatement(
+              symbolMarkerWrap(t.expressionStatement(
                 t.assignmentExpression(
                   '=',
                   defaultMember,
                   decl
                 )
-              )
+              ), 'default')
             );
           }
         }
@@ -276,27 +276,29 @@ export default function transform(babel) {
             path.node.declaration.type === 'FunctionDeclaration' ||
             path.node.declaration.type === 'ClassDeclaration'
           ) {
-            exportSymbol(this.exportedSymbols, path.node.declaration.id.name, true);
+            const exportName = path.node.declaration.id.name;
+            exportSymbol(this.exportedSymbols, exportName, true);
             const namedMember = t.memberExpression(
               this.exportAlias,
-              t.identifier(path.node.declaration.id.name)
+              t.identifier(exportName)
             );
             path.replaceWithMultiple([
-              path.node.declaration,
-              t.expressionStatement(
+              symbolMarkerStart(path.node.declaration, exportName),
+              symbolMarkerEnd(t.expressionStatement(
                 t.assignmentExpression(
                   '=',
                   namedMember,
                   path.node.declaration.id
                 )
-              )
+              ), exportName)
             ]);
           } else if (path.node.declaration.type === 'VariableDeclaration') {
             const assignments = [];
             const declarations = path.node.declaration.declarations;
             for (let decl of declarations) {
-              this.exportedByValue[decl.id.name] = true;
-              exportSymbol(this.exportedSymbols, decl.id.name, true);
+              const exportName = decl.id.name;
+              this.exportedByValue[exportName] = true;
+              exportSymbol(this.exportedSymbols, exportName, true);
               if (decl.init) {
                 assignments.push(
                   t.expressionStatement(
@@ -337,9 +339,10 @@ export default function transform(babel) {
                 this.symbolAliases
               );
             }
+            const exportName = spec.exported.name;
             if (path.node.source) {
               objectProps.push(
-                t.objectProperty(
+                symbolMarkerWrap(t.objectProperty(
                   spec.exported,
                   t.memberExpression(
                     t.callExpression(
@@ -351,15 +354,18 @@ export default function transform(babel) {
                     ),
                     local || spec.exported
                   )
-                )
+                ), exportName)
               );
-              symbols.push(spec.exported.name);
+              symbols.push(exportName);
             } else {
               objectProps.push(
-                t.objectProperty(spec.exported,local)
+                symbolMarkerWrap(
+                  t.objectProperty(spec.exported,local),
+                  exportName
+                )
               );
             }
-            exportSymbol(this.exportedSymbols, spec.exported.name, true);
+            exportSymbol(this.exportedSymbols, exportName, true);
           }
 
           if (symbols.length) {
@@ -565,6 +571,33 @@ function getImportPlaceholder(
     }
     return symbolAlias.identifier;
   }
+}
+
+function symbolMarkerWrap(node, symbol) {
+  symbolMarkerStart(node, symbol);
+  return symbolMarkerEnd(node, symbol);
+}
+
+function symbolMarkerStart(node, symbolName) {
+  if (!node.leadingComments) {
+    node.leadingComments = [];
+  }
+  node.leadingComments.push({
+    type: 'CommentBlock',
+    value: `<${constants.PACKT_SYMBOL_PLACEHOLDER}${symbolName}>`,
+  });
+  return node;
+}
+
+function symbolMarkerEnd(node, symbolName) {
+  if (!node.trailingComments) {
+    node.trailingComments = [];
+  }
+  node.trailingComments.push({
+    type: 'CommentBlock',
+    value: `</${constants.PACKT_SYMBOL_PLACEHOLDER}${symbolName}>`,
+  });
+  return node;
 }
 
 function exportSymbol(exportedSymbols, symbol, esModule) {

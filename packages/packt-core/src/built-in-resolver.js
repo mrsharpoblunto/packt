@@ -323,7 +323,7 @@ export default class BuiltInResolver implements Resolver {
           }
           if (!entry) {
             entry = {
-              err: new Error('No property matching [' + candidates.join(',') + '] found in package.json'),
+              err: new Error(`No property matching [${MAIN_CANDIDATES.join(',')}] found in package.json`),
               main: null,
             };
           }

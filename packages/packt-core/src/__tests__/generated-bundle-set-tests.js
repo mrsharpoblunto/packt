@@ -1256,5 +1256,508 @@ describe('generated bundle set tests', () => {
       });
     });
   });
+  
+  it('Tracks used symbols across static bundles', () => {
+    const graph = new DependencyGraph();
+
+    mockEntryPoint(
+      graph,
+      '/src/module-a.js',
+      ['default'],
+      'bundle-a'
+    );
+
+    mockDependent(
+      graph,
+      '/src/module-a.js',
+      '/src/module-1.js',
+      ['default'],
+      {
+        source: './module-1',
+        symbols: ['foo'],
+        type: 'static',
+      }
+    );
+    graph.exports(
+      '/src/module-1.js',
+      ['default'],
+      {
+        identifier: '_',
+        symbols: ['foo', 'bar'],
+        esModule: true,
+      }
+    );
+    
+    mockDependent(
+      graph,
+      '/src/module-a.js',
+      '/src/module-2.js',
+      ['default'],
+      {
+        source: './module-2',
+        symbols: ['alpha'],
+        type: 'static',
+      }
+    );
+    graph.exports(
+      '/src/module-2.js',
+      ['default'],
+      {
+        identifier: '_',
+        symbols: ['alpha', 'beta'],
+        esModule: true,
+      }
+    );
+
+    mockEntryPoint(
+      graph,
+      '/src/module-b.js',
+      ['default'],
+      'bundle-b'
+    );
+
+    mockDependent(
+      graph,
+      '/src/module-b.js',
+      '/src/module-1.js',
+      ['default'],
+      {
+        source: './module-1',
+        symbols: ['bar'],
+        type: 'static',
+      }
+    );
+
+    mockDependent(
+      graph,
+      '/src/module-b.js',
+      '/src/module-2.js',
+      ['default'],
+      {
+        source: './module-2',
+        symbols: ['*'],
+        type: 'static',
+      }
+    );
+
+    return parseMockConfig({
+      bundles: {
+        'bundle-a': {
+          type: 'entrypoint',
+          requires: [
+            '/src/module-a.js',
+          ],
+          bundler: 'js',
+        },
+        'bundle-b': {
+          type: 'entrypoint',
+          requires: [
+            '/src/module-b.js',
+          ],
+          bundler: 'js',
+        },
+      },
+      bundlers: {
+        'js': {
+          require: 'bundler.js',
+        },
+      },
+      handlers: [
+        {
+          pattern: '.js',
+          require: 'handler.js',
+        },
+      ],
+    }).then((config) => {
+      const workingSet = generateMockWorkingSet(config);
+      const outputPaths = new OutputPathHelpers(config);
+      const generatedBundles = new GeneratedBundleSet(
+        'default',
+        graph.variants['default'],
+        workingSet,
+        config,
+        outputPaths
+      );
+
+      expect(Object.keys(generatedBundles.getBundles())).toEqual([
+        'bundle-a',
+        'bundle-b',
+      ]);
+      const bundleA = generatedBundles.getStaticBundle('bundle-a');
+      expect(bundleA.usedSymbols).toEqual({
+        '/src/module-2.js': ['alpha'],
+        '/src/module-1.js': ['foo'],
+        '/src/module-a.js': [],
+      });
+      const bundleB = generatedBundles.getStaticBundle('bundle-b');
+      expect(bundleB.usedSymbols).toEqual({
+        '/src/module-2.js': ['*'],
+        '/src/module-1.js': ['bar'],
+        '/src/module-b.js': [],
+      });
+    });
+  });
+
+  it('Tracks used symbols across dynamic bundles', () => {
+    const graph = new DependencyGraph();
+
+    mockEntryPoint(
+      graph,
+      '/src/module-a.js',
+      ['default'],
+      'bundle-a'
+    );
+
+    mockDependent(
+      graph,
+      '/src/module-a.js',
+      '/src/module-1.js',
+      ['default'],
+      {
+        source: './module-1',
+        symbols: ['*'],
+        type: 'dynamic',
+      }
+    );
+    graph.exports(
+      '/src/module-1.js',
+      ['default'],
+      {
+        identifier: '_',
+        symbols: ['default'],
+        esModule: true,
+      }
+    );
+    
+    mockDependent(
+      graph,
+      '/src/module-1.js',
+      '/src/module-2.js',
+      ['default'],
+      {
+        source: './module-2',
+        symbols: ['alpha'],
+        type: 'static',
+      }
+    );
+    graph.exports(
+      '/src/module-2.js',
+      ['default'],
+      {
+        identifier: '_',
+        symbols: ['alpha', 'beta'],
+        esModule: true,
+      }
+    );
+
+    mockEntryPoint(
+      graph,
+      '/src/module-b.js',
+      ['default'],
+      'bundle-b'
+    );
+
+    mockDependent(
+      graph,
+      '/src/module-b.js',
+      '/src/module-1.js',
+      ['default'],
+      {
+        source: './module-1',
+        symbols: ['*'],
+        type: 'dynamic',
+      }
+    );
+
+    mockDependent(
+      graph,
+      '/src/module-b.js',
+      '/src/module-2.js',
+      ['default'],
+      {
+        source: './module-2',
+        symbols: ['beta'],
+        type: 'static',
+      }
+    );
+
+    return parseMockConfig({
+      bundles: {
+        'bundle-a': {
+          type: 'entrypoint',
+          requires: [
+            '/src/module-a.js',
+          ],
+          bundler: 'js',
+        },
+        'bundle-b': {
+          type: 'entrypoint',
+          requires: [
+            '/src/module-b.js',
+          ],
+          dynamicChildren: {
+            preserveDuplicates: true,
+          },
+          bundler: 'js',
+        },
+      },
+      bundlers: {
+        'js': {
+          require: 'bundler.js',
+        },
+      },
+      handlers: [
+        {
+          pattern: '.js',
+          require: 'handler.js',
+        },
+      ],
+    }).then((config) => {
+      const workingSet = generateMockWorkingSet(config);
+      const outputPaths = new OutputPathHelpers(config);
+      const generatedBundles = new GeneratedBundleSet(
+        'default',
+        graph.variants['default'],
+        workingSet,
+        config,
+        outputPaths
+      );
+
+      expect(Object.keys(generatedBundles.getBundles())).toEqual([
+        'bundle-a',
+        'bundle-b',
+        'bundle-a:/src/module-1.js',
+        'bundle-b:/src/module-1.js',
+      ]);
+      const bundleA = generatedBundles.getStaticBundle('bundle-a');
+      expect(bundleA.usedSymbols).toEqual({
+        '/src/module-a.js': [],
+      });
+      const bundleB = generatedBundles.getStaticBundle('bundle-b');
+      expect(bundleB.usedSymbols).toEqual({
+        '/src/module-2.js': ['alpha', 'beta'],
+        '/src/module-b.js': [],
+      });
+      const dynamicBundleA = generatedBundles.getDynamicBundle('bundle-a:/src/module-1.js');
+      expect(dynamicBundleA.usedSymbols).toEqual({
+        '/src/module-2.js': ['alpha'],
+        '/src/module-1.js': ['*'],
+      });
+      const dynamicBundleB = generatedBundles.getDynamicBundle('bundle-b:/src/module-1.js');
+      expect(dynamicBundleB.usedSymbols).toEqual({
+        '/src/module-2.js': ['alpha', 'beta'],
+        '/src/module-1.js': ['*'],
+      });
+    });
+  });
+
+  it('Tracks used symbols in common and library bundles', () => {
+    const graph = new DependencyGraph();
+
+    mockEntryPoint(
+      graph,
+      '/src/module-2.js',
+      ['default'],
+      'lib'
+    );
+
+    mockEntryPoint(
+      graph,
+      '/src/module-a.js',
+      ['default'],
+      'bundle-a'
+    );
+
+    mockDependent(
+      graph,
+      '/src/module-a.js',
+      '/src/module-1.js',
+      ['default'],
+      {
+        source: './module-1',
+        symbols: ['foo'],
+        type: 'static',
+      }
+    );
+    graph.exports(
+      '/src/module-1.js',
+      ['default'],
+      {
+        identifier: '_',
+        symbols: ['foo', 'bar', 'baz'],
+        esModule: true,
+      }
+    );
+
+    mockDependent(
+      graph,
+      '/src/module-a.js',
+      '/src/module-2.js',
+      ['default'],
+      {
+        source: './module-2',
+        symbols: ['alpha'],
+        type: 'static',
+      }
+    );
+    graph.exports(
+      '/src/module-2.js',
+      ['default'],
+      {
+        identifier: '_',
+        symbols: ['alpha', 'beta', 'gaga'],
+        esModule: true,
+      }
+    );
+
+    mockDependent(
+      graph,
+      '/src/module-a.js',
+      '/src/module-3.js',
+      ['default'],
+      {
+        source: './module-3',
+        symbols: ['one'],
+        type: 'static',
+      }
+    );
+    graph.exports(
+      '/src/module-3.js',
+      ['default'],
+      {
+        identifier: '_',
+        symbols: ['one', 'two', 'three'],
+        esModule: true,
+      }
+    );
+
+    mockEntryPoint(
+      graph,
+      '/src/module-b.js',
+      ['default'],
+      'bundle-b'
+    );
+
+    mockDependent(
+      graph,
+      '/src/module-b.js',
+      '/src/module-1.js',
+      ['default'],
+      {
+        source: './module-1',
+        symbols: ['bar'],
+        type: 'static',
+      }
+    );
+
+    mockDependent(
+      graph,
+      '/src/module-b.js',
+      '/src/module-2.js',
+      ['default'],
+      {
+        source: './module-2',
+        symbols: ['beta'],
+        type: 'static',
+      }
+    );
+
+    mockDependent(
+      graph,
+      '/src/module-b.js',
+      '/src/module-3.js',
+      ['default'],
+      {
+        source: './module-3',
+        symbols: ['*'],
+        type: 'static',
+      }
+    );
+
+    return parseMockConfig({
+      bundles: {
+        'bundle-a': {
+          type: 'entrypoint',
+          requires: [
+            '/src/module-a.js',
+          ],
+          depends: [
+            'common',
+            'lib',
+          ],
+          bundler: 'js',
+        },
+        'bundle-b': {
+          type: 'entrypoint',
+          requires: [
+            '/src/module-b.js',
+          ],
+          depends: [
+            'common',
+            'lib',
+          ],
+          bundler: 'js',
+        },
+        'common': {
+          type: 'common',
+          contentTypes: ['text/javascript'],
+          threshold: 1,
+          bundler: 'js',
+        },
+        'lib': {
+          type: 'library',
+          requires: [
+            '/src/module-2.js',
+          ],
+          bundler: 'js',
+        },
+      },
+      bundlers: {
+        'js': {
+          require: 'bundler.js',
+        },
+      },
+      handlers: [
+        {
+          pattern: '.js',
+          require: 'handler.js',
+        },
+      ],
+    }).then((config) => {
+      const workingSet = generateMockWorkingSet(config);
+      const outputPaths = new OutputPathHelpers(config);
+      const generatedBundles = new GeneratedBundleSet(
+        'default',
+        graph.variants['default'],
+        workingSet,
+        config,
+        outputPaths
+      );
+
+      expect(Object.keys(generatedBundles.getBundles())).toEqual([
+        'lib',
+        'bundle-a',
+        'bundle-b',
+        'common',
+      ]);
+      const bundleA = generatedBundles.getStaticBundle('bundle-a');
+      expect(bundleA.usedSymbols).toEqual({
+        '/src/module-a.js': [],
+      });
+      const bundleB = generatedBundles.getStaticBundle('bundle-b');
+      expect(bundleB.usedSymbols).toEqual({
+        '/src/module-b.js': [],
+      });
+      const common = generatedBundles.getStaticBundle('common');
+      expect(common.usedSymbols).toEqual({
+        '/src/module-3.js': ['*'],
+        '/src/module-1.js': ['bar', 'foo'],
+      });
+      const lib = generatedBundles.getStaticBundle('lib');
+      expect(lib.usedSymbols).toEqual({
+        '/src/module-2.js': ['alpha', 'beta'],
+      });
+    });
+  });
 
 });

@@ -324,10 +324,10 @@ describe('dependency graph tests', () => {
     );
 
     const component1 = graph.variants['default'].lookups['/src/component-1.js'];
-    expect(component1.getUsedSymbolsForBundle('bundle-a')).toEqual([
+    expect(Array.from(component1.getUsedSymbolsForBundle('bundle-a'))).toEqual([
       'a','b','c'
     ]);
-    expect(component1.getUsedSymbolsForBundle('bundle-b')).toEqual(['*']);
+    expect(Array.from(component1.getUsedSymbolsForBundle('bundle-b'))).toEqual(['*']);
   });
 
   it('variant graphs are independent of one another', () => {

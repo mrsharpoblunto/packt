@@ -68,7 +68,10 @@ export function serializeBundle({
 |}): BundlerData {
   return { 
     modules: bundle.modules.map(
-      (m) => m.serialize(m.contentHash ? contentMap(m.module) : '')
+      (m) => m.serialize(
+         bundle.usedSymbols[m.module],
+         m.contentHash ? contentMap(m.module) : ''
+      )
     ), 
     paths: bundle.paths,
     hasDependencies: bundle.type === 'dynamic' || (

@@ -79,17 +79,21 @@ export type GeneratedBundleData = {|
   paths: OutputPaths,
   type: 'static' | 'dynamic',
   modules: Array<DependencyNode>,
+  usedSymbols: { [moduleName: string]: Array<string> },
 |};
 
 export class GeneratedBundleSet {
   _staticBundles: { [bundleName: string]: {
     hash: string,
     paths: OutputPaths,
+    usedSymbols: { [moduleName: string]: Array<string> },
   }};
   _dynamicBundles: { [bundleName: string]: {
     hash: string,
     paths: OutputPaths,
+    usedSymbols: { [moduleName: string]: Array<string> },
   }};
+  _symbols: { [bundleName: string]: Map<DependencyNode, Set<string>> };
   _modules: { [bundleHash: string]: Array<DependencyNode> };
   _variant: string;
   _config: PacktConfig;
@@ -111,6 +115,7 @@ export class GeneratedBundleSet {
     this._variant = variant;
     this._staticBundles = {};
     this._dynamicBundles = {};
+    this._symbols = {};
     this._modules = {};
     this._config = config;
     this._outputPathHelpers = outputPathHelpers;
@@ -132,6 +137,7 @@ export class GeneratedBundleSet {
       paths: staticBundle.paths,
       type: 'static',
       modules: this._modules[staticBundle.hash],
+      usedSymbols: staticBundle.usedSymbols,
     };
   }
 
@@ -142,6 +148,7 @@ export class GeneratedBundleSet {
       paths: dynamicBundle.paths,
       type: 'dynamic',
       modules: this._modules[dynamicBundle.hash],
+      usedSymbols: dynamicBundle.usedSymbols,
     };
   }
 
@@ -173,6 +180,10 @@ export class GeneratedBundleSet {
       );
 
       for (let bundleName of moduleBundles) {
+        const symbolMap = getOrCreate(this._symbols, bundleName, () => new Map());
+        if (!symbolMap.has(module)) {
+          symbolMap.set(module, module.getUsedSymbolsForBundle(bundleName));
+        }
         const pendingBundle = getOrCreate(this._pendingBundles, bundleName, () => new Set());
         pendingBundle.add(module);
       }
@@ -196,8 +207,9 @@ export class GeneratedBundleSet {
       const bundleConfig = this._config.bundles[b];
       if (bundleConfig.type === 'entrypoint' && Object.keys(bundleConfig.depends).length) {
         let isExternal = false;
-        for (let b of module.bundles) {
-          if (bundleConfig.depends[b]) {
+        for (let db of module.bundles) {
+          if (bundleConfig.depends[db]) {
+            this._mergeSymbols(b, db, module);
             isExternal = true;
             break;
           }
@@ -289,10 +301,10 @@ export class GeneratedBundleSet {
       const pendingBundle = this._pendingBundles[bundleName];
       const extracted: Array<DependencyNode> = [];
 
-      for (let module of pendingBundle) {
+      for (let module: DependencyNode of pendingBundle) {
         // if it does have a common bundle, then we need to see if this module
         // passes the content type check for a common bundle
-        for (let common in bundleConfig.commons) {
+        for (let common: string in bundleConfig.commons) {
           if (alreadyChecked[common + ':' + module.module]) {
             continue;
           }
@@ -318,6 +330,7 @@ export class GeneratedBundleSet {
             if (frequency / dependedBy.length >= commonConfig.threshold) {
               commonBundle.add(module);
               for (let dependentBundleName in commonConfig.dependedBy) {
+                this._mergeSymbols(dependentBundleName, common, module);
                 if (dependentBundleName !== bundleName) {
                   this._pendingBundles[dependentBundleName].delete(module);
                 } else {
@@ -332,6 +345,42 @@ export class GeneratedBundleSet {
       }
       for (let module of extracted) {
         pendingBundle.delete(module);
+      }
+    }
+  }
+
+  _mergeSymbols(
+    fromBundle: string,
+    toBundle: string,
+    module: DependencyNode,
+  ) {
+    // take the symbols in from & merge them into the symbols for to.
+    // if either from or to contains '*', then the result becomes '*'
+    const fromMap = getOrCreate(this._symbols, fromBundle, () => new Map());
+    const toMap = getOrCreate(this._symbols, toBundle, () => new Map());
+
+    let fromSymbolSet = fromMap.get(module);
+    if (!fromSymbolSet) {
+      fromSymbolSet = module.getUsedSymbolsForBundle(fromBundle); 
+      fromMap.set(module, fromSymbolSet);
+    }
+
+    let toSymbolSet = toMap.get(module);
+    if (!toSymbolSet) {
+      toSymbolSet = module.getUsedSymbolsForBundle(toBundle); 
+      toMap.set(module, toSymbolSet);
+    }
+
+    if (fromSymbolSet.has('*')) {
+      if (!toSymbolSet.has('*')) {
+        toMap.set(module,new Set(['*']));
+      }
+      return;
+    }
+
+    if (!toSymbolSet.has('*')) {
+      for (let f of fromSymbolSet) {
+        toSymbolSet.add(f);
       }
     }
   }
@@ -354,21 +403,20 @@ export class GeneratedBundleSet {
       }
 
       const modules: Array<DependencyNode> = Array.from(bundle.modules);
+      const {hash, usedSymbols} = this._getHashAndUsedSymbols(bundle.parentBundleName, modules);
+      const paths = this._outputPathHelpers.getBundlerDynamicOutputPaths(
+        bundle.parentBundleName + '_' + path.basename(bundle.rootModule.module),
+        hash,
+        bundleConfig.bundler,
+        this._variant
+      );
 
       // calculate the bundle hash and add the modules to the final dynamic bundle.
       // They're already in the right order as visit sorts them for us
-      const hash = this._outputPathHelpers.generateHash(
-        modules.reduce((result, module) => result + (module.contentHash || ''), '')
-      );
-
       this._dynamicBundles[bundle.parentBundleName + ':' + bundle.rootModule.module] = {
+        paths,
         hash,
-        paths: this._outputPathHelpers.getBundlerDynamicOutputPaths(
-          bundle.parentBundleName + '_' + path.basename(bundle.rootModule.module),
-          hash,
-          bundleConfig.bundler,
-          this._variant
-        ),
+        usedSymbols,
       };
       this._modules[hash] = modules;
     }
@@ -380,9 +428,7 @@ export class GeneratedBundleSet {
       const pendingBundle = this._pendingBundles[bundleName];
       const bundleConfig = this._config.bundles[bundleName];
       const modules = sortBundle(pendingBundle);
-      const hash = this._outputPathHelpers.generateHash(
-        modules.reduce((result, module) => result + (module.contentHash || ''), '')
-      );
+      const {hash, usedSymbols} = this._getHashAndUsedSymbols(bundleName, modules);
       const paths = this._outputPathHelpers.getBundlerStaticOutputPaths(
         bundleName,
         hash,
@@ -393,9 +439,34 @@ export class GeneratedBundleSet {
       this._staticBundles[bundleName] = {
         hash,
         paths,
+        usedSymbols,
       }
       this._modules[hash] = modules;
     }
     this._pendingBundles = {};
+    this._symbols = {};
   }
+
+  _getHashAndUsedSymbols(bundleName: string, modules: Array<DependencyNode>): {
+    hash: string,
+    usedSymbols: { [moduleName: string]: Array<string> },
+  } {
+    const usedSymbols: { [moduleName: string]: Array<string> } = {};
+
+    let hashComponents = '';
+    for (let module of modules) {
+      const symbolSet = this._symbols[bundleName].get(module);
+      const symbols = symbolSet ? Array.from(symbolSet) : [];
+      symbols.sort();
+      usedSymbols[module.module] = symbols;
+      hashComponents += (module.contentHash || '');
+      hashComponents += symbols.join(',');
+    }
+
+    return {
+      hash: this._outputPathHelpers.generateHash(hashComponents),
+      usedSymbols,
+    };
+  }
+
 }
