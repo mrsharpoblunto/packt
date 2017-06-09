@@ -2,6 +2,7 @@
  * @flow
  */
 import {getOrCreate} from './helpers';
+import type {WorkingSet} from './working-set';
 
 export type DependencyNodeImport = {|
   node: DependencyNode,
@@ -294,5 +295,12 @@ export class DependencyGraph {
       node.importsNode(importedNode, imported);
       importedNode.importedByNode(node);
     }
+  }
+
+  hasChanges(workingSet: WorkingSet): boolean {
+    return true;
+  }
+
+  trim() {
   }
 }

@@ -13,6 +13,7 @@ export type OutputPaths = {|
 
 export type PacktOptions = {|
   config: string,
+  bail: boolean,
   moduleScopes: string,
 |};
 
@@ -29,6 +30,7 @@ export type PacktConfig = {|
     workers: number,
     outputPath: string,
     cachePath: string,
+    rootPath: string,
     outputPublicPath: string,
     outputHash: string,
     outputHashLength: number,
@@ -135,10 +137,16 @@ export interface Reporter {
     variants: Array<string>,
     warning: string
   ): void,
+  onBuildError(
+    error: Error
+  ): void,
   onBundleWarning(
     bundleName: string,
     variant: string,
     warning: string
+  ): void,
+  onBundleError(
+    error: Error
   ): void,
   onFinishBuild(
     timers: {|

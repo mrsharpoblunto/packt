@@ -221,6 +221,7 @@ function generateSchema(
       workers: joi.number().integer().min(1).default(os.cpus().length - 1),
       outputPath: joi.string().default(path.join(workingDirectory,'build')),
       cachePath: joi.string().default(path.join(workingDirectory,'.packt-cache')),
+      rootPath: joi.string().default(workingDirectory),
       outputPublicPath: joi.string().default('/'),
       outputHash: joi.any().valid('md5','sha1','sha256').default('md5'),
       outputHashLength: joi.number().min(1).max(16).default(12),

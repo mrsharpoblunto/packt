@@ -21,24 +21,40 @@ import ContentMap from './content-map';
 import AssetMap from './asset-map';
 import type {ReadOnlyContentMapVariant} from './content-map';
 import {generateBundleSets} from './generated-bundle-set';
-import type {GeneratedBundleData} from './generated-bundle-set';
+import type {
+  GeneratedBundleSet,
+  GeneratedBundleData,
+} from './generated-bundle-set';
 import {
   generateBundleLookups,
   serializeBundle,
 } from './bundle-utils';
-import type {GeneratedBundleLookupVariant} from './bundle-utils';
+import type {
+  GeneratedBundleLookups,
+  GeneratedBundleLookupVariant,
+} from './bundle-utils';
 import * as errors from 'packt-types';
 import ScopeIdGenerator from './scope-id-generator';
 import OutputPathHelpers from './output-path-helpers';
 import {parseConfig} from './packt-config';
-import {determineInitialWorkingSet} from './working-set';
+import {
+  determineIncrementalWorkingSet,
+  determineInitialWorkingSet,
+} from './working-set';
 import {getOrCreate} from './helpers';
+import events from 'events';
+import {
+  type ChangeDetails,
+}from './change-watcher';
+import ChangeWatcher from './change-watcher';
 
 type BuildState = {|
   contentMap: ContentMap,
   assetMap: AssetMap,
   dependencyGraph: DependencyGraph,
   scopeGenerator: ScopeIdGenerator,
+  bundleSets: ?{ [variant: string]: GeneratedBundleSet },
+  bundleLookups: ?GeneratedBundleLookups,
 |};
 
 type BuildUtils = {|
@@ -53,9 +69,10 @@ type BuildParams = {|
   config: PacktConfig,
   utils: BuildUtils,
   state: BuildState,
+  bail: boolean,
 |};
 
-export default class Packt {
+export default class Packt extends events.EventEmitter {
   _timer: Timer;
   _handlerTimer: Timer;
   _bundlerTimer: Timer;
@@ -70,6 +87,7 @@ export default class Packt {
     options: PacktOptions,
     reporter: Reporter
   ) {
+    super();
     this._timer = new Timer();
     this._handlerTimer = new Timer();
     this._bundlerTimer = new Timer();
@@ -95,26 +113,74 @@ export default class Packt {
         return this._loadBuildState(utils)
       }).then((state) => {
         this._state = state;
+        this.emit('start');
         return this;
       })
       .catch((err) => this._fatalError(err));
   }
 
   stop(): Promise<Packt> {
-    return this._utils
-      ? this._utils.pool.stop().then(() => this)
-      : Promise.resolve(this);
+    if (this._utils) {
+      return this._utils.pool.stop().then(() => {
+        this.emit('stop');
+        return this;
+      });
+    } else {
+      this.emit('stop');
+      return Promise.resolve(this);
+    }
   }
 
   build(): Promise<Packt> {
+    return this._build(true);
+  }
+
+  watch() {
     const utils = this._utils;
     const state = this._state;
     const config = this._config;
     if (!utils || !state || !config) {
       return this._fatalError(new Error(
-        'Packt build has not been initialized. Make sure to call Start before calling Build'
+        'Packt build has not been initialized. Make sure to call start() before calling build()'
       ));
     }
+
+    this._build(this._options.bail).then(() => {
+      return new Promise((resolve, reject) => {
+        const watcher = new ChangeWatcher(config);
+        watcher.onChange((err: ?Error, changes?: Array<ChangeDetails>) => {
+          if (err) {
+            return reject(err);
+          } else if (changes) {
+            determineIncrementalWorkingSet(config, state.dependencyGraph, changes)
+            .then((workingSet: ?WorkingSet) => {
+              if (workingSet) {
+                this.emit('buildStart');
+                return this._doBuild(workingSet, this._options.bail);
+              }
+            })
+            .then(() => {
+              watcher.resume();
+            })
+            .catch((err) => reject(err));
+          }
+        });
+      });
+    })
+    .catch((err) => this._fatalError(err));
+  }
+
+  _build(bail: boolean): Promise<Packt> {
+    const utils = this._utils;
+    const state = this._state;
+    const config = this._config;
+    if (!utils || !state || !config) {
+      return this._fatalError(new Error(
+        'Packt build has not been initialized. Make sure to call start() before calling watch() or build()'
+      ));
+    }
+
+    this.emit('buildStart');
 
     try {
       rimraf.sync(config.invariantOptions.outputPath);
@@ -126,36 +192,52 @@ export default class Packt {
 
     return determineInitialWorkingSet(config)
       .then(workingSet => {
-        this._reporter.onStartBuild();
-        const params = {
-          workingSet, 
-          timer: new Timer(),
-          config,
-          utils,
-          state
-        };
-        return this._buildModules(params).then(({
-          buildStats, 
-          handlerTimer
-        }) => {
-          return this._bundleModules(params).then(({
-            bundleStats, 
-            bundlerTimer
-          }) => {
+        return this._doBuild(workingSet, bail);
+      })
+      .catch((err) => this._fatalError(err));
+  }
+
+  _doBuild(workingSet: WorkingSet, bail: boolean): Promise<Packt> {
+    const utils = this._utils;
+    const state = this._state;
+    const config = this._config;
+    if (!utils || !state || !config) {
+      return this._fatalError(new Error(
+        'Packt build has not been initialized. Make sure to call start() before calling watch() or build()'
+      ));
+    }
+
+    this._reporter.onStartBuild();
+    const params = {
+      workingSet, 
+      timer: new Timer(),
+      config,
+      utils,
+      state,
+      bail,
+    };
+    return this._buildModules(params).then((buildResult) => {
+      if (!buildResult) {
+        return Promise.resolve();
+      } else {
+        const br = buildResult;
+        return this._bundleModules(params).then((bundleResult) => {
+          if (bundleResult) {
             this._reporter.onFinishBuild(
               {
                 global: params.timer,
-                handlers: handlerTimer,
-                bundlers: bundlerTimer,
+                handlers: br.handlerTimer,
+                bundlers: bundleResult.bundlerTimer,
               },
-              buildStats,
-              bundleStats
+              br.buildStats,
+              bundleResult.bundleStats
             );
-          });
+            this.emit('buildFinish');
+          }
+          return Promise.resolve();
         });
-      })
-      .then(() => this)
-      .catch((err) => this._fatalError(err));
+      }
+    }).then(() => this);
   }
 
   _fatalError(err: Error): Promise<Packt> {
@@ -163,6 +245,7 @@ export default class Packt {
       this._utils.pool.stop();
     }
     this._reporter.onError(err);
+    this.emit('error',err);
     return Promise.reject(err);
   }
 
@@ -205,17 +288,13 @@ export default class Packt {
       ));
     }
 
-    // TODO load from cache configured in config
-    // TODO need the dependency map here too
-    // TODO should have one content map per dependency tree - lazy load
-    // reset contentMap if config has changed as the hashes will need
-    // to be recomputed.
-    // if the tree requires changes
     return Promise.resolve({
       scopeGenerator,
       assetMap: new AssetMap(utils.pathHelpers),
       contentMap: new ContentMap(),
       dependencyGraph: new DependencyGraph(),
+      bundleSets: null,
+      bundleLookups: null,
     });
   }
 
@@ -226,10 +305,16 @@ export default class Packt {
     config,
     utils,
     state,
-  }: BuildParams): Promise<{
+    bail,
+  }: BuildParams): Promise<?{
     buildStats: { [variant: string]: PerfStatsDict },
     handlerTimer: Timer
   }> {
+    const bundles = Object.keys(workingSet.bundles);
+    if (!bundles.length) {
+      return Promise.resolve(null);
+    }
+
     return new Promise((resolve, reject) => {
       const updateReporter = setInterval(() => {
         this._reporter.onUpdateBuildStatus(utils.pool.status(), buildStats, null);
@@ -239,15 +324,18 @@ export default class Packt {
       const buildStats: { [variant: string]: PerfStatsDict } = {};
       const handlerTimer = new Timer();
 
-      const cleanup = (err: ?Error) => {
+      const cleanup = (forceBail: boolean, err: ?Error) => {
         timer.accumulate('build',{ 'modules': Date.now() - start });
-        if (updateReporter) {
-          clearInterval(updateReporter);
-        }
+        clearInterval(updateReporter);
         utils.pool.removeAllListeners();
         utils.resolvers.removeAllListeners();
         if (err) {
-          reject(err);
+          if (bail || forceBail) {
+            reject(err);
+          } else {
+            this._reporter.onBuildError(err);
+            resolve(null);
+          }
         } else {
           resolve({
             buildStats,
@@ -288,12 +376,12 @@ export default class Packt {
           break;
 
           case 'module_resolve_error':
-            cleanup(m.error);
+            cleanup(false, m.error);
             break;
 
           case 'idle':
             if (utils.pool.idle()) {
-              cleanup();
+              cleanup(false);
             }
             break;
         }
@@ -302,7 +390,7 @@ export default class Packt {
       utils.pool.on('worker_pool_message', (m: MessageType) => {
         switch (m.type) {
           case 'worker_error':
-            cleanup(m.error);
+            cleanup(true, m.error);
             break;
 
           case 'module_content':
@@ -331,7 +419,7 @@ export default class Packt {
             break;
 
           case 'module_content_error':
-            cleanup(new errors.PacktContentError(
+            cleanup(false, new errors.PacktContentError(
               m.handler,
               m.variants,
               m.error,
@@ -379,13 +467,13 @@ export default class Packt {
             
           case 'idle':
             if (utils.resolvers.idle()) {
-              cleanup();
+              cleanup(false);
             }
             break;
         }
       });
 
-      for (let bundleName in workingSet.bundles) {
+      for (let bundleName of bundles) {
         const modules = workingSet.bundles[bundleName];
         modules.forEach((m) => {
           utils.resolvers.resolve(
@@ -403,36 +491,80 @@ export default class Packt {
     });
   }
 
+  _prepareBundles({
+    workingSet,
+    timer,
+    config,
+    utils,
+    state,
+    bail,
+  }: BuildParams): {|
+    bundleSets: { [variant: string]: GeneratedBundleSet },
+    bundleLookups: GeneratedBundleLookups,
+  |} {
+    // we can avoid rebuilding the structure of the bundles if we know
+    // that no dependency changes occurred since the last build i.e. no
+    // files added or removed & no imports/exports changed.
+    let bundleSets = state.bundleSets;
+    let bundleLookups = state.bundleLookups;
+    if (
+      !bundleSets || 
+      !bundleLookups ||
+      state.dependencyGraph.hasChanges(workingSet)
+    ) {
+      // remove any pieces of the graph that have
+      // become disconnected due to import changes etc.
+      state.dependencyGraph.trim();
+
+      bundleSets = generateBundleSets(
+        state.dependencyGraph,
+        workingSet,
+        config,
+        utils.pathHelpers
+      );
+
+      bundleLookups = generateBundleLookups(
+        state.dependencyGraph,
+        bundleSets
+      );
+
+      Object.assign(state, {
+        bundleSets,
+        bundleLookups,
+      });
+    }
+    return {
+      bundleSets,
+      bundleLookups,
+    };
+  }
+
   _bundleModules({
     workingSet,
     timer,
     config,
     utils,
     state,
-  }: BuildParams): Promise<{
+    bail,
+  }: BuildParams): Promise<?{
     bundleStats: { [variant: string]: PerfStatsDict },
     bundlerTimer: Timer,
   }> {
     let start = Date.now();
-
-    const generatedBundleSets = generateBundleSets(
-      state.dependencyGraph,
+    const {bundleSets, bundleLookups} = this._prepareBundles({
       workingSet,
+      timer,
       config,
-      utils.pathHelpers
-    );
-
-    const generatedBundleLookups = generateBundleLookups(
-      state.dependencyGraph,
-      generatedBundleSets
-    );
-
+      utils,
+      state,
+      bail
+    });
     timer.accumulate('build',{ 'bundle-sort': Date.now() - start });
 
     start = Date.now();
     return state.assetMap.update(
       state.dependencyGraph,
-      generatedBundleSets,
+      bundleSets,
     ).then(() => new Promise((resolve,reject) => {
       timer.accumulate('build',{ 'asset-map': Date.now() - start });
 
@@ -440,18 +572,21 @@ export default class Packt {
       const bundleStats: { [variant: string]: PerfStatsDict } = {};
       const bundlerTimer = new Timer();
 
-      const updateReporter = this._reporter ? setInterval(() => {
+      const updateReporter = setInterval(() => {
         this._reporter.onUpdateBuildStatus(utils.pool.status(), null, bundleStats);
-      },100) : null;
+      },100);
 
-      const cleanup = (err,result) => {
+      const cleanup = (forceBail: boolean, err: ?Error) => {
         timer.accumulate('build',{ 'bundles': Date.now() - start });
-        if (updateReporter) {
-          clearInterval(updateReporter);
-        }
+        clearInterval(updateReporter);
         utils.pool.removeAllListeners();
         if (err) {
-          reject(err);
+          if (bail || forceBail) {
+            reject(err);
+          } else {
+            this._reporter.onBundleError(err);
+            resolve(null);
+          }
         } else {
           resolve({
             bundleStats,
@@ -468,7 +603,7 @@ export default class Packt {
             break;
 
           case 'bundle_content_error':
-            cleanup(new errors.PacktBundleError(
+            cleanup(false, new errors.PacktBundleError(
               m.bundler,
               m.error,
               m.bundleName
@@ -484,19 +619,19 @@ export default class Packt {
             break;
 
           case 'worker_error':
-            cleanup(m.error);
+            cleanup(true, m.error);
             break;
 
           case 'idle':
-            cleanup();
+            cleanup(false);
             break;
         }
       });
 
       const duplicateBundles: Set<string> = new Set();
-      for (let variant in generatedBundleSets) {
-        const generatedVariant = generatedBundleSets[variant];
-        const bundleLookups = generatedBundleLookups[variant];
+      for (let variant in bundleSets) {
+        const generatedVariant = bundleSets[variant];
+        const bundleLookupVariant = bundleLookups[variant];
         const contentMap = state.contentMap.readOnlyVariant(variant);
         const bundles = generatedVariant.getBundles();
         for (let bundleName in bundles) {
@@ -513,7 +648,7 @@ export default class Packt {
               serializeBundle({
                 bundleName,
                 bundle,
-                bundleLookups,
+                bundleLookups: bundleLookupVariant,
                 contentMap,
                 config
               })

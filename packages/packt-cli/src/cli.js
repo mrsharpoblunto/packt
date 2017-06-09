@@ -13,6 +13,8 @@ const argv = yargs
   .default('progress', true)
   .boolean('verbose')
   .default('verbose', true)
+  .boolean('watch')
+  .default('watch', false)
   .help('h')
   .alias('h','help')
   .argv;
@@ -24,13 +26,14 @@ if (!argv.help) {
     new ConsoleReporter(argv.progress, argv.verbose)
   );
 
-  packt.start()
-    .then(() => packt.build())
+  packt.start().then(() => {
+    return (argv.watch ? packt.watch : packt.build).apply(packt)
     .then(() => packt.stop())
     .then(() => {
       return 0;
-    }).catch((err) => {
-      return 1;
     });
+  }).catch((err) => {
+    return 1;
+  });
 }
 

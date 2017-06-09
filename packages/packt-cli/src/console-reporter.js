@@ -12,7 +12,6 @@ const VSPLIT = String.fromCharCode(9474);
 
 class ConsoleReporter implements Reporter {
   _isTTY: boolean;
-  _hasUpdated: boolean;
   _eraseCount: number;
   _showProgress: boolean;
   _verboseOutput: boolean;
@@ -25,7 +24,6 @@ class ConsoleReporter implements Reporter {
 
   constructor(showProgress: boolean, verboseOutput: boolean) {
     this._isTTY = ((process.stdout): any).isTTY;
-    this._hasUpdated = false;
     this._eraseCount = 0;
     this._showProgress = showProgress;
     this._verboseOutput = verboseOutput;
@@ -38,8 +36,6 @@ class ConsoleReporter implements Reporter {
     version: string, 
     options: PacktOptions
   ) {
-    this._buildCount = 0;
-    this._bundleCount = 0;
     console.log(chalk.bold('Packt ' + version));
     console.log(chalk.bold('Using config: ') + options.config);
   }
@@ -53,6 +49,9 @@ class ConsoleReporter implements Reporter {
   }
 
   onStartBuild() {
+    this._warnings = {};
+    this._buildCount = 0;
+    this._bundleCount = 0;
   }
 
   onUpdateBuildStatus(
@@ -137,8 +136,6 @@ class ConsoleReporter implements Reporter {
     });
   }
 
-  // TODO need summary data around modules built etc.
-  // need to pass through stats on each compiled module as well
   onFinishBuild(
     timers: {
       global: Timer,
@@ -272,6 +269,14 @@ class ConsoleReporter implements Reporter {
     console.log(`${String.fromCharCode(9492)}${S(String.fromCharCode(9472)).repeat(width)}${String.fromCharCode(9496)}`);
   }
 
+
+  onBuildError(err: Error) {
+    this.onError(err);
+  }
+
+  onBundleError(err: Error) {
+    this.onError(err);
+  }
 
   onError(err: Error) {
     let defaultError = false;
