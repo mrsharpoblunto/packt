@@ -1,5 +1,6 @@
 /**
  * @flow
+ * @format
  */
 
 export function getOrCreate<T>(

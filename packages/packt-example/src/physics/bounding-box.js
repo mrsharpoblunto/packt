@@ -1,4 +1,5 @@
-/* @flow */
+/* @flow
+ * @format */
 import glm from 'gl-matrix';
 
 const IDENTITY = glm.mat4.identity(glm.mat4.create());

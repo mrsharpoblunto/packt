@@ -1,5 +1,6 @@
 /**
  * @flow
+ * @format
  */
 import escapes from 'ansi-escapes';
 import errors from 'packt-types';

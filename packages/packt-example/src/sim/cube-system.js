@@ -1,4 +1,5 @@
-/* @flow */
+/* @flow
+ * @format */
 import type { Entity, Input } from 'framework';
 import * as Components from 'components';
 import * as constants from 'constants';

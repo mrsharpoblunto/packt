@@ -1,4 +1,5 @@
-/* @flow */
+/* @flow
+ * @format */
 import glm from 'gl-matrix';
 
 export function cube(

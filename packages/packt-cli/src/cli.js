@@ -1,5 +1,6 @@
 /**
  * @flow
+ * @format
  */
 import yargs from 'yargs';
 import Packt from 'packt-core';

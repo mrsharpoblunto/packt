@@ -1,5 +1,6 @@
 /**
  * @flow
+ * @format
  */
 import { getOrCreate } from './helpers';
 import type { WorkingSet } from './working-set';

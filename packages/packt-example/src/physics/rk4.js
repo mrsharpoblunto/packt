@@ -1,4 +1,5 @@
-/* @flow */
+/* @flow
+ * @format */
 import glm from 'gl-matrix';
 import OrientationComponent from '../components/orientation';
 import MassComponent from '../components/mass';

@@ -1,4 +1,5 @@
-/* @flow */
+/* @flow
+ * @format */
 import twgl from 'twgl.js';
 import glm from 'gl-matrix';
 import type { Entity } from 'framework';

@@ -1,5 +1,6 @@
 /**
  * @flow
+ * @format
  */
 import mkdirp from 'mkdirp';
 import path from 'path';

@@ -1,4 +1,5 @@
-/* @flow */
+/* @flow
+ * @format */
 import twgl from 'twgl.js';
 import type { Entity } from 'framework';
 import * as Components from 'components';

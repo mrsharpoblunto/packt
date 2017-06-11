@@ -1,5 +1,6 @@
 /**
  * @flow
+ * @format
  */
 export class PacktError extends Error {
   originalError: Error;

@@ -1,5 +1,6 @@
 /**
  * @flow
+ * @format
  */
 
 export default class Timer {

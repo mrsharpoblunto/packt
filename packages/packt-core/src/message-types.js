@@ -1,5 +1,6 @@
 /**
  * @flow
+ * @format
  */
 export type IdleMessage = {|
   type: 'idle'

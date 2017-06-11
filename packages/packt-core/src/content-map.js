@@ -1,5 +1,6 @@
 /**
  * @flow
+ * @format
  */
 export type ContentMapEntry = {
   content: string

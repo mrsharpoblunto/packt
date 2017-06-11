@@ -1,4 +1,5 @@
-/* @flow */
+/* @flow
+ * @format */
 import CubeComponent from 'components/cube';
 import CameraComponent from 'components/camera';
 import TerrainComponent from 'components/terrain';

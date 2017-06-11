@@ -1,4 +1,5 @@
-/* @flow */
+/* @flow
+ * @format */
 
 import integrate from 'physics/rk4';
 import { cube } from 'physics/inertia-tensors';

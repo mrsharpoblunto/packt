@@ -1,4 +1,5 @@
-/* @flow */
+/* @flow
+ * @format */
 import type { RenderSystem } from 'framework';
 import CameraRenderSystem from 'render/camera-render-system';
 import CubeRenderSystem from 'render/cube-render-system';

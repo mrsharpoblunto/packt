@@ -1,5 +1,6 @@
 /**
  * @flow
+ * @format
  */
 import events from 'events';
 import Worker from './worker';

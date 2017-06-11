@@ -1,4 +1,5 @@
-/* @flow */
+/* @flow
+ * @format */
 import twgl from 'twgl.js';
 import InputHandler from 'input-handler';
 

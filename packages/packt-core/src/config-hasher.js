@@ -1,5 +1,6 @@
 /**
  * @flow
+ * @format
  */
 import crypto from 'crypto';
 import path from 'path';

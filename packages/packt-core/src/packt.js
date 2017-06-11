@@ -1,6 +1,7 @@
 /**
  * @flow
  * @format
+ * @format
  */
 import path from 'path';
 import rimraf from 'rimraf';

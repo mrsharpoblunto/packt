@@ -2,6 +2,7 @@
  * Types usable by external plugins and reporters
  *
  * @flow
+ * @format
  */
 
 export type OutputPaths = {|

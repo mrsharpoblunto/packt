@@ -1,4 +1,5 @@
-/* @flow */
+/* @flow
+ * @format */
 import type { Entity, Input } from 'framework';
 import glm from 'gl-matrix';
 import * as Components from 'components';

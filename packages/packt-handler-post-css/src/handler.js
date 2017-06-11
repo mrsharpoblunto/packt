@@ -1,5 +1,6 @@
 /**
  * @flow
+ * @format
  */
 import fs from 'fs';
 import postcss from 'postcss';

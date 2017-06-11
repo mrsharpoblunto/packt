@@ -1,4 +1,5 @@
-/* @flow */
+/* @flow
+ * @format */
 import type { World } from 'framework';
 import * as Builders from 'builders';
 import glm from 'gl-matrix';

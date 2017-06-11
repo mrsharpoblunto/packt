@@ -1,4 +1,5 @@
-/* @flow */
+/* @flow
+ * @format */
 import type { World, Entity } from 'framework';
 import * as Components from 'components';
 

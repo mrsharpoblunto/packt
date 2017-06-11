@@ -1,4 +1,5 @@
-/* @flow */
+/* @flow
+ * @format */
 import type { SimSystem } from 'framework';
 import CameraSystem from 'sim/camera-system';
 import CubeSystem from 'sim/cube-system';

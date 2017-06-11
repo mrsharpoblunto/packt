@@ -1,5 +1,6 @@
 /**
  * @flow
+ * @format
  */
 import { transformFromAst } from 'babel-core';
 import OptionsManager from 'babel-core/lib/transformation/file/options/option-manager';

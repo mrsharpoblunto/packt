@@ -1,5 +1,6 @@
 /**
  * @flow
+ * @format
  */
 import type { DependencyGraph } from './dependency-graph';
 import type {

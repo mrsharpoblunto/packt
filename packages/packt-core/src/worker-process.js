@@ -1,6 +1,7 @@
 /**
  * @flow
  * @format
+ * @format
  */
 import type {
   MessageType,

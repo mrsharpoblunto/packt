@@ -1,5 +1,6 @@
 /**
  * @flow
+ * @format
  */
 import events from 'events';
 import path from 'path';

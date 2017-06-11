@@ -1,4 +1,5 @@
-/* @flow */
+/* @flow
+ * @format */
 
 import glm from 'gl-matrix';
 import BoundingBox from 'physics/bounding-box';
