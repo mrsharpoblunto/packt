@@ -173,6 +173,14 @@ export type ImportDeclaration = {|
   type: 'static' | 'dynamic',
 |};
 
+export type HandlerCacheEntry = {|
+  content: string,
+  contentType: string,
+  contentHash: string,
+  exportDeclarations: Array<ExportDeclaration>,
+  importDeclarations: Array<ImportDeclaration>,
+|};
+
 export type HandlerDelegate = {|
   importsModule: (
     variants: Array<string>,
@@ -203,6 +211,7 @@ export type HandlerDelegate = {|
     outputPath: string,
     outputParentPath: string,
   },
+  cacheGet: (variant: string, content: string) => Promise<?HandlerCacheEntry>,
   generateHash: (content: string) => string,
 |};
 
@@ -216,12 +225,19 @@ export type HandlerInitCallback = (err: ?(Error | string)) => void;
 export type HandlerProcessCallback = (
   err: ?(Error | string),
   variants: ?Array<string>,
-  response: ?{|
-    content: string,
-    contentType: string,
-    contentHash: string,
-    perfStats: PerfStats,
-  |},
+  response: ?(
+    | {|
+        content: string,
+        cache?: boolean,
+        contentType: string,
+        sourceContentHash?: string,
+        contentHash: string,
+        perfStats: PerfStats,
+      |}
+    | {|
+        cacheEntry: HandlerCacheEntry,
+        perfStats: PerfStats,
+      |}),
 ) => void;
 
 export interface Handler {

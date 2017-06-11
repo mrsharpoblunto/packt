@@ -1,7 +1,6 @@
 /**
  * @flow
  * @format
- * @format
  */
 import path from 'path';
 import rimraf from 'rimraf';
@@ -415,6 +414,11 @@ export default class Packt extends events.EventEmitter {
                 preSize: m.perfStats.preSize,
                 postSize: m.perfStats.postSize,
               };
+              if (m.cacheHit) {
+                timer.accumulate('build', { 'cache-hit': 1 });
+              } else {
+                timer.accumulate('build', { 'cache-miss': 1 });
+              }
             }
             handlerTimer.accumulate(m.handler, m.perfStats);
             handlerTimer.accumulate(m.handler, { modules: m.variants.length });

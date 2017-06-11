@@ -38,6 +38,7 @@ export type ModuleContentMessage = {|
   perfStats: PerfStats,
   variants: Array<string>,
   resolvedModule: string,
+  cacheHit: boolean,
 |};
 
 export type ModuleContentErrorMessage = {|

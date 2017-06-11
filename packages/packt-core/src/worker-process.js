@@ -1,7 +1,6 @@
 /**
  * @flow
  * @format
- * @format
  */
 import type {
   MessageType,
@@ -10,17 +9,54 @@ import type {
   ProcessBundleMessage,
 } from './message-types';
 import path from 'path';
+import { getOrCreate } from './helpers';
 import BuiltInResolver from './built-in-resolver';
 import OutputPathHelpers from './output-path-helpers';
+import ContentCache from './content-cache';
+
+class HandlerCacheHelper {
+  entries: {
+    [variant: string]: {|
+      entry: HandlerCacheEntry,
+      isCacheable: boolean,
+    |},
+  };
+
+  constructor() {
+    this.entries = {};
+  }
+
+  get(
+    variant: string,
+  ): {|
+    entry: HandlerCacheEntry,
+    isCacheable: boolean,
+  |} {
+    return getOrCreate(this.entries, variant, () => ({
+      entry: {
+        content: '',
+        contentType: '',
+        contentHash: '',
+        exportDeclarations: [],
+        importDeclarations: [],
+      },
+      isCacheable: true,
+    }));
+  }
+}
 
 class WorkerProcess {
+  _contentCache: ContentCache;
   _allVariants: Array<string>;
   _handlers: Array<{|
     pattern: RegExp,
     invariantOptions: HandlerOptions,
     options: { [key: string]: HandlerOptions },
     handler: Handler,
-    delegateFactory: (resolvedModule: string) => HandlerDelegate,
+    delegateFactory: (
+      resolvedModule: string,
+      cacheHelper?: HandlerCacheHelper,
+    ) => HandlerDelegate,
   |}>;
   _bundles: {
     [key: string]: {
@@ -76,19 +112,13 @@ class WorkerProcess {
     });
   }
 
-  _handlerDelegateFactory(
-    pathUtils: OutputPathHelpers,
-    resolver: BuiltInResolver,
-  ): (resolvedModule: string) => HandlerDelegate {
-    return (resolvedModule: string) => ({});
-  }
-
   _processConfig(msg: ProcessConfigMessage) {
     const pathUtils = new OutputPathHelpers(msg.config);
     const resolver = new BuiltInResolver(
       BuiltInResolver.defaultOptions(msg.config.workingDirectory),
     );
 
+    this._contentCache = new ContentCache(msg.config);
     this._allVariants = Object.keys(msg.config.options);
 
     for (let handlerConfig of msg.config.handlers) {
@@ -213,12 +243,17 @@ class WorkerProcess {
     outputPathHelpers: OutputPathHelpers,
     resolver: BuiltInResolver,
     configFile: string,
-  ): (resolvedModule: string) => HandlerDelegate {
-    return (resolvedModule: string) => ({
+  ): (resolvedModule: string, cache?: HandlerCacheHelper) => HandlerDelegate {
+    return (resolvedModule: string, cache?: HandlerCacheHelper) => ({
       importsModule: (
         variants: Array<string>,
         importDeclaration: ImportDeclaration,
       ) => {
+        if (cache) {
+          for (let v of variants) {
+            cache.get(v).entry.importDeclarations.push(importDeclaration);
+          }
+        }
         this._sendMessage({
           type: 'module_import',
           variants,
@@ -230,6 +265,11 @@ class WorkerProcess {
         variants: Array<string>,
         exportDeclaration: ExportDeclaration,
       ) => {
+        if (cache) {
+          for (let v of variants) {
+            cache.get(v).entry.exportDeclarations.push(exportDeclaration);
+          }
+        }
         this._sendMessage({
           type: 'module_export',
           variants,
@@ -238,6 +278,11 @@ class WorkerProcess {
         });
       },
       emitWarning: (variants: Array<string>, warning: string) => {
+        if (cache) {
+          for (let v of variants) {
+            cache.get(v).isCacheable = false;
+          }
+        }
         this._sendMessage({
           type: 'module_warning',
           variants,
@@ -250,6 +295,11 @@ class WorkerProcess {
         assetName: string,
         outputPath: string,
       ) => {
+        if (cache) {
+          for (let v of variants) {
+            cache.get(v).isCacheable = false;
+          }
+        }
         this._sendMessage({
           type: 'module_generated_asset',
           variants,
@@ -266,6 +316,9 @@ class WorkerProcess {
       },
       getOutputPaths: outputPathHelpers.getOutputPaths.bind(outputPathHelpers),
       generateHash: outputPathHelpers.generateHash.bind(outputPathHelpers),
+      cacheGet: (variant: string, hash: string) => {
+        return this._contentCache.get(variant, hash);
+      },
     });
   }
 
@@ -305,7 +358,8 @@ class WorkerProcess {
       return;
     }
 
-    const delegate = handler.delegateFactory(msg.resolvedModule);
+    const cacheHelper = new HandlerCacheHelper();
+    const delegate = handler.delegateFactory(msg.resolvedModule, cacheHelper);
 
     let remaining = this._allVariants.slice(0);
     handler.handler.process(
@@ -323,16 +377,71 @@ class WorkerProcess {
             resolvedModule: msg.resolvedModule,
           });
         } else if (variants && response) {
-          this._sendMessage({
-            type: 'module_content',
-            handler: handler.pattern.toString(),
-            variants: variants || this._allVariants,
-            content: response.content,
-            contentType: response.contentType,
-            contentHash: response.contentHash,
-            perfStats: response.perfStats,
-            resolvedModule: msg.resolvedModule,
-          });
+          if (response.cacheEntry) {
+            // simulate a normal worker process response, but
+            // source the data from the cache entry provided
+            for (let e of response.cacheEntry.exportDeclarations) {
+              delegate.exportsSymbols(variants, e);
+            }
+            for (let i of response.cacheEntry.importDeclarations) {
+              delegate.importsModule(variants, i);
+            }
+            this._sendMessage({
+              type: 'module_content',
+              handler: handler.pattern.toString(),
+              variants: variants || this._allVariants,
+              content: response.cacheEntry.content,
+              contentType: response.cacheEntry.contentType,
+              contentHash: response.cacheEntry.contentHash,
+              perfStats: response.perfStats,
+              cacheHit: true,
+              resolvedModule: msg.resolvedModule,
+            });
+          } else {
+            const {
+              content,
+              contentType,
+              contentHash,
+              sourceContentHash,
+            } = response;
+            const perfStats = { ...response.perfStats };
+
+            // cache all the responses that we're able to
+            let promises = [];
+            if (response.cache && sourceContentHash) {
+              for (let v of variants) {
+                if (cacheHelper.get(v).isCacheable) {
+                  const entry = cacheHelper.get(v).entry;
+                  entry.contentType = contentType;
+                  entry.content = content;
+                  entry.contentHash = contentHash;
+                  promises.push(
+                    this._contentCache.put(v, sourceContentHash, entry),
+                  );
+                }
+              }
+              Promise.all(promises).catch(err => {
+                this._sendMessage({
+                  type: 'raw_worker_error',
+                  error: err.stack,
+                });
+                process.exit(0);
+              });
+            }
+
+            // then tell the main loop that we're done
+            this._sendMessage({
+              type: 'module_content',
+              handler: handler.pattern.toString(),
+              variants: variants || this._allVariants,
+              content,
+              contentType,
+              contentHash,
+              perfStats,
+              cacheHit: false,
+              resolvedModule: msg.resolvedModule,
+            });
+          }
         }
 
         // once all the expected variants are processed, go onto the next task

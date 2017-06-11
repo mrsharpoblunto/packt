@@ -148,19 +148,7 @@ class ConsoleReporter implements Reporter {
     });
   }
 
-  onFinishBuild(
-    timers: {
-      global: Timer,
-      handlers: Timer,
-      bundlers: Timer,
-    },
-    buildStats: { [variant: string]: PerfStatsDict },
-    bundleStats: { [variant: string]: PerfStatsDict },
-  ) {
-    if (this._eraseCount) {
-      process.stdout.write(escapes.eraseLines(this._eraseCount + 1));
-    }
-
+  _showWarnings() {
     if (Object.keys(this._warnings).length) {
       console.log(chalk.bold('Build Warnings:'));
       console.log();
@@ -174,10 +162,34 @@ class ConsoleReporter implements Reporter {
       }
       console.log();
     }
+  }
+
+  onFinishBuild(
+    timers: {
+      global: Timer,
+      handlers: Timer,
+      bundlers: Timer,
+    },
+    buildStats: { [variant: string]: PerfStatsDict },
+    bundleStats: { [variant: string]: PerfStatsDict },
+  ) {
+    if (this._eraseCount) {
+      process.stdout.write(escapes.eraseLines(this._eraseCount + 1));
+    }
+
+    this._showWarnings();
 
     if (this._verboseOutput) {
       console.log(chalk.bold('Timing information:'));
 
+      const cacheTotal =
+        timers.global.get('build', 'cache-hit') +
+        timers.global.get('build', 'cache-miss');
+      console.log(
+        `  Cache hits: ${(timers.global.get('build', 'cache-hit') /
+          cacheTotal *
+          100).toFixed(2)}%`,
+      );
       console.log(
         `  Bundle Sort: ${(timers.global.get('build', 'bundle-sort') /
           1000).toFixed(2)}s`,
@@ -328,6 +340,7 @@ class ConsoleReporter implements Reporter {
   }
 
   onError(err: Error) {
+    this._showWarnings();
     let defaultError = false;
     try {
       if (err instanceof errors.PacktConfigError) {

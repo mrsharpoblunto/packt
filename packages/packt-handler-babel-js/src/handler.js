@@ -132,22 +132,47 @@ export default class BabelJsHandler implements Handler {
     delegate: HandlerDelegate,
     callback: HandlerProcessCallback,
   ): void {
-    const variantKeys = Object.keys(options);
-    const stats = {};
+    let variantKeys = Object.keys(options);
     let start = Date.now();
 
-    this._ensureParserOptions(options, delegate);
-    stats.transform = Date.now() - start;
-
-    start = Date.now();
     fs.readFile(resolvedModule, 'utf8', (err, source) => {
-      stats.diskIO = (Date.now() - start) / variantKeys.length;
+      const stats = {
+        diskIO: (Date.now() - start) / variantKeys.length,
+        transform: 0,
+        preSize: source.length,
+        postSize: 0,
+      };
+
       if (err) {
         callback(err);
         return;
       }
 
+      const sourceContentHash = delegate.generateHash(source);
+
+      // use cached responses for all variants that have
+      // a cached resonse already
+      variantKeys = variantKeys.filter(variant => {
+        const cacheEntry = delegate.cacheGet(variant, sourceContentHash);
+        if (cacheEntry) {
+          stats.postSize = cacheEntry.content.length;
+          callback(null, [variant], {
+            cacheEntry,
+            perfStats: stats,
+          });
+          return false;
+        }
+        return true;
+      });
+      // if all variants were cached, no point
+      // in continuing
+      if (!variantKeys.length) {
+        return;
+      }
+
       start = Date.now();
+      this._ensureParserOptions(options, delegate);
+
       let ast;
       try {
         ast = parse(
@@ -201,11 +226,12 @@ export default class BabelJsHandler implements Handler {
             ),
           );
           stats.transform = Date.now() - vStart + parseTime;
-          stats.preSize = source.length;
           stats.postSize = result.code.length;
           callback(null, [key], {
             content: result.code,
+            cache: true,
             contentType: 'text/javascript',
+            sourceContentHash,
             contentHash: delegate.generateHash(result.code),
             perfStats: stats,
           });

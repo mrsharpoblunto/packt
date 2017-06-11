@@ -60,13 +60,41 @@ export default class PostCssHandler implements Handler {
     delegate: HandlerDelegate,
     callback: HandlerProcessCallback,
   ) {
-    const variantKeys = Object.keys(options);
-    const stats = {};
     let start = Date.now();
     fs.readFile(resolvedModule, 'utf8', (err, source) => {
-      stats.diskIO = (Date.now() - start) / variantKeys.length;
+      let variantKeys = Object.keys(options);
+      const stats = {
+        diskIO: (Date.now() - start) / variantKeys.length,
+        preSize: source.length,
+        transform: 0,
+        postSize: 0,
+      };
+
       if (err) {
         callback(err);
+        return;
+      }
+
+      const sourceContentHash = delegate.generateHash(source);
+
+      // use cached responses for all variants that have
+      // a cached resonse already
+      variantKeys = variantKeys.filter(variant => {
+        const cacheEntry = delegate.cacheGet(variant, sourceContentHash);
+        if (cacheEntry) {
+          stats.postSize = cacheEntry.content.length;
+          callback(null, [variant], {
+            cacheEntry,
+            perfStats: stats,
+          });
+          return false;
+        }
+        return true;
+      });
+
+      // if all variants were cached, no point
+      // in continuing
+      if (!variantKeys.length) {
         return;
       }
 
@@ -107,7 +135,9 @@ export default class PostCssHandler implements Handler {
                 callback(null, [key], {
                   content: result.css,
                   contentType: 'text/css',
+                  sourceContentHash,
                   contentHash: delegate.generateHash(result.css),
+                  cache: true,
                   perfStats: stats,
                 });
               })
