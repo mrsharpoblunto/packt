@@ -10,7 +10,7 @@ export interface Input {
   isMousePressed(button: number): boolean,
   getMouseDelta(): Vec2,
   getMouseWheel(): Vec3,
-  getMousePosition(): Vec2
+  getMousePosition(): Vec2,
 }
 
 export interface SimSystem {
@@ -18,13 +18,13 @@ export interface SimSystem {
   systemWillUnmount(canvas: any): void,
   worldAddingEntity(entity: Entity): void,
   worldRemovingEntity(entity: Entity): void,
-  simulate(timestep: number): void
+  simulate(timestep: number): void,
 }
 
 export interface RenderSystem {
   worldAddingEntity(entity: Entity): void,
   worldRemovingEntity(entity: Entity): void,
-  render(gl: any, alpha: number): void
+  render(gl: any, alpha: number): void,
 }
 
 export class Entity {
@@ -52,7 +52,7 @@ export class Entity {
   }
   hasComponent<C: Object>(
     componentClass: Class<C>,
-    fn: ?(componentInstance: C) => any
+    fn: ?(componentInstance: C) => any,
   ): boolean {
     const componentInstance = this._components.get(componentClass);
     if (componentInstance && fn) {
@@ -62,7 +62,7 @@ export class Entity {
   }
   hasComponents<C: Object>(
     componentClasses: C,
-    fn: ?(instances: { [key: $Enum<C>]: Object }) => any
+    fn: ?(instances: { [key: $Enum<C>]: Object }) => any,
   ): boolean {
     let instances = null;
     for (const c in componentClasses) {
@@ -72,7 +72,7 @@ export class Entity {
       }
       if (!instances) {
         instances = {
-          [c]: componentInstance
+          [c]: componentInstance,
         };
       } else {
         instances[c] = componentInstance;
@@ -104,7 +104,7 @@ export class World {
     glContext: any,
     maxWidth: number,
     aspect: number,
-    fov: number
+    fov: number,
   ) {
     this._input = new InputHandler(canvas);
     this._simSystems = [];
@@ -188,7 +188,7 @@ export class World {
   render(alpha: number): void {
     this._glContext.clearColor(0.0, 0.0, 0.0, 1.0);
     this._glContext.clear(
-      this._glContext.COLOR_BUFFER_BIT | this._glContext.DEPTH_BUFFER_BIT
+      this._glContext.COLOR_BUFFER_BIT | this._glContext.DEPTH_BUFFER_BIT,
     );
     for (let system of this._renderSystems) {
       system.render(this._glContext, alpha);
@@ -196,7 +196,7 @@ export class World {
   }
   createEntity(
     builder: (entity: Entity, options: any) => Entity,
-    options: any
+    options: any,
   ): Entity {
     let id: number;
     if (this._freeIds.length) {

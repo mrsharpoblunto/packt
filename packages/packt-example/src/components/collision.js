@@ -27,7 +27,7 @@ export default class CollisionComponent {
     const back = this.support(tmp, constants.BACK)[2];
 
     this.boundingBox = new BoundingBox(
-      glm.vec3.fromValues(top - bottom, right - left, front - back)
+      glm.vec3.fromValues(top - bottom, right - left, front - back),
     );
   }
 
@@ -37,7 +37,7 @@ export default class CollisionComponent {
     glm.mat4.fromRotationTranslation(
       this._toWorld,
       orientation.orientation,
-      orientation.position
+      orientation.position,
     );
   }
 }

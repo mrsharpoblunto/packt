@@ -6,7 +6,7 @@
 export function getOrCreate<T>(
   dict: { [key: string]: T },
   key: string,
-  newFunc: () => T
+  newFunc: () => T,
 ): T {
   let existing = dict[key];
   if (!existing) {
@@ -17,7 +17,7 @@ export function getOrCreate<T>(
 
 export function objectMap<T, U>(
   dict: { [key: string]: T },
-  map: (value: T, key: string) => U
+  map: (value: T, key: string) => U,
 ): { [key: string]: U } {
   return Object.keys(dict).reduce((prev, next) => {
     prev[next] = map(dict[next], next);

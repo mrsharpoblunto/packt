@@ -19,7 +19,7 @@ export class PacktResolverError extends Error {
       'Unable to resolve "' +
         module +
         '"' +
-        (parentModule ? ' (via ' + parentModule + ')' : '')
+        (parentModule ? ' (via ' + parentModule + ')' : ''),
     );
     this.module = module;
     this.parentModule = parentModule;
@@ -30,13 +30,13 @@ export class PacktResolverError extends Error {
 export class PacktConfigError extends Error {
   details: Array<{
     path: string,
-    message: string
+    message: string,
   }>;
   constructor(error: {
     details: Array<{
       path: string,
-      message: string
-    }>
+      message: string,
+    }>,
   }) {
     super(error.details[0].path + ': ' + error.details[0].message);
     this.details = error.details;
@@ -63,7 +63,7 @@ export class PacktContentError extends Error {
     handler: string,
     variants: Array<string>,
     error: string,
-    resolved: string
+    resolved: string,
   ) {
     super('Error processing ' + resolved + ': ' + error);
     this.handler = handler;

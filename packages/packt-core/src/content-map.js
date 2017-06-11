@@ -3,7 +3,7 @@
  * @format
  */
 export type ContentMapEntry = {
-  content: string
+  content: string,
 };
 
 export type ReadOnlyContentMapVariant = (resolved: string) => string;
@@ -11,8 +11,8 @@ export type ReadOnlyContentMapVariant = (resolved: string) => string;
 export default class ContentMap {
   _content: {
     [key: string]: {
-      variants: { [key: string]: ContentMapEntry }
-    }
+      variants: { [key: string]: ContentMapEntry },
+    },
   };
 
   constructor() {
@@ -31,7 +31,7 @@ export default class ContentMap {
     const entry = this._content[resolved];
     if (!entry) {
       this._content[resolved] = {
-        variants: {}
+        variants: {},
       };
       ifNotPresent();
     }
@@ -42,10 +42,10 @@ export default class ContentMap {
       this._content[resolved].variants,
       variants.reduce((prev, next) => {
         prev[next] = {
-          content: content
+          content: content,
         };
         return prev;
-      }, {})
+      }, {}),
     );
   }
 }

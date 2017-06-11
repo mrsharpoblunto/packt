@@ -16,7 +16,7 @@ export default function transform(babel) {
           path.node.property.type === 'Identifier'
         ) {
           let value = this.opts.defines.hasOwnProperty(
-            `process.env.${path.node.property.name}`
+            `process.env.${path.node.property.name}`,
           )
             ? this.opts.defines[`process.env.${path.node.property.name}`]
             : process.env[path.node.property.name];
@@ -34,7 +34,7 @@ export default function transform(babel) {
           const d = this.opts.defines[path.node.name];
           path.replaceWith(helpers.createLiteral(d));
         }
-      }
-    }
+      },
+    },
   };
 }

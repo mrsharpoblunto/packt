@@ -14,7 +14,7 @@ export function impl(minify: boolean): string {
   if (!cached) {
     cached = fs.readFileSync(
       path.join(__dirname, 'js-runtime.js.template'),
-      'utf8'
+      'utf8',
     );
     if (minify) {
       cached = uglify.minify(cached, { fromString: true }).code;
@@ -30,6 +30,6 @@ export function styleLoader(cssModules: Array<SerializedModule>) {
   const hasher = crypto.createHash('md5');
   hasher.update(cssModules.map(c => c.contentHash).join(''));
   return `__packt_style__(\'${hasher.digest('hex')}\',${JSON.stringify(
-    cssModules.map(c => c.content).join('')
+    cssModules.map(c => c.content).join(''),
   )});`;
 }

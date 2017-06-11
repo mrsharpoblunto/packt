@@ -14,7 +14,7 @@ import positionVert from 'shaders/position-vert.glsl';
 
 type SystemComponents = {
   cube: Components.CubeComponent,
-  orientation: Components.OrientationComponent
+  orientation: Components.OrientationComponent,
 };
 
 const IDENTITY_QUAT = glm.quat.create();
@@ -33,11 +33,11 @@ export default class CubeRenderSystem {
 
     this._cubeProgramInfo = twgl.createProgramInfo(gl, [
       positionNormalVert,
-      diffuseSpecularFrag
+      diffuseSpecularFrag,
     ]);
     this._wireframeProgramInfo = twgl.createProgramInfo(gl, [
       positionVert,
-      flatFrag
+      flatFrag,
     ]);
     this._cubeBufferInfo = twgl.primitives.createCubeBufferInfo(gl, 2);
     this._wireBufferInfo = createWireframeCubeBufferInfo(gl);
@@ -48,11 +48,11 @@ export default class CubeRenderSystem {
     entity.hasComponents(
       {
         cube: Components.CubeComponent,
-        orientation: Components.OrientationComponent
+        orientation: Components.OrientationComponent,
       },
       renderable => {
         this._cubes.set(renderable.cube, renderable);
-      }
+      },
     );
     entity.hasComponent(Components.CameraComponent, camera => {
       this._camera = camera;
@@ -94,20 +94,20 @@ export default class CubeRenderSystem {
       glm.mat4.fromRotationTranslation(
         world,
         cube.orientation.orientation,
-        cube.orientation.position
+        cube.orientation.position,
       );
 
       glm.mat4.mul(worldViewProjection, viewProjection, world);
       glm.mat4.invert(
         invTransposeWorld,
-        glm.mat4.transpose(invTransposeWorld, world)
+        glm.mat4.transpose(invTransposeWorld, world),
       );
 
       gl.useProgram(this._cubeProgramInfo.program);
       twgl.setBuffersAndAttributes(
         gl,
         this._cubeProgramInfo,
-        this._cubeBufferInfo
+        this._cubeBufferInfo,
       );
       twgl.setUniforms(this._cubeProgramInfo, {
         u_lightWorld: lightDirection,
@@ -120,7 +120,7 @@ export default class CubeRenderSystem {
         u_world: world,
         u_worldInverseTranspose: invTransposeWorld,
         u_worldViewProjection: worldViewProjection,
-        u_worldViewPos: cameraPosition
+        u_worldViewPos: cameraPosition,
       });
       twgl.drawBufferInfo(gl, gl.TRIANGLES, this._cubeBufferInfo);
 
@@ -129,7 +129,7 @@ export default class CubeRenderSystem {
         world,
         IDENTITY_QUAT,
         cube.orientation.position,
-        this._boundingBox.getAASize()
+        this._boundingBox.getAASize(),
       );
 
       glm.mat4.mul(worldViewProjection, viewProjection, world);
@@ -138,11 +138,11 @@ export default class CubeRenderSystem {
       twgl.setBuffersAndAttributes(
         gl,
         this._wireframeProgramInfo,
-        this._wireBufferInfo
+        this._wireBufferInfo,
       );
       twgl.setUniforms(this._wireframeProgramInfo, {
         u_diffuse: [1, 1, 1, 1],
-        u_worldViewProjection: worldViewProjection
+        u_worldViewProjection: worldViewProjection,
       });
       twgl.drawBufferInfo(gl, gl.LINES, this._wireBufferInfo);
     }

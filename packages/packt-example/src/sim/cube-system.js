@@ -19,7 +19,7 @@ type SystemComponents = {
   cube: Components.CubeComponent,
   orientation: Components.OrientationComponent,
   collision: Components.CollisionComponent,
-  mass: Components.MassComponent
+  mass: Components.MassComponent,
 };
 
 export default class CubeSystem {
@@ -42,17 +42,17 @@ export default class CubeSystem {
         cube: Components.CubeComponent,
         orientation: Components.OrientationComponent,
         collision: Components.CollisionComponent,
-        mass: Components.MassComponent
+        mass: Components.MassComponent,
       },
       sim => {
         this._cubes.set(sim.cube, sim);
-      }
+      },
     );
   }
 
   worldRemovingEntity(entity: Entity): void {
     entity.hasComponent(Components.CubeComponent, cube =>
-      this._cubes.delete(cube)
+      this._cubes.delete(cube),
     );
   }
 
@@ -76,7 +76,7 @@ export default class CubeSystem {
           if (this._input.isKeyDown('ArrowDown')) {
             glm.vec3.sub(outTorque, outTorque, TORQUE_X);
           }
-        }
+        },
       );
       cube.collision.recalculate(cube.orientation);
     }

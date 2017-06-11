@@ -40,7 +40,7 @@ export default {
           path.stop();
           break;
       }
-    }
+    },
   },
   BinaryExpression: {
     exit: function(path) {
@@ -75,14 +75,14 @@ export default {
           path.stop();
           break;
       }
-    }
+    },
   },
   UnaryExpression: {
     exit: function(path) {
       if (path.node.operator === '!') {
         const argument = helpers.getLiteralOrConst(
           path.node.argument,
-          path.scope
+          path.scope,
         );
         if (argument) {
           path.replaceWith(helpers.createLiteral(!argument.value));
@@ -90,18 +90,18 @@ export default {
           path.stop();
         }
       }
-    }
+    },
   },
   ConditionalExpression: {
     exit: function(path) {
       const testValue = helpers.getLiteralOrConst(path.node.test, path.scope);
       if (testValue) {
         path.replaceWith(
-          testValue.value ? path.node.consequent : path.node.alternate
+          testValue.value ? path.node.consequent : path.node.alternate,
         );
       } else {
         path.stop();
       }
-    }
-  }
+    },
+  },
 };

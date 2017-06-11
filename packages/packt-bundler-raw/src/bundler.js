@@ -10,7 +10,7 @@ export default class RawBundler implements Bundler {
   init(
     invariantOptions: BundlerOptions,
     delegate: BundlerDelegate,
-    callback: BundlerInitCallback
+    callback: BundlerInitCallback,
   ) {
     callback();
   }
@@ -19,7 +19,7 @@ export default class RawBundler implements Bundler {
     options: BundlerOptions,
     data: BundlerData,
     delegate: BundlerDelegate,
-    callback: BundlerProcessCallback
+    callback: BundlerProcessCallback,
   ): void {
     mkdirp(data.paths.outputParentPath, (err: ?Error) => {
       if (err) {
@@ -30,7 +30,7 @@ export default class RawBundler implements Bundler {
         transform: 0,
         diskIO: 0,
         preSize: 0,
-        postSize: 0
+        postSize: 0,
       };
 
       const start = Date.now();
@@ -38,7 +38,7 @@ export default class RawBundler implements Bundler {
       wstream.on('finish', () => {
         perfStats.diskIO = Date.now() - start;
         callback(null, {
-          perfStats: perfStats
+          perfStats: perfStats,
         });
       });
       wstream.on('error', err => {
@@ -49,7 +49,7 @@ export default class RawBundler implements Bundler {
         perfStats.postSize += module.content.length;
         wstream.write(
           module.content,
-          module.contentType.indexOf('text/') === 0 ? 'utf8' : 'base64'
+          module.contentType.indexOf('text/') === 0 ? 'utf8' : 'base64',
         );
       }
       wstream.end();

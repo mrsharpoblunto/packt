@@ -5,7 +5,7 @@ import invariant from 'invariant';
 import {
   barycentric,
   closestPointLineSegments,
-  closestPointOnTriangle
+  closestPointOnTriangle,
 } from 'geometry/helpers';
 import * as constants from 'constants';
 
@@ -76,7 +76,7 @@ class SupportPoint {
 export function createSupport(
   convexHull: Array<Vec3>,
   inverseRotation: Mat4,
-  world: Mat4
+  world: Mat4,
 ): SupportFunc {
   const localDirection = glm.vec3.create();
   const worldOut = glm.vec3.create();
@@ -101,7 +101,7 @@ export function createSupport(
 export function GJKIntersect(
   simplex: Simplex,
   supportA: SupportFunc,
-  supportB: SupportFunc
+  supportB: SupportFunc,
 ): boolean {
   return GJKDistance(simplex, constants.RIGHT, supportA, supportB) === null;
 }
@@ -112,7 +112,7 @@ export function GJKDistance(
   simplex: Simplex,
   initialDirection: Vec3,
   supportA: SupportFunc,
-  supportB: SupportFunc
+  supportB: SupportFunc,
 ): ?number {
   // get the first point in the search direction
   support(simplex.grow(), initialDirection, supportA, supportB);
@@ -190,7 +190,7 @@ export function GJKDistance(
 export function GJKClosestPoint(
   outPoint: Vec3,
   outNormal: Vec3,
-  simplex: Simplex
+  simplex: Simplex,
 ): ?Vec3 {
   if (!simplex.closest) {
     invariant(!simplex.closest, 'Simplex is not complete');
@@ -306,7 +306,7 @@ function closestMinkowskiDifferenceToOrigin(out: Vec3, simplex: Simplex): Vec3 {
     constants.ORIGIN,
     (simplex: any)[2].v,
     (simplex: any)[1].v,
-    (simplex: any)[0].v
+    (simplex: any)[0].v,
   );
   return out;
 }
@@ -315,7 +315,7 @@ function support(
   out: SupportPoint,
   direction: Vec3,
   supportA: SupportFunc,
-  supportB: SupportFunc
+  supportB: SupportFunc,
 ): Vec3 {
   glm.vec3.negate(_reverse, direction);
   const a = supportA(out.worldSupports[0], direction);
@@ -362,7 +362,7 @@ export function EPA(
   outNormal: Vec3,
   simplex: Simplex,
   supportA: SupportFunc,
-  supportB: SupportFunc
+  supportB: SupportFunc,
 ): ?Vec3 {
   invariant(simplex.length === 3, 'Expected simplex length of 3');
 
@@ -394,16 +394,16 @@ export function EPA(
   let edges: Array<Edge> = [];
 
   triangles.push(
-    new Triangle((simplex: any)[3], (simplex: any)[2], (simplex: any)[1])
+    new Triangle((simplex: any)[3], (simplex: any)[2], (simplex: any)[1]),
   );
   triangles.push(
-    new Triangle((simplex: any)[3], (simplex: any)[1], (simplex: any)[0])
+    new Triangle((simplex: any)[3], (simplex: any)[1], (simplex: any)[0]),
   );
   triangles.push(
-    new Triangle((simplex: any)[3], (simplex: any)[0], (simplex: any)[2])
+    new Triangle((simplex: any)[3], (simplex: any)[0], (simplex: any)[2]),
   );
   triangles.push(
-    new Triangle((simplex: any)[2], (simplex: any)[0], (simplex: any)[1])
+    new Triangle((simplex: any)[2], (simplex: any)[0], (simplex: any)[1]),
   );
 
   for (let i = 0; i < MAX_ITERATIONS; ++i) {
@@ -437,7 +437,7 @@ export function EPA(
         glm.vec3.scale(_tmp1, currentTriangle.normal, currentDistance),
         currentTriangle.points[0].v,
         currentTriangle.points[1].v,
-        currentTriangle.points[2].v
+        currentTriangle.points[2].v,
       );
 
       if (
@@ -451,19 +451,19 @@ export function EPA(
       glm.vec3.scale(
         outPoint,
         currentTriangle.points[0].worldSupports[0],
-        _tmp[0]
+        _tmp[0],
       );
       glm.vec3.scaleAndAdd(
         outPoint,
         outPoint,
         currentTriangle.points[1].worldSupports[0],
-        _tmp[1]
+        _tmp[1],
       );
       glm.vec3.scaleAndAdd(
         outPoint,
         outPoint,
         currentTriangle.points[2].worldSupports[0],
-        _tmp[2]
+        _tmp[2],
       );
       glm.vec3.negate(outNormal, currentTriangle.normal);
       return outPoint;
@@ -474,7 +474,7 @@ export function EPA(
       if (
         glm.vec3.dot(
           triangles[i].normal,
-          glm.vec3.sub(_tmp, currentSupport.v, triangles[i].points[0].v)
+          glm.vec3.sub(_tmp, currentSupport.v, triangles[i].points[0].v),
         ) > 0
       ) {
         addEdge(edges, triangles[i].points[0], triangles[i].points[1]);

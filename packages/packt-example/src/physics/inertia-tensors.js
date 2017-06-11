@@ -7,7 +7,7 @@ export function cube(
   mass: number,
   height: number,
   width: number,
-  depth: number
+  depth: number,
 ): Mat3 {
   return glm.mat3.set(
     out,
@@ -19,6 +19,6 @@ export function cube(
     0,
     0,
     0,
-    1 / 12 * mass * (width * width + height * height)
+    1 / 12 * mass * (width * width + height * height),
   );
 }

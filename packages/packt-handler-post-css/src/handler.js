@@ -11,23 +11,23 @@ type PostCssOptionsTransformFunction = (
     scopeId: string,
     variant: string,
     options: HandlerOptions,
-    invariantOptions: HandlerOptions
+    invariantOptions: HandlerOptions,
   },
   options: Object,
-  plugins: Array<string>
+  plugins: Array<string>,
 ) => void;
 
 export default class PostCssHandler implements Handler {
   _invariantOptions: HandlerOptions;
   _handlerInvariants: {
-    optsProcessor?: PostCssOptionsTransformFunction
+    optsProcessor?: PostCssOptionsTransformFunction,
   };
   _pluginCache: { [key: string]: mixed };
 
   init(
     invariantOptions: HandlerOptions,
     delegate: HandlerDelegate,
-    callback: HandlerInitCallback
+    callback: HandlerInitCallback,
   ) {
     this._invariantOptions = invariantOptions;
     this._handlerInvariants = {};
@@ -46,7 +46,7 @@ export default class PostCssHandler implements Handler {
             return callback(ex);
           }
           callback();
-        }
+        },
       );
     } else {
       callback();
@@ -58,7 +58,7 @@ export default class PostCssHandler implements Handler {
     scopeId: string,
     options: { [key: string]: HandlerOptions },
     delegate: HandlerDelegate,
-    callback: HandlerProcessCallback
+    callback: HandlerProcessCallback,
   ) {
     const variantKeys = Object.keys(options);
     const stats = {};
@@ -108,7 +108,7 @@ export default class PostCssHandler implements Handler {
                   content: result.css,
                   contentType: 'text/css',
                   contentHash: delegate.generateHash(result.css),
-                  perfStats: stats
+                  perfStats: stats,
                 });
               })
               .catch(err => {
@@ -134,13 +134,13 @@ export default class PostCssHandler implements Handler {
     scopeId: string,
     variant: string,
     options: HandlerOptions,
-    delegate: HandlerDelegate
+    delegate: HandlerDelegate,
   ) {
     const opts = Object.assign(
       {
-        from: resolvedModule
+        from: resolvedModule,
       },
-      options.handler.opts || {}
+      options.handler.opts || {},
     );
     const plugins: Array<string> = (options.handler.plugins || []).slice(0);
 
@@ -153,10 +153,10 @@ export default class PostCssHandler implements Handler {
           scopeId: scopeId,
           variant: variant,
           options: options,
-          invariantOptions: this._invariantOptions
+          invariantOptions: this._invariantOptions,
         },
         opts,
-        plugins
+        plugins,
       );
     }
 
@@ -185,11 +185,11 @@ export default class PostCssHandler implements Handler {
             });
           }
         });
-      })
+      }),
     ).then(plugins => {
       return {
         opts: opts,
-        plugins: plugins
+        plugins: plugins,
       };
     });
   }

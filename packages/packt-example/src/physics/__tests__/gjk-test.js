@@ -7,7 +7,7 @@ import {
   GJKClosestPoint,
   EPA,
   Simplex,
-  createSupport
+  createSupport,
 } from '../gjk-epa';
 
 const CUBE_BASE = [
@@ -18,7 +18,7 @@ const CUBE_BASE = [
   glm.vec3.fromValues(-0.5, -0.5, 0.5),
   glm.vec3.fromValues(0.5, -0.5, 0.5),
   glm.vec3.fromValues(-0.5, 0.5, 0.5),
-  glm.vec3.fromValues(0.5, 0.5, 0.5)
+  glm.vec3.fromValues(0.5, 0.5, 0.5),
 ];
 
 const IDENTITY = glm.mat4.create();
@@ -60,7 +60,7 @@ describe('gjk intersection', () => {
     const cube2Support = createSupport(
       cube2,
       CUBE_2_INV_ROTATION,
-      CUBE_2_WORLD
+      CUBE_2_WORLD,
     );
     const simplex = new Simplex();
 
@@ -117,7 +117,7 @@ describe('gjk distance', () => {
       simplex,
       CUBE_2_OFFSET,
       cube1Support,
-      cube2Support
+      cube2Support,
     );
 
     expect(distance).not.toBe(null);
@@ -154,7 +154,7 @@ describe('gjk distance', () => {
     const cube2Support = createSupport(
       cube2,
       CUBE_2_INV_ROTATION,
-      CUBE_2_WORLD
+      CUBE_2_WORLD,
     );
     const simplex = new Simplex();
 
@@ -162,7 +162,7 @@ describe('gjk distance', () => {
       simplex,
       CUBE_2_OFFSET,
       cube1Support,
-      cube2Support
+      cube2Support,
     );
 
     expect(distance).not.toBe(null);
@@ -191,7 +191,7 @@ describe('gjk distance', () => {
     const simplex = new Simplex();
 
     expect(
-      GJKDistance(simplex, CUBE_2_OFFSET, cube1Support, cube2Support)
+      GJKDistance(simplex, CUBE_2_OFFSET, cube1Support, cube2Support),
     ).toBe(null);
   });
 });

@@ -17,7 +17,7 @@ module.exports = {
     workers: os.cpus().length - 1,
     outputPath: path.join(__dirname, '_build'),
     outputHash: 'md5',
-    outputHashLength: 12
+    outputHashLength: 12,
   },
 
   resolvers: {
@@ -27,11 +27,11 @@ module.exports = {
           __dirname,
           path.join(__dirname, 'src'),
           path.join(__dirname, 'node_modules'),
-          path.join(__dirname, 'shaders')
+          path.join(__dirname, 'shaders'),
         ],
-        extensions: ['.html', '.js', '.glsl', '.css']
-      }
-    }
+        extensions: ['.html', '.js', '.glsl', '.css'],
+      },
+    },
   },
 
   bundles: {
@@ -39,18 +39,18 @@ module.exports = {
       type: 'entrypoint',
       requires: ['src/main.js'],
       depends: ['vendor.js'],
-      bundler: 'js'
+      bundler: 'js',
     },
     'vendor.js': {
       type: 'library',
       requires: ['node_modules/twgl.js', 'node_modules/gl-matrix'],
-      bundler: 'js'
+      bundler: 'js',
     },
     'index.html': {
       type: 'entrypoint',
       requires: ['src/index.html'],
-      bundler: 'raw'
-    }
+      bundler: 'raw',
+    },
   },
 
   /**
@@ -60,20 +60,20 @@ module.exports = {
     js: {
       require: 'packt-bundler-js',
       invariantOptions: {
-        outputPathFormat: '/bundles/${name}${ext}'
+        outputPathFormat: '/bundles/${name}${ext}',
       },
       options: {
         base: {
-          minify: true
-        }
-      }
+          minify: true,
+        },
+      },
     },
     raw: {
       require: 'packt-bundler-raw',
       invariantOptions: {
-        outputPathFormat: '/${name}${ext}'
-      }
-    }
+        outputPathFormat: '/${name}${ext}',
+      },
+    },
   },
 
   /**
@@ -88,10 +88,10 @@ module.exports = {
       options: {
         base: {
           babelOptions: {
-            babelrc: false
-          }
-        }
-      }
+            babelrc: false,
+          },
+        },
+      },
     },
     {
       pattern: '\\.js$',
@@ -101,28 +101,28 @@ module.exports = {
           babelOptions: {
             plugins: ['transform-flow-strip-types'],
             presets: [['es2015', { modules: false }], 'stage-0'],
-            compact: false
+            compact: false,
           },
           defines: {
             foo: 'bar',
             __DEV__: false,
-            baz: 1
-          }
+            baz: 1,
+          },
           //preserveIdentifiers: false,
-        }
-      }
+        },
+      },
     },
     {
       pattern: '\\.css$',
-      require: 'packt-handler-post-css'
+      require: 'packt-handler-post-css',
     },
     {
       pattern: '\\.glsl$',
-      require: 'packt-handler-raw-to-js'
+      require: 'packt-handler-raw-to-js',
     },
     {
       pattern: '\\.html$',
-      require: 'packt-handler-raw'
-    }
-  ]
+      require: 'packt-handler-raw',
+    },
+  ],
 };

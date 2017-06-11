@@ -7,17 +7,17 @@ function transform(src, defines) {
       [
         replaceDefines,
         {
-          defines: defines
-        }
-      ]
-    ]
+          defines: defines,
+        },
+      ],
+    ],
   }).code;
 }
 
 describe('Replaces all compile time defines', () => {
   it('replaces process.env settings when defined in config', () => {
     const output = transform(`var foo = process.env.FOO;`, {
-      'process.env.FOO': 'production'
+      'process.env.FOO': 'production',
     });
 
     expect(output).toBe(`var foo = "production";`);
@@ -38,14 +38,14 @@ var baz = __BAZ__;`,
       {
         __FOO__: 'foo',
         __BAR__: true,
-        __BAZ__: 2.5
-      }
+        __BAZ__: 2.5,
+      },
     );
 
     expect(output).toBe(
       `var foo = "foo";
 var bar = true;
-var baz = 2.5;`
+var baz = 2.5;`,
     );
   });
 
@@ -57,8 +57,8 @@ var baz = 2.5;`
 }
 __FOO__;`,
       {
-        __FOO__: 'foo'
-      }
+        __FOO__: 'foo',
+      },
     );
 
     expect(output).toBe(
@@ -66,7 +66,7 @@ __FOO__;`,
   var __FOO__ = "bar";
   __FOO__;
 }
-"foo";`
+"foo";`,
     );
   });
 });

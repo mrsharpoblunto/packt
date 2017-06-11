@@ -14,9 +14,9 @@ type TransformBabelOptionsFunction = (
     scopeId: string,
     variant: string,
     options: Object,
-    invariantOptions: Object
+    invariantOptions: Object,
   },
-  babelOptions: Object
+  babelOptions: Object,
 ) => void;
 
 export default class BabelJsHandler implements Handler {
@@ -24,23 +24,23 @@ export default class BabelJsHandler implements Handler {
   _handlerInvariants: {
     babelOptionsProcessor?: TransformBabelOptionsFunction,
     parserOptions: Object,
-    loadedParserOptions: boolean
+    loadedParserOptions: boolean,
   };
   _parserOptions: ?Object;
 
   init(
     invariantOptions: HandlerOptions,
     delegate: HandlerDelegate,
-    callback: HandlerInitCallback
+    callback: HandlerInitCallback,
   ): void {
     this._invariantOptions = invariantOptions;
     this._handlerInvariants = {
       parserOptions: {
         sourceType: 'module',
         plugins: [],
-        ...(invariantOptions.handler.babelParserOptions || {})
+        ...(invariantOptions.handler.babelParserOptions || {}),
       },
-      loadedParserOptions: false
+      loadedParserOptions: false,
     };
 
     if (invariantOptions.handler.babelOptionsProcessor) {
@@ -58,7 +58,7 @@ export default class BabelJsHandler implements Handler {
             return;
           }
           callback();
-        }
+        },
       );
     } else {
       callback();
@@ -73,7 +73,7 @@ export default class BabelJsHandler implements Handler {
 
   _ensureParserOptions(
     options: { [key: string]: HandlerOptions },
-    delegate: HandlerDelegate
+    delegate: HandlerDelegate,
   ) {
     if (this._handlerInvariants.loadedParserOptions) {
       return;
@@ -114,7 +114,7 @@ export default class BabelJsHandler implements Handler {
       } catch (ex) {
         delegate.emitWarning(
           [key],
-          'Unable to load babelOptions object ' + ex.toString()
+          'Unable to load babelOptions object ' + ex.toString(),
         );
       }
     }
@@ -130,7 +130,7 @@ export default class BabelJsHandler implements Handler {
     scopeId: string,
     options: { [key: string]: HandlerOptions },
     delegate: HandlerDelegate,
-    callback: HandlerProcessCallback
+    callback: HandlerProcessCallback,
   ): void {
     const variantKeys = Object.keys(options);
     const stats = {};
@@ -154,10 +154,10 @@ export default class BabelJsHandler implements Handler {
           source,
           Object.assign(
             {
-              sourceFileName: resolvedModule
+              sourceFileName: resolvedModule,
             },
-            this._handlerInvariants.parserOptions
-          )
+            this._handlerInvariants.parserOptions,
+          ),
         );
       } catch (ex) {
         if (ex.pos && ex.loc && ex.loc.line && ex.loc.column) {
@@ -166,7 +166,7 @@ export default class BabelJsHandler implements Handler {
             codeFrame(source, ex.loc.line, ex.loc.column, {
               highlightCode: true,
               linesAbove: 2,
-              linesBelow: 3
+              linesBelow: 3,
             });
         }
         return callback(ex);
@@ -197,8 +197,8 @@ export default class BabelJsHandler implements Handler {
               scopeId,
               key,
               variant,
-              delegate
-            )
+              delegate,
+            ),
           );
           stats.transform = Date.now() - vStart + parseTime;
           stats.preSize = source.length;
@@ -207,7 +207,7 @@ export default class BabelJsHandler implements Handler {
             content: result.code,
             contentType: 'text/javascript',
             contentHash: delegate.generateHash(result.code),
-            perfStats: stats
+            perfStats: stats,
           });
         } catch (ex) {
           callback(ex, [key]);
@@ -222,13 +222,13 @@ export default class BabelJsHandler implements Handler {
     scopeId: string,
     variant: string,
     options: HandlerOptions,
-    delegate: HandlerDelegate
+    delegate: HandlerDelegate,
   ) {
     const babelOptions = options.handler.babelOptions || {};
 
     const opts = Object.assign({}, babelOptions, {
       filename: resolvedModule,
-      plugins: babelOptions.plugins ? babelOptions.plugins.slice(0) : []
+      plugins: babelOptions.plugins ? babelOptions.plugins.slice(0) : [],
     });
 
     // allow custom logic & transforms to be instantiated via a provided
@@ -240,9 +240,9 @@ export default class BabelJsHandler implements Handler {
           scopeId: scopeId,
           variant: variant,
           options: options,
-          invariantOptions: this._invariantOptions
+          invariantOptions: this._invariantOptions,
         },
-        opts
+        opts,
       );
     }
 
@@ -251,8 +251,8 @@ export default class BabelJsHandler implements Handler {
       opts.plugins.unshift([
         plugins['replace-defines'],
         {
-          defines: options.handler.defines
-        }
+          defines: options.handler.defines,
+        },
       ]);
     }
     opts.plugins.unshift(plugins['dead-code-removal']);
@@ -262,21 +262,21 @@ export default class BabelJsHandler implements Handler {
         preserveIdentifiers: !!options.handler.preserveIdentifiers,
         delegate,
         scope: scopeId,
-        variants: [variant]
-      }
+        variants: [variant],
+      },
     ]);
     return opts;
   }
 
   _builtInPlugins(): {
     [key: string]: () => {
-      manipulateOptions?: (opts: Object, parserOpts: Object) => void
-    }
+      manipulateOptions?: (opts: Object, parserOpts: Object) => void,
+    },
   } {
     return [
       'replace-defines',
       'dead-code-removal',
-      'scopify-and-process-dependencies'
+      'scopify-and-process-dependencies',
     ].reduce((prev, next) => {
       prev[next] = require(`./plugins/${next}`).default;
       return prev;

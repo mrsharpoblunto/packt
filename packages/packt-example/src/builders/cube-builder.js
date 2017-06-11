@@ -5,7 +5,7 @@ import type { World, Entity } from 'framework';
 import * as Components from 'components';
 
 type CubeOptions = {
-  position: Vec3
+  position: Vec3,
 };
 
 const CUBE_HULL = [
@@ -16,7 +16,7 @@ const CUBE_HULL = [
   glm.vec3.fromValues(-0.5, -0.5, 0.5),
   glm.vec3.fromValues(0.5, -0.5, 0.5),
   glm.vec3.fromValues(-0.5, 0.5, 0.5),
-  glm.vec3.fromValues(0.5, 0.5, 0.5)
+  glm.vec3.fromValues(0.5, 0.5, 0.5),
 ];
 
 export default function cube(ent: Entity, options: CubeOptions): Entity {

@@ -8,7 +8,7 @@ describe('Config', () => {
   it('loads a simple config and generates defaults', () => {
     MockBuiltInResolver.__resolvableDirectories = {
       './handler-js': '/path/to/handler.js',
-      './bundler-js': '/path/to/bundler.js'
+      './bundler-js': '/path/to/bundler.js',
     };
 
     return parseConfig(path.join(__dirname, 'packt.config.js'), {
@@ -17,42 +17,42 @@ describe('Config', () => {
           type: 'entrypoint',
           requires: ['./index.js'],
           depends: ['library.js', 'common.js'],
-          bundler: 'js'
+          bundler: 'js',
         },
         'entry2.js': {
           type: 'entrypoint',
           requires: './index.js',
           depends: 'library.js',
-          bundler: 'js'
+          bundler: 'js',
         },
         'entry3.js': {
           type: 'entrypoint',
           requires: './index.js',
-          bundler: 'js'
+          bundler: 'js',
         },
         'library.js': {
           type: 'library',
           requires: ['react.js'],
-          bundler: 'js'
+          bundler: 'js',
         },
         'common.js': {
           type: 'common',
           bundler: 'js',
           contentTypes: ['text/javascript'],
-          threshold: 0.5
-        }
+          threshold: 0.5,
+        },
       },
       bundlers: {
         js: {
-          require: './bundler-js'
-        }
+          require: './bundler-js',
+        },
       },
       handlers: [
         {
           pattern: '^\\.js$',
-          require: './handler-js'
-        }
-      ]
+          require: './handler-js',
+        },
+      ],
     }).then(config => {
       expect(config).toBeTruthy();
       expect(config.hasVariants).toBe(false);
@@ -72,11 +72,11 @@ describe('Config', () => {
       expect(builtInResolver.invariantOptions).toBeTruthy();
       expect(builtInResolver.invariantOptions.searchPaths).toEqual([
         __dirname,
-        'node_modules'
+        'node_modules',
       ]);
       expect(builtInResolver.invariantOptions.extensions).toEqual([
         '.js',
-        '.json'
+        '.json',
       ]);
 
       expect(config.handlers.length).toBe(1);
@@ -88,10 +88,10 @@ describe('Config', () => {
       expect(config.bundlers['js'].invariantOptions).toBeTruthy();
       expect(config.bundlers['js'].require).toBe('/path/to/bundler.js');
       expect(
-        config.bundlers['js'].invariantOptions.staticOutputPathFormat
+        config.bundlers['js'].invariantOptions.staticOutputPathFormat,
       ).toBe('/bundles/${name}_${hash}${ext}');
       expect(
-        config.bundlers['js'].invariantOptions.dynamicOutputPathFormat
+        config.bundlers['js'].invariantOptions.dynamicOutputPathFormat,
       ).toBe('/bundles/dynamic/${hash}${ext}');
       expect(config.bundlers['js'].options).toBeTruthy();
 
@@ -106,7 +106,7 @@ describe('Config', () => {
   it('fails when an entrypoint has multiple common chunks with the same content type', () => {
     MockBuiltInResolver.__resolvableDirectories = {
       './bundler-js': '/path/to/bundler.js',
-      './handler-js': '/path/to/handler.js'
+      './handler-js': '/path/to/handler.js',
     };
 
     return parseConfig(path.join(__dirname, 'packt.config.js'), {
@@ -115,45 +115,45 @@ describe('Config', () => {
           type: 'entrypoint',
           requires: ['./index.js'],
           depends: ['common1.js', 'common2.js'],
-          bundler: 'js'
+          bundler: 'js',
         },
         'common1.js': {
           type: 'common',
           contentTypes: ['text/javascript'],
           threshold: 1,
-          bundler: 'js'
+          bundler: 'js',
         },
         'common2.js': {
           type: 'common',
           contentTypes: ['text/javascript'],
           threshold: 1,
-          bundler: 'js'
-        }
+          bundler: 'js',
+        },
       },
       bundlers: {
         js: {
-          require: './bundler-js'
-        }
+          require: './bundler-js',
+        },
       },
       handlers: [
         {
           pattern: '^\\.js$',
-          require: './handler-js'
-        }
-      ]
+          require: './handler-js',
+        },
+      ],
     }).then(
       config => {
         return Promise.reject();
       },
       () => {
         return Promise.resolve();
-      }
+      },
     );
   });
 
   it('fails with unresolved handlers', () => {
     MockBuiltInResolver.__resolvableDirectories = {
-      './bundler-js': '/path/to/bundler.js'
+      './bundler-js': '/path/to/bundler.js',
     };
 
     return parseConfig(path.join(__dirname, 'packt.config.js'), {
@@ -161,33 +161,33 @@ describe('Config', () => {
         'entry.js': {
           type: 'entrypoint',
           requires: ['./index.js'],
-          bundler: 'js'
-        }
+          bundler: 'js',
+        },
       },
       bundlers: {
         js: {
-          require: './bundler-js'
-        }
+          require: './bundler-js',
+        },
       },
       handlers: [
         {
           pattern: '^\\.js$',
-          require: './handler-js'
-        }
-      ]
+          require: './handler-js',
+        },
+      ],
     }).then(
       config => {
         return Promise.reject();
       },
       () => {
         return Promise.resolve();
-      }
+      },
     );
   });
 
   it('fails with unresolved bundlers', () => {
     MockBuiltInResolver.__resolvableDirectories = {
-      './handler-js': '/path/to/handler.js'
+      './handler-js': '/path/to/handler.js',
     };
 
     return parseConfig(path.join(__dirname, 'packt.config.js'), {
@@ -195,27 +195,27 @@ describe('Config', () => {
         'entry.js': {
           type: 'entrypoint',
           requires: ['./index.js'],
-          bundler: 'js'
-        }
+          bundler: 'js',
+        },
       },
       bundlers: {
         js: {
-          require: './bundler-js'
-        }
+          require: './bundler-js',
+        },
       },
       handlers: [
         {
           pattern: '^\\.js$',
-          require: './handler-js'
-        }
-      ]
+          require: './handler-js',
+        },
+      ],
     }).then(
       config => {
         return Promise.reject();
       },
       () => {
         return Promise.resolve();
-      }
+      },
     );
   });
 
@@ -223,71 +223,71 @@ describe('Config', () => {
     {
       // invalid bundle type
       'index.js': {
-        type: 'unknown'
-      }
+        type: 'unknown',
+      },
     },
     {
       // no requires
       'index.js': {
-        type: 'entrypoint'
-      }
+        type: 'entrypoint',
+      },
     },
     {
       // undefined dependency
       'index.js': {
         type: 'entrypoint',
         requires: ['./foo'],
-        depends: ['bar.js']
-      }
+        depends: ['bar.js'],
+      },
     },
     {
       // common can't require
       'common.js': {
         type: 'common',
-        requires: ['./foo']
-      }
+        requires: ['./foo'],
+      },
     },
     {
       // common can't depend either
       'common.js': {
         type: 'common',
-        depends: ['./foo']
-      }
+        depends: ['./foo'],
+      },
     },
     {
       // libs can't depend
       'lib.js': {
         type: 'library',
-        depends: ['./foo']
-      }
-    }
+        depends: ['./foo'],
+      },
+    },
   ].forEach(bundles => {
     it('fails with invalid bundle options', () => {
       MockBuiltInResolver.__resolvableDirectories = {
         './bundler-js': '/path/to/bundler.js',
-        './handler-js': '/path/to/handler.js'
+        './handler-js': '/path/to/handler.js',
       };
 
       return parseConfig(path.join(__dirname, 'packt.config.js'), {
         bundles: bundles,
         bundlers: {
           js: {
-            require: './bundler-js'
-          }
+            require: './bundler-js',
+          },
         },
         handlers: [
           {
             pattern: '^\\.js$',
-            require: './handler-js'
-          }
-        ]
+            require: './handler-js',
+          },
+        ],
       }).then(
         config => {
           return Promise.reject();
         },
         () => {
           return Promise.resolve();
-        }
+        },
       );
     });
   });
@@ -295,7 +295,7 @@ describe('Config', () => {
   it('generates config variants', () => {
     MockBuiltInResolver.__resolvableDirectories = {
       './handler-js': '/path/to/handler.js',
-      './bundler-js': '/path/to/bundler.js'
+      './bundler-js': '/path/to/bundler.js',
     };
 
     return parseConfig(path.join(__dirname, 'packt.config.js'), {
@@ -304,13 +304,13 @@ describe('Config', () => {
           type: 'entrypoint',
           requires: ['./index.js'],
           depends: ['library.js', 'common.js'],
-          bundler: 'js'
+          bundler: 'js',
         },
         'entry2.js': {
           type: 'entrypoint',
           requires: './index.js',
           depends: 'library.js',
-          bundler: 'js'
+          bundler: 'js',
         },
         'entry3.js': {
           type: 'entrypoint',
@@ -318,73 +318,73 @@ describe('Config', () => {
           bundler: 'js',
           bundlerOptions: {
             base: {
-              minify: false
+              minify: false,
             },
             variants: {
               prod: {
-                omitRuntime: true
-              }
-            }
-          }
+                omitRuntime: true,
+              },
+            },
+          },
         },
         'library.js': {
           type: 'library',
           requires: ['react.js'],
-          bundler: 'js'
+          bundler: 'js',
         },
         'common.js': {
           type: 'common',
           bundler: 'js',
           contentTypes: ['text/javascript'],
-          threshold: 0.5
-        }
+          threshold: 0.5,
+        },
       },
       options: {
         base: {
-          lang: 'es_ES'
+          lang: 'es_ES',
         },
         variants: {
           en_US: {
-            lang: 'en_US'
+            lang: 'en_US',
           },
           en_GB: {
-            lang: 'en_GB'
-          }
-        }
+            lang: 'en_GB',
+          },
+        },
       },
       bundlers: {
         js: {
           require: './bundler-js',
           options: {
             base: {
-              minify: true
-            }
-          }
-        }
+              minify: true,
+            },
+          },
+        },
       },
       handlers: [
         {
           pattern: '^\\.js$',
           require: './handler-js',
           invariantOptions: {
-            strict: false
+            strict: false,
           },
           options: {
             base: {
-              sourceMaps: true
+              sourceMaps: true,
             },
             variants: {
               prod: {
                 sourceMaps: false,
-                minify: true
+                minify: true,
               },
               dev: {
-                minify: false
-              }
-            }
-          }
-        }
-      ]
+                minify: false,
+              },
+            },
+          },
+        },
+      ],
     }).then(config => {
       expect(config).toBeTruthy();
       expect(config.hasVariants).toBe(true);
@@ -392,7 +392,7 @@ describe('Config', () => {
         'en_US',
         'en_GB',
         'prod',
-        'dev'
+        'dev',
       ]);
 
       expect(config.options['en_US'].lang).toBe('en_US');
@@ -407,38 +407,38 @@ describe('Config', () => {
         'en_US',
         'en_GB',
         'prod',
-        'dev'
+        'dev',
       ]);
 
       expect(Object.keys(config.bundlers['js'].options)).toEqual([
         'en_US',
         'en_GB',
         'prod',
-        'dev'
+        'dev',
       ]);
 
       expect(Object.keys(config.handlers[0].options)).toEqual([
         'en_US',
         'en_GB',
         'prod',
-        'dev'
+        'dev',
       ]);
 
       expect(config.handlers[0].options['dev']).toEqual({
         sourceMaps: true,
-        minify: false
+        minify: false,
       });
       expect(config.handlers[0].options['prod']).toEqual({
         sourceMaps: false,
-        minify: true
+        minify: true,
       });
 
       expect(config.bundlers['js'].options['dev']).toEqual({
-        minify: true
+        minify: true,
       });
       expect(config.bundles['entry3.js'].bundlerOptions['prod']).toEqual({
         omitRuntime: true,
-        minify: false
+        minify: false,
       });
     });
   });

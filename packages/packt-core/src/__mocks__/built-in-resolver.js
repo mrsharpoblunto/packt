@@ -4,7 +4,7 @@ export default class MockBuiltInResolver {
     return {
       rootPath: workingDirectory,
       searchPaths: [workingDirectory, 'node_modules'],
-      extensions: ['.js']
+      extensions: ['.js'],
     };
   };
 

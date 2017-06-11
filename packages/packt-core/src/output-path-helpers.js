@@ -21,7 +21,7 @@ export default class OutputPathHelpers {
     name: string,
     hash: string,
     bundler: string,
-    variant: string
+    variant: string,
   ): OutputPaths {
     const b = this._config.bundlers[bundler];
     if (!b) {
@@ -33,7 +33,7 @@ export default class OutputPathHelpers {
       variant,
       b,
       invariantOptions => invariantOptions.staticOutputPathFormat,
-      invariantOptions => invariantOptions.assetNameFormat
+      invariantOptions => invariantOptions.assetNameFormat,
     );
   }
 
@@ -41,7 +41,7 @@ export default class OutputPathHelpers {
     name: string,
     hash: string,
     bundler: string,
-    variant: string
+    variant: string,
   ): OutputPaths {
     const b = this._config.bundlers[bundler];
     if (!b) {
@@ -53,7 +53,7 @@ export default class OutputPathHelpers {
       variant,
       b,
       invariantOptions => invariantOptions.dynamicOutputPathFormat,
-      invariantOptions => invariantOptions.assetNameFormat
+      invariantOptions => invariantOptions.assetNameFormat,
     );
   }
 
@@ -64,7 +64,7 @@ export default class OutputPathHelpers {
       '',
       this._config,
       invariantOptions => invariantOptions.assetMapOutputPathFormat,
-      invariantOptions => 'assets.json'
+      invariantOptions => 'assets.json',
     );
   }
 
@@ -74,14 +74,14 @@ export default class OutputPathHelpers {
     variant: string,
     configRoot: Object,
     pathFormatter: Object => string,
-    nameFormatter: Object => string
+    nameFormatter: Object => string,
   ): OutputPaths {
     let v;
     if (variant) {
       v = configRoot.options[variant];
       if (!v) {
         throw new Error(
-          'No config variant ' + variant + ' has been configured'
+          'No config variant ' + variant + ' has been configured',
         );
       }
     }
@@ -92,10 +92,10 @@ export default class OutputPathHelpers {
       {
         invariantOptions: configRoot.invariantOptions,
         options: v || {},
-        variant
+        variant,
       },
       pathFormatter(configRoot.invariantOptions),
-      nameFormatter(configRoot.invariantOptions)
+      nameFormatter(configRoot.invariantOptions),
     );
   }
 
@@ -104,7 +104,7 @@ export default class OutputPathHelpers {
     hash: string,
     params: Object,
     outputPathTemplate: string,
-    assetNameTemplate: string
+    assetNameTemplate: string,
   ): OutputPaths {
     const ext = path.extname(name);
     name = name.substr(0, name.length - ext.length);
@@ -123,22 +123,22 @@ export default class OutputPathHelpers {
 
     const outputSuffix = outputPathTemplate.replace(
       TEMPLATE_REGEX,
-      templateReplacer
+      templateReplacer,
     );
 
     const outputPath = path.join(
       this._config.invariantOptions.outputPath,
-      outputSuffix
+      outputSuffix,
     );
 
     return {
       outputPublicPath: path.join(
         this._config.invariantOptions.outputPublicPath,
-        outputSuffix
+        outputSuffix,
       ),
       outputPath,
       outputParentPath: path.dirname(outputPath),
-      assetName: assetNameTemplate.replace(TEMPLATE_REGEX, templateReplacer)
+      assetName: assetNameTemplate.replace(TEMPLATE_REGEX, templateReplacer),
     };
   }
 
@@ -151,7 +151,7 @@ export default class OutputPathHelpers {
       }
       if (typeof context !== 'string') {
         throw new Error(
-          expression + ' must resolve to a string on template params object'
+          expression + ' must resolve to a string on template params object',
         );
       }
       return context;
@@ -159,7 +159,7 @@ export default class OutputPathHelpers {
       throw new Error(
         'No matching property ' +
           expression +
-          ' exists on template params object'
+          ' exists on template params object',
       );
     }
   }

@@ -37,49 +37,49 @@ export default class BoundingBox {
       this._vertices[0],
       size[0] * -0.5,
       size[1] * -0.5,
-      size[2] * -0.5
+      size[2] * -0.5,
     );
     glm.vec3.set(
       this._vertices[1],
       size[0] * 0.5,
       size[1] * -0.5,
-      size[2] * -0.5
+      size[2] * -0.5,
     );
     glm.vec3.set(
       this._vertices[2],
       size[0] * 0.5,
       size[1] * -0.5,
-      size[2] * 0.5
+      size[2] * 0.5,
     );
     glm.vec3.set(
       this._vertices[3],
       size[0] * -0.5,
       size[1] * -0.5,
-      size[2] * 0.5
+      size[2] * 0.5,
     );
     glm.vec3.set(
       this._vertices[4],
       size[0] * -0.5,
       size[1] * 0.5,
-      size[2] * -0.5
+      size[2] * -0.5,
     );
     glm.vec3.set(
       this._vertices[5],
       size[0] * 0.5,
       size[1] * 0.5,
-      size[2] * -0.5
+      size[2] * -0.5,
     );
     glm.vec3.set(
       this._vertices[6],
       size[0] * 0.5,
       size[1] * 0.5,
-      size[2] * 0.5
+      size[2] * 0.5,
     );
     glm.vec3.set(
       this._vertices[7],
       size[0] * -0.5,
       size[1] * 0.5,
-      size[2] * 0.5
+      size[2] * 0.5,
     );
     this.transformMat4(IDENTITY);
   }
@@ -88,7 +88,7 @@ export default class BoundingBox {
     glm.vec3.transformMat4(
       this._transformedVertices[0],
       this._vertices[0],
-      worldTransform
+      worldTransform,
     );
 
     let yMin = this._transformedVertices[0][1];
@@ -134,7 +134,7 @@ export default class BoundingBox {
       this._aaHalfSize,
       (xMax - xMin) * 0.5,
       (yMax - yMin) * 0.5,
-      (zMax - zMin) * 0.5
+      (zMax - zMin) * 0.5,
     );
     glm.vec3.set(this._aaSize, xMax - xMin, yMax - yMin, zMax - zMin);
     glm.vec3.copy(this._aaCenter, this._aaHalfSize);

@@ -13,7 +13,7 @@ export {
   TerrainComponent,
   MassComponent,
   OrientationComponent,
-  CollisionComponent
+  CollisionComponent,
 };
 
 if (__DEV__) {

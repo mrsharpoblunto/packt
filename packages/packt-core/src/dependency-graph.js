@@ -8,7 +8,7 @@ import type { WorkingSet } from './working-set';
 export type DependencyNodeImport = {|
   node: DependencyNode,
   symbols: Set<string>,
-  type: 'static' | 'dynamic'
+  type: 'static' | 'dynamic',
 |};
 
 export class DependencyNode {
@@ -33,7 +33,7 @@ export class DependencyNode {
     this.exports = {
       identifier: '',
       esModule: false,
-      symbols: []
+      symbols: [],
     };
     this.contentType = null;
     this.contentHash = null;
@@ -53,7 +53,7 @@ export class DependencyNode {
       i = this.imports[node.module] = {
         node: node,
         symbols: new Set(),
-        type: 'dynamic'
+        type: 'dynamic',
       };
     }
     this.importAliases[imported.source] = i;
@@ -183,7 +183,7 @@ export class DependencyNode {
       contentHash: this.contentHash || '',
       contentType: this.contentType || '',
       content,
-      usedSymbols
+      usedSymbols,
     };
   }
 }
@@ -194,7 +194,7 @@ export class DependencyNode {
 export type DependencyVariant = {|
   lookups: { [key: string]: DependencyNode },
   identifiers: { [key: string]: ExportDeclaration },
-  roots: { [bundleName: string]: Set<DependencyNode> }
+  roots: { [bundleName: string]: Set<DependencyNode> },
 |};
 
 export class DependencyGraph {
@@ -210,7 +210,7 @@ export class DependencyGraph {
       v = this.variants[variant] = {
         lookups: {},
         identifiers: {},
-        roots: {}
+        roots: {},
       };
     }
     return v;
@@ -227,7 +227,7 @@ export class DependencyGraph {
   exports(
     resolvedModule: string,
     variants: Array<string>,
-    exported: ExportDeclaration
+    exported: ExportDeclaration,
   ) {
     for (let v of variants) {
       const variant = this._getVariant(v);
@@ -240,7 +240,7 @@ export class DependencyGraph {
     resolvedModule: string,
     variants: Array<string>,
     contentType: string,
-    contentHash: string
+    contentHash: string,
   ) {
     for (let v of variants) {
       const variant = this._getVariant(v);
@@ -254,7 +254,7 @@ export class DependencyGraph {
     resolvedModule: string,
     variants: Array<string>,
     assetName: string,
-    outputPath: string
+    outputPath: string,
   ) {
     for (let v of variants) {
       const variant = this._getVariant(v);
@@ -266,7 +266,7 @@ export class DependencyGraph {
   bundleEntrypoint(
     resolvedModule: string,
     variants: Array<string>,
-    bundleName: string
+    bundleName: string,
   ) {
     for (let v of variants) {
       const variant = this._getVariant(v);
@@ -281,7 +281,7 @@ export class DependencyGraph {
     resolvedModule: string,
     resolvedImportedModule: string,
     variants: Array<string>,
-    imported: ImportDeclaration
+    imported: ImportDeclaration,
   ) {
     for (let v of variants) {
       const variant = this._getVariant(v);

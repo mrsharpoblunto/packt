@@ -9,22 +9,22 @@ export type WorkingSet = {
   bundles: {
     [key: string]: Array<{
       name: string,
-      folder: boolean
-    }>
+      folder: boolean,
+    }>,
   },
   commonBundles: Set<string>,
-  invalidatedModules: Array<string>
+  invalidatedModules: Array<string>,
 };
 
 export function determineIncrementalWorkingSet(
   config: PacktConfig,
   dependencyGraph: DependencyGraph,
-  changes: Array<ChangeDetails>
+  changes: Array<ChangeDetails>,
 ): Promise<?WorkingSet> {
   const set: WorkingSet = {
     bundles: {},
     commonBundles: new Set(),
-    invalidatedModules: []
+    invalidatedModules: [],
   };
   // TODO
   // only include the file as a valid candidate for a change
@@ -47,12 +47,12 @@ export function determineIncrementalWorkingSet(
 }
 
 export function determineInitialWorkingSet(
-  config: PacktConfig
+  config: PacktConfig,
 ): Promise<WorkingSet> {
   const set: WorkingSet = {
     bundles: {},
     commonBundles: new Set(),
-    invalidatedModules: []
+    invalidatedModules: [],
   };
 
   try {
@@ -68,7 +68,7 @@ export function determineInitialWorkingSet(
 function addDependentBundles(
   bundleName: string,
   config: PacktConfig,
-  set: WorkingSet
+  set: WorkingSet,
 ) {
   const bundle = config.bundles[bundleName];
   if (bundle.type === 'common') {
@@ -84,7 +84,7 @@ function addDependentBundles(
         set.bundles[dep] =
           (set.bundles[dep] || [])
             .map(
-              m => (typeof m === 'string' ? { name: m, folder: false } : m)
+              m => (typeof m === 'string' ? { name: m, folder: false } : m),
             ) || [];
       });
       set.commonBundles.add(common);
@@ -92,7 +92,7 @@ function addDependentBundles(
   }
   if (bundle.requires) {
     set.bundles[bundleName] = bundle.requires.map(
-      m => (typeof m === 'string' ? { name: m, folder: false } : m)
+      m => (typeof m === 'string' ? { name: m, folder: false } : m),
     );
   }
 }

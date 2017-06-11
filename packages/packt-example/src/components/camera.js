@@ -18,7 +18,7 @@ export default class CameraComponent {
     lockPitch: boolean,
     fov: number,
     position: Vec3,
-    focalPoint: Vec3
+    focalPoint: Vec3,
   ) {
     this._lockPitch = lockPitch;
     this._accumPitch = 0;
@@ -30,7 +30,7 @@ export default class CameraComponent {
     this._up = glm.vec3.clone(constants.UP);
     this.setFocalPointAndPosition(
       glm.vec3.fromValues.apply(glm.vec3, (focalPoint: any)),
-      glm.vec3.fromValues.apply(glm.vec3, (position: any))
+      glm.vec3.fromValues.apply(glm.vec3, (position: any)),
     );
   }
 
@@ -40,7 +40,7 @@ export default class CameraComponent {
       this._fov * (Math.PI / 180),
       gl.drawingBufferWidth / gl.drawingBufferHeight,
       0.5,
-      1000
+      1000,
     );
   }
 
@@ -68,7 +68,7 @@ export default class CameraComponent {
     focalPoint: Vec3,
     position: Vec3,
     focalLerp: ?number,
-    positionLerp: ?number
+    positionLerp: ?number,
   ): void {
     if (positionLerp) {
       glm.vec3.lerp(this._position, this._position, position, positionLerp);
@@ -164,8 +164,8 @@ export default class CameraComponent {
       glm.mat4.mul(
         this._viewMatrix,
         glm.mat4.fromQuat(glm.mat4.create(), this._rotation),
-        glm.mat4.fromTranslation(translation, position)
-      )
+        glm.mat4.fromTranslation(translation, position),
+      ),
     );
   }
 }

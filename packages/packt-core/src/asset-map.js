@@ -20,7 +20,7 @@ export default class AssetMap {
 
   update(
     graph: DependencyGraph,
-    generatedBundleSets: { [variant: string]: GeneratedBundleSet }
+    generatedBundleSets: { [variant: string]: GeneratedBundleSet },
   ): Promise<any> {
     const promises = [];
 
@@ -64,10 +64,10 @@ export default class AssetMap {
               } else {
                 resolve();
               }
-            }
+            },
           );
         });
-      })
+      }),
     );
 
     return Promise.all(promises);

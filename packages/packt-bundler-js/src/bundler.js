@@ -16,18 +16,18 @@ const JS_INDEX = 0;
 const CSS_INDEX = 1;
 const DEFAULT_UGLIFY_OPTIONS = {
   mangle: {
-    toplevel: true
+    toplevel: true,
   },
   compress: {
-    toplevel: true
-  }
+    toplevel: true,
+  },
 };
 
 export default class JsBundler implements Bundler {
   init(
     invariantOptions: BundlerOptions,
     delegate: BundlerDelegate,
-    callback: BundlerInitCallback
+    callback: BundlerInitCallback,
   ) {
     callback();
   }
@@ -37,7 +37,7 @@ export default class JsBundler implements Bundler {
     options: BundlerOptions,
     data: BundlerData,
     delegate: BundlerDelegate,
-    callback: BundlerProcessCallback
+    callback: BundlerProcessCallback,
   ) {
     mkdirp(data.paths.outputParentPath, err => {
       if (err) {
@@ -48,7 +48,7 @@ export default class JsBundler implements Bundler {
         preSize: 0,
         postSize: 0,
         transform: 0,
-        diskIO: 0
+        diskIO: 0,
       };
       let start = Date.now();
 
@@ -67,8 +67,8 @@ export default class JsBundler implements Bundler {
                 module.resolvedModule +
                 '" has "' +
                 module.contentType +
-                '"'
-            )
+                '"',
+            ),
           );
         }
       }
@@ -77,7 +77,7 @@ export default class JsBundler implements Bundler {
       wstream.on('finish', () => {
         perfStats.diskIO = Date.now() - start;
         callback(null, {
-          perfStats: perfStats
+          perfStats: perfStats,
         });
       });
       wstream.on('error', err => {
@@ -104,7 +104,7 @@ export default class JsBundler implements Bundler {
         if (cssModules.length > 0) {
           perfStats.preSize += cssModules.reduce(
             (p, n) => p + n.content.length,
-            0
+            0,
           );
           write(jsRuntime.styleLoader(cssModules));
         }
@@ -118,7 +118,7 @@ export default class JsBundler implements Bundler {
                 bundleName,
                 data,
                 module,
-                delegate
+                delegate,
               );
             } else {
               write(module.content);
@@ -129,8 +129,8 @@ export default class JsBundler implements Bundler {
             write(
               uglify.minify(jsContent, {
                 ...(options.bundler.uglifyOptions || DEFAULT_UGLIFY_OPTIONS),
-                fromString: true
-              }).code
+                fromString: true,
+              }).code,
             );
           }
         }
@@ -185,7 +185,7 @@ export default class JsBundler implements Bundler {
     bundleName: string,
     data: BundlerData,
     module: SerializedModule,
-    delegate: BundlerDelegate
+    delegate: BundlerDelegate,
   ): string {
     let content = module.content;
 
@@ -202,14 +202,14 @@ export default class JsBundler implements Bundler {
           symbol: string,
           content: string,
           symbolEnd: string,
-          trailingComma: ?string
+          trailingComma: ?string,
         ) => {
           if (module.usedSymbols.indexOf(symbol) >= 0) {
             return content + (trailingComma || '');
           } else {
             return '';
           }
-        }
+        },
       );
     }
 
@@ -226,7 +226,7 @@ export default class JsBundler implements Bundler {
                     module.resolvedModule +
                     '". Expected __packt_bundle_context__' +
                     ' but got ' +
-                    args[0]
+                    args[0],
                 );
               }
               const resolvedAlias = module.importAliases[args[2]];
@@ -235,13 +235,13 @@ export default class JsBundler implements Bundler {
                   'No import alias "' +
                     args[2] +
                     '" found in module "' +
-                    module.resolvedModule
+                    module.resolvedModule,
                 );
               }
               const importedModule = data.moduleMap[resolvedAlias];
               if (!importedModule) {
                 throw new Error(
-                  'No module "' + resolvedAlias + '" found in this bundle'
+                  'No module "' + resolvedAlias + '" found in this bundle',
                 );
               }
 
@@ -259,13 +259,13 @@ export default class JsBundler implements Bundler {
                   'No import alias "' +
                     args[1] +
                     '" found in module "' +
-                    module.resolvedModule
+                    module.resolvedModule,
                 );
               }
               const importedModule = data.moduleMap[resolvedAlias];
               if (!importedModule) {
                 throw new Error(
-                  'No module "' + resolvedAlias + '" found in this bundle'
+                  'No module "' + resolvedAlias + '" found in this bundle',
                 );
               }
 
@@ -291,11 +291,11 @@ export default class JsBundler implements Bundler {
           }*/
             default:
               delegate.emitWarning(
-                'Unknown packt placeholder type "' + type + '" found in module'
+                'Unknown packt placeholder type "' + type + '" found in module',
               );
               return match;
           }
-        }
+        },
       ) + ';\n'
     );
   }

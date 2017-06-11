@@ -3,7 +3,7 @@ import { transform as babelTransform } from 'babel-core';
 
 function transform(src) {
   return babelTransform(src, {
-    plugins: [deadCodeRemoval]
+    plugins: [deadCodeRemoval],
   }).code;
 }
 
@@ -13,7 +13,7 @@ describe('Removes blocks of dead code', () => {
       `const foo = false;
 if (foo) {
   console.log('foo');
-}`
+}`,
     );
 
     expect(output).toBe(`const foo = false;`);
@@ -27,7 +27,7 @@ if (foo) {
   console.log('foo');
 } else {
   console.log((foo || baz) ? 'bar' : 'baz');
-}`
+}`,
     );
 
     expect(output).toBe(
@@ -35,7 +35,7 @@ if (foo) {
 const baz = 1;
 {
   console.log('bar');
-}`
+}`,
     );
   });
 });

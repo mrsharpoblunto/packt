@@ -11,7 +11,7 @@ describe('built in resolver', () => {
       rootPath: '/my-project',
       searchPaths: ['node_modules'],
       extensions: ['.js', '.jsx'],
-      verbose: false
+      verbose: false,
     });
   });
 
@@ -21,7 +21,7 @@ describe('built in resolver', () => {
         try {
           expect(path).toEqual('/my-project/modules/foobar.js');
           callback(null, {
-            isFile: () => true
+            isFile: () => true,
           });
         } catch (err) {
           callback(err);
@@ -40,7 +40,7 @@ describe('built in resolver', () => {
           } catch (ex) {
             reject(ex);
           }
-        }
+        },
       );
     });
   });
@@ -51,7 +51,7 @@ describe('built in resolver', () => {
         try {
           expect(path).toEqual('/my-project/modules/foobar.jsx');
           callback(null, {
-            isFile: () => true
+            isFile: () => true,
           });
         } catch (err) {
           callback(err);
@@ -70,7 +70,7 @@ describe('built in resolver', () => {
           } catch (ex) {
             reject(ex);
           }
-        }
+        },
       );
     });
   });
@@ -84,11 +84,11 @@ describe('built in resolver', () => {
           path === '/my-project/modules/foobar/index.js'
         ) {
           callback(null, {
-            isFile: () => true
+            isFile: () => true,
           });
         } else if (path === '/my-project/modules/foobar') {
           callback(null, {
-            isFile: () => false
+            isFile: () => false,
           });
         } else {
           callback(new Error('not found'));
@@ -107,7 +107,7 @@ describe('built in resolver', () => {
           } catch (ex) {
             reject(ex);
           }
-        }
+        },
       );
     });
   });
@@ -118,7 +118,7 @@ describe('built in resolver', () => {
         try {
           expect(path).toEqual('/my-project/modules/foobar.js');
           callback(null, {
-            isFile: () => true
+            isFile: () => true,
           });
         } catch (err) {
           callback(err);
@@ -137,7 +137,7 @@ describe('built in resolver', () => {
           } catch (ex) {
             reject(ex);
           }
-        }
+        },
       );
     });
   });
@@ -148,7 +148,7 @@ describe('built in resolver', () => {
         try {
           expect(path).toEqual('/my-project/modules/foobar.jsx');
           callback(null, {
-            isFile: () => true
+            isFile: () => true,
           });
         } catch (err) {
           callback(err);
@@ -167,7 +167,7 @@ describe('built in resolver', () => {
           } catch (ex) {
             reject(ex);
           }
-        }
+        },
       );
     });
   });
@@ -178,14 +178,14 @@ describe('built in resolver', () => {
         try {
           if (path.indexOf('.js') >= 0) {
             expect(path).toEqual(
-              '/my-project/node_modules/foobar/lib/index.js'
+              '/my-project/node_modules/foobar/lib/index.js',
             );
             callback(null, {
-              isFile: () => true
+              isFile: () => true,
             });
           } else {
             callback(null, {
-              isFile: () => false
+              isFile: () => false,
             });
           }
         } catch (err) {
@@ -199,8 +199,8 @@ describe('built in resolver', () => {
           callback(
             null,
             JSON.stringify({
-              main: './lib/index.js'
-            })
+              main: './lib/index.js',
+            }),
           );
         } catch (err) {
           callback(err);
@@ -215,13 +215,13 @@ describe('built in resolver', () => {
           try {
             expect(err).toBeFalsy();
             expect(resolved).toEqual(
-              '/my-project/node_modules/foobar/lib/index.js'
+              '/my-project/node_modules/foobar/lib/index.js',
             );
             resolve();
           } catch (ex) {
             reject(ex);
           }
-        }
+        },
       );
     });
   });
@@ -233,11 +233,11 @@ describe('built in resolver', () => {
           if (path.indexOf('.js') >= 0) {
             expect(path).toEqual('/my-project/modules/foobar/index.js');
             callback(null, {
-              isFile: () => true
+              isFile: () => true,
             });
           } else {
             callback(null, {
-              isFile: () => false
+              isFile: () => false,
             });
           }
         } catch (err) {
@@ -257,7 +257,7 @@ describe('built in resolver', () => {
           } catch (ex) {
             reject(ex);
           }
-        }
+        },
       );
     });
   });
@@ -269,11 +269,11 @@ describe('built in resolver', () => {
           if (path.indexOf('.js') >= 0) {
             expect(path).toEqual('/my-project/node_modules/foobar.js');
             callback(null, {
-              isFile: () => true
+              isFile: () => true,
             });
           } else {
             callback(null, {
-              isFile: () => false
+              isFile: () => false,
             });
           }
         } catch (err) {
@@ -293,7 +293,7 @@ describe('built in resolver', () => {
           } catch (ex) {
             reject(ex);
           }
-        }
+        },
       );
     });
   });
@@ -305,11 +305,11 @@ describe('built in resolver', () => {
           if (path.indexOf('.css') >= 0) {
             expect(path).toEqual('/my-project/node_modules/foobar.css');
             callback(null, {
-              isFile: () => true
+              isFile: () => true,
             });
           } else {
             callback(null, {
-              isFile: () => false
+              isFile: () => false,
             });
           }
         } catch (err) {
@@ -329,7 +329,7 @@ describe('built in resolver', () => {
           } catch (ex) {
             reject(ex);
           }
-        }
+        },
       );
     });
   });
@@ -340,7 +340,7 @@ describe('built in resolver', () => {
         try {
           expect(path).toEqual('/my-project/node_modules/foobar.js');
           callback(null, {
-            isFile: () => false
+            isFile: () => false,
           });
         } catch (err) {
           callback(err);
@@ -360,13 +360,13 @@ describe('built in resolver', () => {
               '/my-project/node_modules/foobar.js.js',
               '/my-project/node_modules/foobar.js.jsx',
               '/my-project/node_modules/foobar.js/index.js',
-              '/my-project/node_modules/foobar.js/index.jsx'
+              '/my-project/node_modules/foobar.js/index.jsx',
             ]);
             resolve();
           } catch (ex) {
             reject(ex);
           }
-        }
+        },
       );
     });
   });
@@ -386,13 +386,13 @@ describe('built in resolver', () => {
             expect(err).toBeTruthy();
             expect(err.attempts).toEqual([
               '/my-project/modules/node_modules/foobar.js',
-              '/my-project/node_modules/foobar.js'
+              '/my-project/node_modules/foobar.js',
             ]);
             resolve();
           } catch (ex) {
             reject(ex);
           }
-        }
+        },
       );
     });
   });
@@ -416,13 +416,13 @@ describe('built in resolver', () => {
               '/my-project/modules/node_modules/foobar.react.jsx',
               '/my-project/node_modules/foobar.react',
               '/my-project/node_modules/foobar.react.js',
-              '/my-project/node_modules/foobar.react.jsx'
+              '/my-project/node_modules/foobar.react.jsx',
             ]);
             resolve();
           } catch (ex) {
             reject(ex);
           }
-        }
+        },
       );
     });
   });

@@ -9,6 +9,6 @@ export default function(glContext: any): Array<RenderSystem> {
   return [
     new CameraRenderSystem(glContext),
     new CubeRenderSystem(glContext),
-    new TerrainRenderSystem(glContext)
+    new TerrainRenderSystem(glContext),
   ];
 }

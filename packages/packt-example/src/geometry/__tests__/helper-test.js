@@ -1,7 +1,7 @@
 import glm from 'gl-matrix';
 import {
   closestPointLineSegments,
-  closestPointOnTriangle
+  closestPointOnTriangle,
 } from 'geometry/helpers';
 
 describe('closest point on triangle', () => {
@@ -47,7 +47,7 @@ describe('closest point between line segments', () => {
       // the value returned is the distance squared
       closestPointLineSegments(outA, outB, a1, a2, b1, b2),
       outA,
-      outB
+      outB,
     ]).toMatchSnapshot();
   });
 
@@ -63,7 +63,7 @@ describe('closest point between line segments', () => {
     expect([
       closestPointLineSegments(outA, outB, a1, a2, b1, b2),
       outA,
-      outB
+      outB,
     ]).toMatchSnapshot();
   });
 
@@ -79,7 +79,7 @@ describe('closest point between line segments', () => {
     expect([
       closestPointLineSegments(outA, outB, a1, a2, b1, b2),
       outA,
-      outB
+      outB,
     ]).toMatchSnapshot();
   });
 
@@ -95,7 +95,7 @@ describe('closest point between line segments', () => {
     expect([
       closestPointLineSegments(outA, outB, a1, a2, b1, b2),
       outA,
-      outB
+      outB,
     ]).toMatchSnapshot();
   });
 });

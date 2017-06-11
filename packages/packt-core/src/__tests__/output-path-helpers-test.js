@@ -8,8 +8,8 @@ describe('output path utils', () => {
     const helpers = new OutputPathHelpers({
       invariantOptions: {
         outputHash: 'md5',
-        outputHashLength: 5
-      }
+        outputHashLength: 5,
+      },
     });
 
     expect(helpers.generateHash('hello world').length).toBe(5);
@@ -19,8 +19,8 @@ describe('output path utils', () => {
     const helpers = new OutputPathHelpers({
       invariantOptions: {
         outputHash: 'sha1',
-        outputHashLength: 7
-      }
+        outputHashLength: 7,
+      },
     });
 
     expect(helpers.generateHash('hello world').length).toBe(7);
@@ -30,24 +30,24 @@ describe('output path utils', () => {
     const helpers = new OutputPathHelpers({
       invariantOptions: {
         outputHash: 'sha1',
-        outputHashLength: 7
-      }
+        outputHashLength: 7,
+      },
     });
 
     const helpers1 = new OutputPathHelpers({
       invariantOptions: {
         outputHash: 'sha1',
-        outputHashLength: 7
+        outputHashLength: 7,
       },
       options: {
         base: {
-          foo: 'bar'
-        }
-      }
+          foo: 'bar',
+        },
+      },
     });
 
     expect(helpers1.generateHash('hello world')).not.toEqual(
-      helpers.generateHash('hello world')
+      helpers.generateHash('hello world'),
     );
   });
 
@@ -57,8 +57,8 @@ describe('output path utils', () => {
         outputHash: 'sha1',
         outputHashLength: 7,
         outputPath: '/opt/build',
-        outputPublicPath: '/static'
-      }
+        outputPublicPath: '/static',
+      },
     });
     expect(
       helpers.getOutputPaths(
@@ -66,13 +66,13 @@ describe('output path utils', () => {
         'xyzzy',
         {},
         '${hash}/${name}${ext}',
-        '${name}${ext}'
-      )
+        '${name}${ext}',
+      ),
     ).toEqual({
       outputPath: '/opt/build/xyzzy/my/resource.js',
       outputParentPath: '/opt/build/xyzzy/my',
       outputPublicPath: '/static/xyzzy/my/resource.js',
-      assetName: 'my/resource.js'
+      assetName: 'my/resource.js',
     });
   });
 
@@ -83,17 +83,17 @@ describe('output path utils', () => {
         outputHashLength: 7,
         outputPath: '/opt/build',
         outputPublicPath: '/static',
-        assetMapOutputPathFormat: '${name}${ext}'
+        assetMapOutputPathFormat: '${name}${ext}',
       },
       options: {
-        default: {}
-      }
+        default: {},
+      },
     });
     expect(helpers.getAssetMapOutputPaths()).toEqual({
       outputPath: '/opt/build/assets.json',
       outputParentPath: '/opt/build',
       outputPublicPath: '/static/assets.json',
-      assetName: 'assets.json'
+      assetName: 'assets.json',
     });
   });
 
@@ -103,7 +103,7 @@ describe('output path utils', () => {
         outputHash: 'sha1',
         outputHashLength: 7,
         outputPath: '/opt/build',
-        outputPublicPath: '/static'
+        outputPublicPath: '/static',
       },
       bundlers: {
         js: {
@@ -111,32 +111,32 @@ describe('output path utils', () => {
             staticOutputPathFormat:
               '/bundles/${variant}_${options.param}_${name}${ext}/${hash}${ext}',
             dynamicOutputPathFormat: '/bundles/dynamic/${name}${ext}',
-            assetNameFormat: '${name}'
+            assetNameFormat: '${name}',
           },
           options: {
             en_US: {
-              param: '1'
-            }
-          }
-        }
-      }
+              param: '1',
+            },
+          },
+        },
+      },
     });
 
     expect(
-      helpers.getBundlerStaticOutputPaths('foobar.js', 'xyzzy', 'js', 'en_US')
+      helpers.getBundlerStaticOutputPaths('foobar.js', 'xyzzy', 'js', 'en_US'),
     ).toEqual({
       outputPath: '/opt/build/bundles/en_US_1_foobar.js/xyzzy.js',
       outputParentPath: '/opt/build/bundles/en_US_1_foobar.js',
       outputPublicPath: '/static/bundles/en_US_1_foobar.js/xyzzy.js',
-      assetName: 'foobar'
+      assetName: 'foobar',
     });
     expect(
-      helpers.getBundlerDynamicOutputPaths('foobar.js', 'xyzzy', 'js', 'en_US')
+      helpers.getBundlerDynamicOutputPaths('foobar.js', 'xyzzy', 'js', 'en_US'),
     ).toEqual({
       outputPath: '/opt/build/bundles/dynamic/foobar.js',
       outputParentPath: '/opt/build/bundles/dynamic',
       outputPublicPath: '/static/bundles/dynamic/foobar.js',
-      assetName: 'foobar'
+      assetName: 'foobar',
     });
   });
 });

@@ -6,12 +6,12 @@ export default function transform(babel) {
     visitor: {
       // try to collapse and eliminate dead conditional branches
       IfStatement: {
-        exit: collapseConditional
+        exit: collapseConditional,
       },
       ConditionalExpression: {
-        exit: collapseConditional
-      }
-    }
+        exit: collapseConditional,
+      },
+    },
   };
 }
 
@@ -23,7 +23,7 @@ function collapseConditional(path) {
       path.remove();
     } else {
       path.replaceWith(
-        value.value ? path.node.consequent : path.node.alternate
+        value.value ? path.node.consequent : path.node.alternate,
       );
     }
   }

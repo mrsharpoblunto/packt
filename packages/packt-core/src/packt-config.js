@@ -10,18 +10,18 @@ import os from 'os';
 import chalk from 'chalk';
 
 export type ParseOptions = {
-  resolver: Resolver
+  resolver: Resolver,
 };
 
 export function parseConfig(
   filename: string,
   json: Object,
-  options: ?ParseOptions
+  options: ?ParseOptions,
 ): Promise<PacktConfig> {
   const workingDirectory = path.dirname(filename);
 
   return validate(filename, workingDirectory, json, options).then(validated =>
-    buildVariants(validated)
+    buildVariants(validated),
   );
 }
 
@@ -29,12 +29,12 @@ function validate(
   configFile: string,
   workingDirectory: string,
   json: Object,
-  opts: ?ParseOptions
+  opts: ?ParseOptions,
 ): Promise<PacktConfig> {
   const options = opts || {
     resolver: new BuiltInResolver(
-      BuiltInResolver.defaultOptions(workingDirectory)
-    )
+      BuiltInResolver.defaultOptions(workingDirectory),
+    ),
   };
 
   const resolvers = Array.isArray(json.resolvers && json.resolvers.custom)
@@ -49,13 +49,13 @@ function validate(
     resolvers
       .map(c => resolveRequire(c, configFile, options.resolver))
       .concat(
-        handlers.map(h => resolveRequire(h, configFile, options.resolver))
+        handlers.map(h => resolveRequire(h, configFile, options.resolver)),
       )
       .concat(
         bundlers.map(b =>
-          resolveRequire(json.bundlers[b], configFile, options.resolver)
-        )
-      )
+          resolveRequire(json.bundlers[b], configFile, options.resolver),
+        ),
+      ),
   ).then(
     resolved =>
       new Promise((resolve, reject) => {
@@ -63,7 +63,7 @@ function validate(
           ? Object.keys(json.bundles).filter(
               b =>
                 json.bundles[b].type === 'library' ||
-                json.bundles[b].type === 'common'
+                json.bundles[b].type === 'common',
             )
           : [];
 
@@ -71,14 +71,14 @@ function validate(
           workingDirectory,
           resolved.filter(r => !r.err).map(r => r.resolved || ''),
           libraries,
-          bundlers
+          bundlers,
         );
 
         joi.validate(
           json,
           schema,
           {
-            abortEarly: false
+            abortEarly: false,
           },
           (err, value: PacktConfig) => {
             if (err) {
@@ -98,9 +98,9 @@ function validate(
                 contentTypes: {},
                 threshold: 0,
                 dynamicChildren: {
-                  preserveDuplicates: false
+                  preserveDuplicates: false,
                 },
-                ...value.bundles[b]
+                ...value.bundles[b],
               };
             }
 
@@ -122,7 +122,7 @@ function validate(
                   }
                   if (depBundle.type === 'common') {
                     depBundle.contentTypes = Array.isArray(
-                      depBundle.contentTypes
+                      depBundle.contentTypes,
                     )
                       ? depBundle.contentTypes.reduce((prev, next) => {
                           prev[next] = true;
@@ -139,10 +139,10 @@ function validate(
                                 message:
                                   'An entrypoint bundle can\'t have dependencies on multiple common bundles that have the extract the same content types. Multiple common bundles are configured to extract "' +
                                     contentType +
-                                    '" resources.'
-                              }
-                            ]
-                          })
+                                    '" resources.',
+                              },
+                            ],
+                          }),
                         );
                       }
                       commonTypes.add(contentType);
@@ -165,9 +165,9 @@ function validate(
               }
             }
             resolve(value);
-          }
+          },
         );
-      })
+      }),
   );
 }
 
@@ -175,7 +175,7 @@ function generateSchema(
   workingDirectory: string,
   resolved: Array<string>,
   libraries: Array<string>,
-  bundlers: Array<string>
+  bundlers: Array<string>,
 ): Object {
   const customJoi = joi.extend({
     base: joi.string(),
@@ -185,13 +185,13 @@ function generateSchema(
       library:
         'dependency {{value}} needs to be one of the following library or common bundles {{libraries}}',
       resolvable: 'unable to resolve required module "{{value}}"',
-      regex: '"{{value}}" is not a valid RegExp'
+      regex: '"{{value}}" is not a valid RegExp',
     },
     rules: [
       {
         name: 'library',
         params: {
-          libraries: joi.array().items(joi.string()).required()
+          libraries: joi.array().items(joi.string()).required(),
         },
         validate(params, value, state, options) {
           if (!params.libraries.find(b => value === b)) {
@@ -199,19 +199,19 @@ function generateSchema(
               'string.library',
               {
                 value: value,
-                libraries: params.libraries
+                libraries: params.libraries,
               },
               state,
-              options
+              options,
             );
           }
           return value;
-        }
+        },
       },
       {
         name: 'bundler',
         params: {
-          bundlers: joi.array().items(joi.string()).required()
+          bundlers: joi.array().items(joi.string()).required(),
         },
         validate(params, value, state, options) {
           if (!params.bundlers.find(b => value === b)) {
@@ -219,14 +219,14 @@ function generateSchema(
               'string.bundler',
               {
                 value: value,
-                bundlers: params.bundlers
+                bundlers: params.bundlers,
               },
               state,
-              options
+              options,
             );
           }
           return value;
-        }
+        },
       },
       {
         name: 'regex',
@@ -238,34 +238,34 @@ function generateSchema(
             return this.createError(
               'string.regex',
               {
-                value: value
+                value: value,
               },
               state,
-              options
+              options,
             );
           }
-        }
+        },
       },
       {
         name: 'resolvable',
         params: {
-          resolved: joi.array().items(joi.string()).required()
+          resolved: joi.array().items(joi.string()).required(),
         },
         validate(params, value, state, options) {
           if (!params.resolved.find(r => r === value)) {
             return this.createError(
               'string.resolvable',
               {
-                value: value
+                value: value,
               },
               state,
-              options
+              options,
             );
           }
           return value;
-        }
-      }
-    ]
+        },
+      },
+    ],
   });
 
   const configSchema = joi.object({
@@ -280,13 +280,13 @@ function generateSchema(
         outputPublicPath: joi.string().default('/'),
         outputHash: joi.any().valid('md5', 'sha1', 'sha256').default('md5'),
         outputHashLength: joi.number().min(1).max(16).default(12),
-        assetMapOutputPathFormat: joi.string().default('/${name}${ext}')
+        assetMapOutputPathFormat: joi.string().default('/${name}${ext}'),
       })
       .default(),
     options: joi
       .object({
         base: joi.object({}).default().unknown(),
-        variants: joi.object({}).default().unknown()
+        variants: joi.object({}).default().unknown(),
       })
       .default(),
     // TODO add staticAssets section.
@@ -313,17 +313,17 @@ function generateSchema(
                     joi.string(),
                     joi.object({
                       name: joi.string().required(),
-                      folder: joi.boolean().required()
-                    })
-                  )
+                      folder: joi.boolean().required(),
+                    }),
+                  ),
                 ),
                 joi.object({
                   name: joi.string().required(),
-                  folder: joi.boolean().required()
+                  folder: joi.boolean().required(),
                 }),
-                joi.string()
+                joi.string(),
               )
-              .required()
+              .required(),
           }),
           depends: joi.when('type', {
             is: 'entrypoint',
@@ -331,17 +331,17 @@ function generateSchema(
               .alternatives()
               .try(
                 joi.array().items(customJoi.string().library(libraries)),
-                customJoi.string().library(libraries)
+                customJoi.string().library(libraries),
               )
               .default([]),
-            otherwise: joi.forbidden()
+            otherwise: joi.forbidden(),
           }),
           dynamicChildren: joi.when('type', {
             is: 'entrypoint',
             then: joi.object({
-              preserveDuplicates: joi.boolean().default(false)
+              preserveDuplicates: joi.boolean().default(false),
             }),
-            otherwise: joi.forbidden()
+            otherwise: joi.forbidden(),
           }),
           contentTypes: joi.when('type', {
             is: 'common',
@@ -349,21 +349,21 @@ function generateSchema(
               .array()
               .items(joi.string().regex(/[a-z]+\/[a-z]+/))
               .required(),
-            otherwise: joi.forbidden()
+            otherwise: joi.forbidden(),
           }),
           threshold: joi.when('type', {
             is: 'common',
             then: joi.number().min(0).max(1).required(),
-            otherwise: joi.forbidden()
+            otherwise: joi.forbidden(),
           }),
           bundler: customJoi.string().bundler(bundlers).allow(null),
           bundlerOptions: joi
             .object({
               base: joi.object({}).default().unknown(),
-              variants: joi.object({}).default().unknown()
+              variants: joi.object({}).default().unknown(),
             })
-            .default()
-        })
+            .default(),
+        }),
       )
       .min(1)
       .required(),
@@ -381,17 +381,17 @@ function generateSchema(
               dynamicOutputPathFormat: joi
                 .string()
                 .default('/bundles/dynamic/${hash}${ext}'),
-              assetNameFormat: joi.string().default('${name}${ext}')
+              assetNameFormat: joi.string().default('${name}${ext}'),
             })
             .default()
             .unknown(),
           options: joi
             .object({
               base: joi.object({}).default().unknown(),
-              variants: joi.object({}).default().unknown()
+              variants: joi.object({}).default().unknown(),
             })
-            .default()
-        })
+            .default(),
+        }),
       )
       .min(1)
       .required(),
@@ -402,8 +402,8 @@ function generateSchema(
           .items(
             joi.object({
               require: customJoi.string().resolvable(resolved).required(),
-              invariantOptions: joi.object({}).default().unknown()
-            })
+              invariantOptions: joi.object({}).default().unknown(),
+            }),
           )
           .default([]),
         builtIn: joi
@@ -418,11 +418,11 @@ function generateSchema(
                 extensions: joi
                   .array()
                   .items(joi.string().regex(/^\..+$/))
-                  .default(['.js', '.json'])
+                  .default(['.js', '.json']),
               })
-              .default()
+              .default(),
           })
-          .default()
+          .default(),
       })
       .default(),
     handlers: joi
@@ -435,13 +435,13 @@ function generateSchema(
           options: joi
             .object({
               base: joi.object({}).default().unknown(),
-              variants: joi.object({}).default().unknown()
+              variants: joi.object({}).default().unknown(),
             })
-            .default()
-        })
+            .default(),
+        }),
       )
       .min(1)
-      .required()
+      .required(),
   });
 
   return configSchema;
@@ -449,27 +449,27 @@ function generateSchema(
 
 function resolveRequire(
   entry: {|
-    require: string
+    require: string,
   |},
   configFile: string,
-  resolver: Resolver
+  resolver: Resolver,
 ): Promise<{|
   require: string,
   resolved?: string,
-  err?: Error
+  err?: Error,
 |}> {
   return new Promise((resolve, reject) => {
     resolver.resolve(entry.require, configFile, false, (err, resolved) => {
       if (err || !resolved) {
         resolve({
           require: entry.require,
-          err: err || new Error('Unable to resolve ' + entry.require)
+          err: err || new Error('Unable to resolve ' + entry.require),
         });
       } else {
         entry.require = resolved;
         resolve({
           require: entry.require,
-          resolved
+          resolved,
         });
       }
     });
@@ -525,19 +525,19 @@ function varyOptions(
   variants: Array<string>,
   options: {
     base: Object,
-    variants: { [key: string]: Object }
-  }
+    variants: { [key: string]: Object },
+  },
 ): { [key: string]: Object } {
   if (!variants.length) {
     return {
-      default: options.base
+      default: options.base,
     };
   } else {
     return variants.reduce((prev, next) => {
       prev[next] = Object.assign(
         {},
         options.base,
-        options.variants[next] || {}
+        options.variants[next] || {},
       );
       return prev;
     }, {});

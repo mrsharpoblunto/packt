@@ -10,12 +10,12 @@ import type { DependencyGraph, DependencyNode } from './dependency-graph';
 export type ChangeDetails = {|
   name: string,
   exists: boolean,
-  type: string
+  type: string,
 |};
 
 export type ChangeCallback = (
   err: ?Error,
-  files?: Array<ChangeDetails>
+  files?: Array<ChangeDetails>,
 ) => mixed;
 
 const PACKT_BUILD_WATCH = 'packt_build_watch';
@@ -75,10 +75,10 @@ export default class ChangeWatcher extends events.EventEmitter {
                       'match',
                       path.relative(
                         this._config.invariantOptions.rootPath,
-                        this._config.invariantOptions.cachePath
+                        this._config.invariantOptions.cachePath,
                       ) + '/**',
-                      'wholename'
-                    ]
+                      'wholename',
+                    ],
                   ],
                   [
                     'not',
@@ -86,14 +86,14 @@ export default class ChangeWatcher extends events.EventEmitter {
                       'match',
                       path.relative(
                         this._config.invariantOptions.rootPath,
-                        this._config.invariantOptions.outputPath
+                        this._config.invariantOptions.outputPath,
                       ) + '/**',
-                      'wholename'
-                    ]
-                  ]
+                      'wholename',
+                    ],
+                  ],
                 ],
                 since: clockResp.clock,
-                fields: ['name', 'exists', 'type']
+                fields: ['name', 'exists', 'type'],
               };
               if (resp.relative_path) {
                 sub.relative_root = resp.relative_path;
@@ -105,7 +105,7 @@ export default class ChangeWatcher extends events.EventEmitter {
                   if (err) {
                     return this._callback && this._callback(err);
                   }
-                }
+                },
               );
               this._client.on('subscription', resp => {
                 if (resp.subscription !== PACKT_BUILD_WATCH) {
@@ -121,9 +121,9 @@ export default class ChangeWatcher extends events.EventEmitter {
                 }
               });
             });
-          }
+          },
         );
-      }
+      },
     );
   }
 
@@ -142,7 +142,7 @@ export default class ChangeWatcher extends events.EventEmitter {
   _filterChanges(files: Array<ChangeDetails>) {
     files.forEach(
       f =>
-        (f.name = path.resolve(this._config.invariantOptions.rootPath, f.name))
+        (f.name = path.resolve(this._config.invariantOptions.rootPath, f.name)),
     );
     this._callback && this._callback(null, files);
   }

@@ -5,7 +5,7 @@
 import fs from 'fs';
 
 const DIGITS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz$_'.split(
-  ''
+  '',
 );
 const DIGITS_MAP = {};
 for (let i = 0; i < DIGITS.length; ++i) {
@@ -67,7 +67,7 @@ export default class ScopeIdGenerator {
         JSON.stringify({
           idPool: this._idPool,
           map: this._map,
-          nextId: this._nextId
+          nextId: this._nextId,
         }),
         err => {
           if (err) {
@@ -75,7 +75,7 @@ export default class ScopeIdGenerator {
           } else {
             resolve();
           }
-        }
+        },
       );
     });
   }

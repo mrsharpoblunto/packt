@@ -5,7 +5,7 @@
 import type { DependencyGraph } from './dependency-graph';
 import type {
   GeneratedBundleData,
-  GeneratedBundleSet
+  GeneratedBundleSet,
 } from './generated-bundle-set';
 import { objectMap } from './helpers';
 import type { ReadOnlyContentMapVariant } from './content-map';
@@ -16,18 +16,18 @@ export type GeneratedBundleLookupVariant = {|
   moduleMap: {
     [key: string]: {
       exportsIdentifier: string,
-      exportsESModule: boolean
-    }
-  }
+      exportsESModule: boolean,
+    },
+  },
 |};
 
 export type GeneratedBundleLookups = {
-  [variant: string]: GeneratedBundleLookupVariant
+  [variant: string]: GeneratedBundleLookupVariant,
 };
 
 export function generateBundleLookups(
   graph: DependencyGraph,
-  bundles: { [key: string]: GeneratedBundleSet }
+  bundles: { [key: string]: GeneratedBundleSet },
 ): GeneratedBundleLookups {
   const output = {};
 
@@ -37,8 +37,8 @@ export function generateBundleLookups(
       moduleMap: {},
       dynamicBundleMap: objectMap(
         bundles[v].getDynamicBundles(),
-        bundle => bundle.paths.outputPublicPath
-      )
+        bundle => bundle.paths.outputPublicPath,
+      ),
     });
 
     const lookups = graph.variants[v].lookups;
@@ -49,7 +49,7 @@ export function generateBundleLookups(
       }
       variant.moduleMap[m] = {
         exportsIdentifier: module.exports.identifier,
-        exportsESModule: module.exports.esModule
+        exportsESModule: module.exports.esModule,
       };
     }
   }
@@ -62,20 +62,20 @@ export function serializeBundle({
   bundle,
   bundleLookups,
   config,
-  contentMap
+  contentMap,
 }: {|
   bundleName: string,
   bundle: GeneratedBundleData,
   bundleLookups: GeneratedBundleLookupVariant,
   contentMap: ReadOnlyContentMapVariant,
-  config: PacktConfig
+  config: PacktConfig,
 |}): BundlerData {
   return {
     modules: bundle.modules.map(m =>
       m.serialize(
         bundle.usedSymbols[m.module],
-        m.contentHash ? contentMap(m.module) : ''
-      )
+        m.contentHash ? contentMap(m.module) : '',
+      ),
     ),
     paths: bundle.paths,
     hasDependencies:
@@ -83,6 +83,6 @@ export function serializeBundle({
         (config.bundles[bundleName].type === 'entrypoint' &&
           (Object.keys(config.bundles[bundleName].commons).length !== 0 ||
             Object.keys(config.bundles[bundleName].depends).length !== 0)),
-    ...bundleLookups
+    ...bundleLookups,
   };
 }

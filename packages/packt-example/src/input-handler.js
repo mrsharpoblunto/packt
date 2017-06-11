@@ -24,18 +24,18 @@ export default class InputHandler {
 
     canvas.addEventListener('click', this._handleMouseClick, { passive: true });
     canvas.addEventListener('mousedown', this._handleMouseDown, {
-      passive: true
+      passive: true,
     });
     canvas.addEventListener('mouseup', this._handleMouseUp, { passive: true });
     canvas.addEventListener('mousemove', this._handleMouseMove, {
-      passive: true
+      passive: true,
     });
     canvas.addEventListener('wheel', this._handleMouseWheel, { passive: true });
 
     window.addEventListener('keydown', this._handleKeyDown, { passive: true });
     window.addEventListener('keyup', this._handleKeyUp, { passive: true });
     window.addEventListener('keypress', this._handleKeyPress, {
-      passive: true
+      passive: true,
     });
   }
 

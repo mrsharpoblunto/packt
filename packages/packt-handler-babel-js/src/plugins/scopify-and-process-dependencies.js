@@ -25,14 +25,14 @@ export default function transform(babel) {
       this.opts.delegate.exportsSymbols(this.opts.variants, {
         identifier: this.moduleExport,
         symbols: this.exportedSymbols.slice(0),
-        esModule: this.exportedSymbols.esModule
+        esModule: this.exportedSymbols.esModule,
       });
     },
     visitor: {
       Program: {
         enter: function(path) {
           this.exportAlias = path.scope.generateUidIdentifier(
-            this.moduleScope + (this.opts.preserveIdentifiers ? 'exports' : '')
+            this.moduleScope + (this.opts.preserveIdentifiers ? 'exports' : ''),
           );
           this.moduleExport = this.exportAlias.name;
         },
@@ -53,12 +53,12 @@ export default function transform(babel) {
                 t.assignmentExpression(
                   '=',
                   t.memberExpression(t.identifier('window'), this.exportAlias),
-                  t.objectExpression([])
-                )
-              )
+                  t.objectExpression([]),
+                ),
+              ),
             );
           }
-        }
+        },
       },
       VariableDeclaration: function(path) {
         // hoist top level variable declarations to the global scope
@@ -73,7 +73,7 @@ export default function transform(babel) {
             }
             const alias = path.scope.generateUidIdentifier(
               this.moduleScope +
-                (this.opts.preserveIdentifiers ? decl.id.name : '')
+                (this.opts.preserveIdentifiers ? decl.id.name : ''),
             );
             path.scope.rename(decl.id.name, alias.name);
           }
@@ -90,7 +90,7 @@ export default function transform(babel) {
         ) {
           const alias = path.scope.generateUidIdentifier(
             this.moduleScope +
-              (this.opts.preserveIdentifiers ? path.node.id.name : '')
+              (this.opts.preserveIdentifiers ? path.node.id.name : ''),
           );
           path.scope.rename(path.node.id.name, alias.name);
         }
@@ -101,7 +101,7 @@ export default function transform(babel) {
         if (!path.scope.parent.parent) {
           const alias = path.scope.generateUidIdentifier(
             this.moduleScope +
-              (this.opts.preserveIdentifiers ? path.node.id.name : '')
+              (this.opts.preserveIdentifiers ? path.node.id.name : ''),
           );
           path.scope.rename(path.node.id.name, alias.name);
           this.hoisted[alias.name] = true;
@@ -118,7 +118,7 @@ export default function transform(babel) {
             path.scope,
             this.exportAlias,
             this.importAliases,
-            this.symbolAliases
+            this.symbolAliases,
           );
           path.replaceWith(t.objectProperty(path.node.key, localImport));
           path.skip();
@@ -154,7 +154,7 @@ export default function transform(babel) {
             path.scope,
             this.exportAlias,
             this.importAliases,
-            this.symbolAliases
+            this.symbolAliases,
           );
           path.replaceWith(localImport);
           path.skip();
@@ -182,7 +182,7 @@ export default function transform(babel) {
         this.opts.delegate.importsModule(this.opts.variants, {
           source: path.node.source.value,
           symbols: ['*'],
-          type: 'static'
+          type: 'static',
         });
         exportSymbol(this.exportedSymbols, '*', true);
         path.replaceWith(
@@ -192,10 +192,10 @@ export default function transform(babel) {
               this.exportAlias,
               t.callExpression(
                 t.identifier(constants.PACKT_IMPORT_PLACEHOLDER),
-                [t.stringLiteral(this.exportAlias.name), path.node.source]
-              )
-            ]
-          )
+                [t.stringLiteral(this.exportAlias.name), path.node.source],
+              ),
+            ],
+          ),
         );
         path.skip();
       },
@@ -205,7 +205,7 @@ export default function transform(babel) {
           const decl = path.node.declaration;
           const defaultMember = t.memberExpression(
             this.exportAlias,
-            t.identifier('default')
+            t.identifier('default'),
           );
           if (
             decl.type === 'FunctionDeclaration' ||
@@ -220,19 +220,19 @@ export default function transform(babel) {
               symbolMarkerStart(decl, 'default'),
               symbolMarkerEnd(
                 t.expressionStatement(
-                  t.assignmentExpression('=', defaultMember, decl.id)
+                  t.assignmentExpression('=', defaultMember, decl.id),
                 ),
-                'default'
-              )
+                'default',
+              ),
             ]);
           } else {
             path.replaceWith(
               symbolMarkerWrap(
                 t.expressionStatement(
-                  t.assignmentExpression('=', defaultMember, decl)
+                  t.assignmentExpression('=', defaultMember, decl),
                 ),
-                'default'
-              )
+                'default',
+              ),
             );
           }
         }
@@ -251,7 +251,7 @@ export default function transform(babel) {
             exportSymbol(this.exportedSymbols, exportName, true);
             const namedMember = t.memberExpression(
               this.exportAlias,
-              t.identifier(exportName)
+              t.identifier(exportName),
             );
             path.replaceWithMultiple([
               symbolMarkerStart(path.node.declaration, exportName),
@@ -260,11 +260,11 @@ export default function transform(babel) {
                   t.assignmentExpression(
                     '=',
                     namedMember,
-                    path.node.declaration.id
-                  )
+                    path.node.declaration.id,
+                  ),
                 ),
-                exportName
-              )
+                exportName,
+              ),
             ]);
           } else if (path.node.declaration.type === 'VariableDeclaration') {
             const assignments = [];
@@ -279,9 +279,9 @@ export default function transform(babel) {
                     t.assignmentExpression(
                       '=',
                       t.memberExpression(this.exportAlias, decl.id),
-                      decl.init
-                    )
-                  )
+                      decl.init,
+                    ),
+                  ),
                 );
               }
             }
@@ -307,7 +307,7 @@ export default function transform(babel) {
                 path.scope,
                 this.exportAlias,
                 this.importAliases,
-                this.symbolAliases
+                this.symbolAliases,
               );
             }
             const exportName = spec.exported.name;
@@ -321,22 +321,22 @@ export default function transform(babel) {
                         t.identifier(constants.PACKT_IMPORT_PLACEHOLDER),
                         [
                           t.stringLiteral(this.exportAlias.name),
-                          path.node.source
-                        ]
+                          path.node.source,
+                        ],
                       ),
-                      local || spec.exported
-                    )
+                      local || spec.exported,
+                    ),
                   ),
-                  exportName
-                )
+                  exportName,
+                ),
               );
               symbols.push(exportName);
             } else {
               objectProps.push(
                 symbolMarkerWrap(
                   t.objectProperty(spec.exported, local),
-                  exportName
-                )
+                  exportName,
+                ),
               );
             }
             exportSymbol(this.exportedSymbols, exportName, true);
@@ -346,7 +346,7 @@ export default function transform(babel) {
             this.opts.delegate.importsModule(this.opts.variants, {
               source: path.node.source.value,
               symbols: symbols,
-              type: 'static'
+              type: 'static',
             });
           }
 
@@ -354,10 +354,10 @@ export default function transform(babel) {
             t.callExpression(
               t.memberExpression(
                 t.identifier('Object'),
-                t.identifier('assign')
+                t.identifier('assign'),
               ),
-              [this.exportAlias, t.objectExpression(objectProps)]
-            )
+              [this.exportAlias, t.objectExpression(objectProps)],
+            ),
           );
           path.skip();
         }
@@ -387,7 +387,7 @@ export default function transform(babel) {
           symbols.push(symbol);
           this.importAliases[spec.local.name] = {
             moduleName: moduleName,
-            symbol: symbol
+            symbol: symbol,
           };
           path.scope.removeBinding(spec.local.name);
         }
@@ -395,7 +395,7 @@ export default function transform(babel) {
         this.opts.delegate.importsModule(this.opts.variants, {
           source: path.node.source.value,
           symbols: symbols,
-          type: 'static'
+          type: 'static',
         });
 
         path.remove();
@@ -411,18 +411,18 @@ export default function transform(babel) {
           ) {
             if (path.node.arguments.length !== 1) {
               throw path.buildCodeFrameError(
-                `Expected a single argument to ${node.callee.name}`
+                `Expected a single argument to ${node.callee.name}`,
               );
             } else if (path.node.arguments[0].type !== 'StringLiteral') {
               path.traverse(evaluateExpression, {
-                skipIdentifier: path.node.callee.name || 'import'
+                skipIdentifier: path.node.callee.name || 'import',
               });
               if (path.node.arguments[0].type !== 'StringLiteral') {
                 const nodeStr = generate(path.node.arguments[0]);
                 this.opts.delegate.emitWarning(
                   this.opts.variants,
                   `Argument (${nodeStr.code}) to ${path.node.callee
-                    .name} should be a string literal, or expression that can be evaluated statically at build time. This statement will cause an exception if called at runtime`
+                    .name} should be a string literal, or expression that can be evaluated statically at build time. This statement will cause an exception if called at runtime`,
                 );
                 path.node.callee.name =
                   constants.PACKT_UNRESOLVABLE_IMPORT_PLACEHOLDER;
@@ -439,13 +439,13 @@ export default function transform(babel) {
             path.node.callee.name = constants.PACKT_DYNAMIC_IMPORT_PLACEHOLDER;
             path.node.arguments.unshift(t.stringLiteral(this.exportAlias.name));
             path.node.arguments.unshift(
-              t.identifier(constants.PACKT_BUNDLE_CONTEXT_PLACEHOLDER)
+              t.identifier(constants.PACKT_BUNDLE_CONTEXT_PLACEHOLDER),
             );
 
             this.opts.delegate.importsModule(this.opts.variants, {
               source: required,
               symbols: ['*'],
-              type: 'dynamic'
+              type: 'dynamic',
             });
           } else {
             path.node.callee.name = constants.PACKT_IMPORT_PLACEHOLDER;
@@ -454,12 +454,12 @@ export default function transform(babel) {
             this.opts.delegate.importsModule(this.opts.variants, {
               source: required,
               symbols: ['*'],
-              type: 'static'
+              type: 'static',
             });
           }
-        }
-      }
-    }
+        },
+      },
+    },
   };
 }
 
@@ -469,7 +469,7 @@ function isUnreachable(path) {
   // code is unreachable
   while (path) {
     path = path.findParent(
-      path => path.isConditionalExpression() || path.isIfStatement()
+      path => path.isConditionalExpression() || path.isIfStatement(),
     );
     if (path) {
       path.traverse(evaluateExpression);
@@ -489,19 +489,19 @@ function getImportPlaceholder(
   scope,
   exportAlias,
   importAliases,
-  symbolAliases
+  symbolAliases,
 ) {
   const localImport = importAliases[name];
   const args = [
     t.stringLiteral(exportAlias.name),
-    t.stringLiteral(localImport.moduleName)
+    t.stringLiteral(localImport.moduleName),
   ];
 
   if (localImport.symbol === '*') {
     // for wildcard imports we just inline the import placeholder directly
     return t.callExpression(
       t.identifier(constants.PACKT_IMPORT_PLACEHOLDER),
-      args
+      args,
     );
   } else {
     // but for specific symbol imports, we want to create a local alias
@@ -522,10 +522,10 @@ function getImportPlaceholder(
             identifier,
             t.callExpression(
               t.identifier(constants.PACKT_IMPORT_PLACEHOLDER),
-              args
-            )
-          )
-        ])
+              args,
+            ),
+          ),
+        ]),
       };
     }
     return symbolAlias.identifier;
@@ -543,7 +543,7 @@ function symbolMarkerStart(node, symbolName) {
   }
   node.leadingComments.push({
     type: 'CommentBlock',
-    value: `<${constants.PACKT_SYMBOL_PLACEHOLDER}${symbolName}>`
+    value: `<${constants.PACKT_SYMBOL_PLACEHOLDER}${symbolName}>`,
   });
   return node;
 }
@@ -554,7 +554,7 @@ function symbolMarkerEnd(node, symbolName) {
   }
   node.trailingComments.push({
     type: 'CommentBlock',
-    value: `</${constants.PACKT_SYMBOL_PLACEHOLDER}${symbolName}>`
+    value: `</${constants.PACKT_SYMBOL_PLACEHOLDER}${symbolName}>`,
   });
   return node;
 }

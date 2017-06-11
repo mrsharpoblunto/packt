@@ -14,26 +14,26 @@ const MAIN_CANDIDATES = ['module', 'browser', 'main'];
 
 export default class BuiltInResolver implements Resolver {
   static defaultOptions = (
-    workingDirectory: string
+    workingDirectory: string,
   ): BuiltInResolverOptions => {
     return {
       rootPath: workingDirectory,
       searchPaths: [workingDirectory, 'node_modules'],
-      extensions: ['.js']
+      extensions: ['.js'],
     };
   };
 
   _packageCache: {
     [key: string]: {|
       err: ?Error,
-      main: ?string
-    |}
+      main: ?string,
+    |},
   };
   _cache: {
     [key: string]: {|
       err: ?Error,
-      isFile: ?boolean
-    |}
+      isFile: ?boolean,
+    |},
   };
   _waiting: { [key: string]: Array<(err: ?Error, isFile: ?boolean) => void> };
   _options: BuiltInResolverOptions;
@@ -54,11 +54,11 @@ export default class BuiltInResolver implements Resolver {
     moduleName: string,
     resolvedParentModule: string,
     expectFolder: boolean,
-    cb: (err: ?Error, resolved: ?string) => void
+    cb: (err: ?Error, resolved: ?string) => void,
   ) {
     const context = {
       attempts: [],
-      expectFolder: expectFolder
+      expectFolder: expectFolder,
     };
 
     const callback = (err, resolved) => {
@@ -67,8 +67,8 @@ export default class BuiltInResolver implements Resolver {
           new PacktResolverError(
             moduleName,
             resolvedParentModule,
-            context.attempts
-          )
+            context.attempts,
+          ),
         );
       }
       cb(null, resolved);
@@ -82,7 +82,7 @@ export default class BuiltInResolver implements Resolver {
     if (moduleName.startsWith('.')) {
       const modulePath = path.resolve(
         path.dirname(resolvedParentModule),
-        moduleName
+        moduleName,
       );
       this._checkFileIndexOrPackage(modulePath, context, callback);
       return;
@@ -93,7 +93,7 @@ export default class BuiltInResolver implements Resolver {
       path.dirname(resolvedParentModule),
       0,
       context,
-      callback
+      callback,
     );
   }
 
@@ -102,7 +102,7 @@ export default class BuiltInResolver implements Resolver {
     moduleDir: string,
     searchIndex: number,
     context: any,
-    callback: (err: ?Error, resolved: ?string) => void
+    callback: (err: ?Error, resolved: ?string) => void,
   ) {
     if (searchIndex === this._options.searchPaths.length) {
       callback(new Error('unable to resolve ' + moduleName));
@@ -119,7 +119,7 @@ export default class BuiltInResolver implements Resolver {
             moduleDir,
             ++searchIndex,
             context,
-            callback
+            callback,
           );
         } else {
           callback(null, result);
@@ -135,7 +135,7 @@ export default class BuiltInResolver implements Resolver {
         moduleDir,
         searchIndex,
         context,
-        callback
+        callback,
       );
     }
   }
@@ -146,7 +146,7 @@ export default class BuiltInResolver implements Resolver {
     currentDir: string,
     searchIndex: number,
     context: any,
-    callback: (err: ?Error, resolved: ?string) => void
+    callback: (err: ?Error, resolved: ?string) => void,
   ) {
     if (currentDir.length < this._options.rootPath.length) {
       // we've reached the root, stop searching up and try the
@@ -156,12 +156,12 @@ export default class BuiltInResolver implements Resolver {
         moduleDir,
         ++searchIndex,
         context,
-        callback
+        callback,
       );
     } else {
       const searchPath = path.join(
         currentDir,
-        this._options.searchPaths[searchIndex]
+        this._options.searchPaths[searchIndex],
       );
       const checkResult = (err, result) => {
         if (err) {
@@ -171,7 +171,7 @@ export default class BuiltInResolver implements Resolver {
             path.resolve(currentDir, '..'),
             searchIndex,
             context,
-            callback
+            callback,
           );
         } else {
           callback(null, result);
@@ -186,7 +186,7 @@ export default class BuiltInResolver implements Resolver {
   _checkFileIndexOrPackage(
     modulePath: string,
     context: any,
-    callback: (err: ?Error, resolved: ?string) => void
+    callback: (err: ?Error, resolved: ?string) => void,
   ) {
     this._stat(modulePath, (err, isFile) => {
       context.attempts.push(modulePath);
@@ -223,7 +223,7 @@ export default class BuiltInResolver implements Resolver {
                   path.join(modulePath, 'index'),
                   0,
                   context,
-                  callback
+                  callback,
                 );
               } else if (packageMain) {
                 const main = packageMain;
@@ -252,7 +252,7 @@ export default class BuiltInResolver implements Resolver {
     modulePath: string,
     extIndex: number,
     context: any,
-    callback: (err: ?Error, resolved: ?string) => void
+    callback: (err: ?Error, resolved: ?string) => void,
   ) {
     if (extIndex === this._options.extensions.length) {
       callback(new Error('Unable to resolve ' + modulePath));
@@ -285,7 +285,7 @@ export default class BuiltInResolver implements Resolver {
       fs.stat(path, (err, stats) => {
         const entry = {
           err: err,
-          isFile: stats ? stats.isFile() : false
+          isFile: stats ? stats.isFile() : false,
         };
         this._cache[path] = entry;
         callback(entry.err, entry.isFile);
@@ -301,7 +301,7 @@ export default class BuiltInResolver implements Resolver {
 
   _readPackageMain(
     packagePath: string,
-    callback: (err: ?Error, main: ?string) => void
+    callback: (err: ?Error, main: ?string) => void,
   ) {
     const cached = this._packageCache[packagePath];
     if (cached) {
@@ -324,7 +324,7 @@ export default class BuiltInResolver implements Resolver {
               if (packageJson[c]) {
                 entry = {
                   err: null,
-                  main: path.join(packagePath, packageJson[c])
+                  main: path.join(packagePath, packageJson[c]),
                 };
                 break;
               }
@@ -333,10 +333,10 @@ export default class BuiltInResolver implements Resolver {
               entry = {
                 err: new Error(
                   `No property matching [${MAIN_CANDIDATES.join(
-                    ','
-                  )}] found in package.json`
+                    ',',
+                  )}] found in package.json`,
                 ),
-                main: null
+                main: null,
               };
             }
             this._packageCache[packagePath] = entry;
@@ -345,7 +345,7 @@ export default class BuiltInResolver implements Resolver {
             this._packageCache[packagePath] = { err: ex, main: null };
             callback(ex);
           }
-        }
+        },
       );
     }
   }

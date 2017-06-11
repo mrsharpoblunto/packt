@@ -23,13 +23,13 @@ export default class Worker extends EventEmitter {
     this._config = config;
     this._status = {
       status: 'idle',
-      description: ''
+      description: '',
     };
   }
 
   start() {
     const process = child_process.fork(path.join(__dirname, WORKER_PROCESS), {
-      cwd: this._config.workingDirectory
+      cwd: this._config.workingDirectory,
     });
     process.on('message', this._onMessage.bind(this));
     process.on('close', this._onClose.bind(this));
@@ -37,7 +37,7 @@ export default class Worker extends EventEmitter {
 
     this.sendMessage({
       type: 'process_config',
-      config: this._config
+      config: this._config,
     });
   }
 
@@ -77,7 +77,7 @@ export default class Worker extends EventEmitter {
     this._status.description = description || '';
     this._emitMessage({
       type: 'status_change',
-      status: this._status
+      status: this._status,
     });
   }
 
@@ -89,7 +89,7 @@ export default class Worker extends EventEmitter {
       case 'process_config':
         this._setStatus(
           'configuring',
-          'loading config from ' + message.config.configFile
+          'loading config from ' + message.config.configFile,
         );
         break;
       case 'process_module':

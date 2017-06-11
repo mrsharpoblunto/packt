@@ -13,7 +13,7 @@ export default class RawHandler implements Handler {
   init(
     invariantOptions: HandlerOptions,
     delegate: HandlerDelegate,
-    callback: HandlerInitCallback
+    callback: HandlerInitCallback,
   ) {
     this._handlerInvariants = invariantOptions.handler;
     callback();
@@ -22,9 +22,9 @@ export default class RawHandler implements Handler {
   process(
     resolvedModule: string,
     scopeId: string,
-    options: { [key: string]: HandlerOptions },
+    options: {[key: string]: HandlerOptions},
     delegate: HandlerDelegate,
-    callback: HandlerProcessCallback
+    callback: HandlerProcessCallback,
   ) {
     const stats = {};
     let start = Date.now();
@@ -48,14 +48,14 @@ export default class RawHandler implements Handler {
         delegate.exportsSymbols(Object.keys(options), {
           identifier: scopeId,
           symbols: ['*'],
-          esModule: false
+          esModule: false,
         });
 
         callback(null, Object.keys(options), {
           content: source,
           contentType: contentType,
           contentHash: delegate.generateHash(source),
-          perfStats: stats
+          perfStats: stats,
         });
       } catch (err) {
         callback(err, Object.keys(options));

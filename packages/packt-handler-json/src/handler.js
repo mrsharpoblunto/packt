@@ -8,7 +8,7 @@ export default class JsonHandler implements Handler {
   init(
     invariantOptions: HandlerOptions,
     delegate: HandlerDelegate,
-    callback: HandlerInitCallback
+    callback: HandlerInitCallback,
   ) {
     callback();
   }
@@ -18,7 +18,7 @@ export default class JsonHandler implements Handler {
     scopeId: string,
     options: { [key: string]: HandlerOptions },
     delegate: HandlerDelegate,
-    callback: HandlerProcessCallback
+    callback: HandlerProcessCallback,
   ) {
     const stats = {};
     let start = Date.now();
@@ -40,14 +40,14 @@ export default class JsonHandler implements Handler {
         delegate.exportsSymbols(Object.keys(options), {
           identifier: scopeId,
           symbols: ['*'],
-          esModule: false
+          esModule: false,
         });
 
         callback(null, Object.keys(options), {
           content: transformed,
           contentType: 'text/javascript',
           contentHash: delegate.generateHash(transformed),
-          perfStats: stats
+          perfStats: stats,
         });
       } catch (err) {
         callback(err, Object.keys(options));

@@ -7,7 +7,7 @@ type CameraOptions = {
   lockPitch: boolean,
   fov: number,
   position: Vec3,
-  focalPoint: Vec3
+  focalPoint: Vec3,
 };
 
 export default function camera(ent: Entity, options: CameraOptions): Entity {
@@ -16,7 +16,7 @@ export default function camera(ent: Entity, options: CameraOptions): Entity {
       options.lockPitch,
       options.fov,
       options.position,
-      options.focalPoint
-    )
+      options.focalPoint,
+    ),
   );
 }

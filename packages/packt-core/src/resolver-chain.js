@@ -26,7 +26,7 @@ export default class ResolverChain extends events.EventEmitter {
       : BuiltInResolver.defaultOptions(config.workingDirectory);
 
     this._resolvers.push(
-      ((new BuiltInResolver(resolverOptions): any): Resolver)
+      ((new BuiltInResolver(resolverOptions): any): Resolver),
     );
     this._resolving = 0;
     this._resolvingQueue = new Set();
@@ -42,12 +42,12 @@ export default class ResolverChain extends events.EventEmitter {
     variants: Array<string>,
     context: {|
       importedByDeclaration?: ImportDeclaration,
-      bundleName?: string
+      bundleName?: string,
     |},
     searchOptions: ?{|
       resolvedParentModule?: string,
-      expectFolder?: boolean
-    |}
+      expectFolder?: boolean,
+    |},
   ) {
     this._resolvingQueue.add(moduleName);
     ++this._resolving;
@@ -71,7 +71,7 @@ export default class ResolverChain extends events.EventEmitter {
               this._resolvingQueue.delete(moduleName);
               this._emitMessage({
                 type: 'module_resolve_error',
-                error: err
+                error: err,
               });
             } else if (!resolved) {
               if (++resolverIndex < this._resolvers.length) {
@@ -86,8 +86,8 @@ export default class ResolverChain extends events.EventEmitter {
                       moduleName +
                       ' (' +
                       resolvedParentModule +
-                      ')'
-                  )
+                      ')',
+                  ),
                 });
               }
             } else {
@@ -101,13 +101,13 @@ export default class ResolverChain extends events.EventEmitter {
                 resolvedParentModuleOrBundle: context.bundleName
                   ? context.bundleName
                   : resolvedParentModule,
-                importedByDeclaration: context.importedByDeclaration
+                importedByDeclaration: context.importedByDeclaration,
               });
             }
             if (!this._resolving) {
               this._emitMessage({ type: 'idle' });
             }
-          }
+          },
         );
       } catch (ex) {
         const end = Date.now();
@@ -116,8 +116,8 @@ export default class ResolverChain extends events.EventEmitter {
           type: 'module_resolve_error',
           error: new PacktError(
             'Unexpected exception thrown in resolver ' + resolverIndex,
-            ex
-          )
+            ex,
+          ),
         });
       }
     };

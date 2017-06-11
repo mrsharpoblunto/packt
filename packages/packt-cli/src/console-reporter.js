@@ -19,8 +19,8 @@ class ConsoleReporter implements Reporter {
   _warnings: {
     [key: string]: Array<{
       warning: string,
-      variant: string
-    }>
+      variant: string,
+    }>,
   };
   _buildCount: number;
   _bundleCount: number;
@@ -45,7 +45,7 @@ class ConsoleReporter implements Reporter {
       chalk.bold('Building variants: ') +
         '[' +
         Object.keys(config.options).join(',') +
-        ']'
+        ']',
     );
     console.log();
   }
@@ -59,7 +59,7 @@ class ConsoleReporter implements Reporter {
   onUpdateBuildStatus(
     workers: Array<WorkerStatusDescription>,
     buildStats: ?{ [variant: string]: PerfStatsDict },
-    bundleStats: ?{ [variant: string]: PerfStatsDict }
+    bundleStats: ?{ [variant: string]: PerfStatsDict },
   ) {
     if (this._isTTY && this._showProgress) {
       if (this._eraseCount) {
@@ -75,7 +75,7 @@ class ConsoleReporter implements Reporter {
       this._showTableHeader(
         `Building (completed ${this._buildCount} modules, ${this
           ._bundleCount} bundles)`,
-        width
+        width,
       );
       for (let worker of workers) {
         let message = '';
@@ -85,7 +85,7 @@ class ConsoleReporter implements Reporter {
             break;
           case 'configuring':
             message += chalk.bgWhite(
-              S(' Configuring').padRight(LEFT_COL_WIDTH)
+              S(' Configuring').padRight(LEFT_COL_WIDTH),
             );
             break;
           case 'error':
@@ -93,12 +93,12 @@ class ConsoleReporter implements Reporter {
             break;
           case 'processing':
             message += chalk.bold.bgGreen(
-              S(' Processing').padRight(LEFT_COL_WIDTH)
+              S(' Processing').padRight(LEFT_COL_WIDTH),
             );
             break;
           case 'bundling':
             message += chalk.bgCyan.bold(
-              S(' Bundling').padRight(LEFT_COL_WIDTH)
+              S(' Bundling').padRight(LEFT_COL_WIDTH),
             );
             break;
           case 'stopped':
@@ -107,10 +107,10 @@ class ConsoleReporter implements Reporter {
         }
         message += `${VSPLIT} `;
         let description = S(
-          worker.description.split('').reverse().join('')
+          worker.description.split('').reverse().join(''),
         ).truncate(width - LEFT_COL_WIDTH - 5, '...');
         description = S(description.split('').reverse().join('')).padRight(
-          width - LEFT_COL_WIDTH - 2
+          width - LEFT_COL_WIDTH - 2,
         );
         message += description;
         this._showTableRow(message, width);
@@ -123,7 +123,7 @@ class ConsoleReporter implements Reporter {
   onBuildWarning(
     resolvedModule: string,
     variants: Array<string>,
-    warning: string
+    warning: string,
   ) {
     let moduleWarnings = this._warnings[resolvedModule];
     if (!moduleWarnings) {
@@ -132,7 +132,7 @@ class ConsoleReporter implements Reporter {
     for (let v of variants) {
       moduleWarnings.push({
         variant: v,
-        warning
+        warning,
       });
     }
   }
@@ -144,7 +144,7 @@ class ConsoleReporter implements Reporter {
     }
     bundleWarnings.push({
       variant,
-      warning
+      warning,
     });
   }
 
@@ -152,10 +152,10 @@ class ConsoleReporter implements Reporter {
     timers: {
       global: Timer,
       handlers: Timer,
-      bundlers: Timer
+      bundlers: Timer,
     },
     buildStats: { [variant: string]: PerfStatsDict },
-    bundleStats: { [variant: string]: PerfStatsDict }
+    bundleStats: { [variant: string]: PerfStatsDict },
   ) {
     if (this._eraseCount) {
       process.stdout.write(escapes.eraseLines(this._eraseCount + 1));
@@ -180,7 +180,7 @@ class ConsoleReporter implements Reporter {
 
       console.log(
         `  Bundle Sort: ${(timers.global.get('build', 'bundle-sort') /
-          1000).toFixed(2)}s`
+          1000).toFixed(2)}s`,
       );
       const resolvers = timers.global.getSubcategories('resolvers');
       for (let i = 0; i < resolvers.length - 1; ++i) {
@@ -188,15 +188,15 @@ class ConsoleReporter implements Reporter {
         console.log(
           `  Resolver ${chalk.bold('custom' + r)}: ${(timers.global.get(
             'resolvers',
-            r
-          ) / 1000).toFixed(2)}s`
+            r,
+          ) / 1000).toFixed(2)}s`,
         );
       }
       console.log(
         `  Resolver ${chalk.bold('default')}: ${(timers.global.get(
           'resolvers',
-          resolvers[resolvers.length - 1]
-        ) / 1000).toFixed(2)}s`
+          resolvers[resolvers.length - 1],
+        ) / 1000).toFixed(2)}s`,
       );
       const handlers = timers.handlers.getCategories();
       for (let h of handlers) {
@@ -206,8 +206,8 @@ class ConsoleReporter implements Reporter {
 
         console.log(
           `  Handler ${chalk.bold(h)}: ${total.toFixed(2)}s ${chalk.dim(
-            `(${transform.toFixed(2)}s Transform, ${io.toFixed(2)}s I/O)`
-          )}`
+            `(${transform.toFixed(2)}s Transform, ${io.toFixed(2)}s I/O)`,
+          )}`,
         );
       }
       const bundlers = timers.bundlers.getCategories();
@@ -218,8 +218,8 @@ class ConsoleReporter implements Reporter {
 
         console.log(
           `  Bundler ${chalk.bold(b)}: ${total.toFixed(2)}s ${chalk.dim(
-            `(${transform.toFixed(2)}s Transform, ${io.toFixed(2)}s I/O)`
-          )}`
+            `(${transform.toFixed(2)}s Transform, ${io.toFixed(2)}s I/O)`,
+          )}`,
         );
       }
       console.log();
@@ -232,33 +232,33 @@ class ConsoleReporter implements Reporter {
     console.log(
       chalk.green(
         `Build (${this._buildCount} modules, ${this
-          ._bundleCount} bundles) completed in `
+          ._bundleCount} bundles) completed in `,
       ) +
         chalk.bold(
           ((timers.global.get('build', 'modules') +
             timers.global.get('build', 'bundle-sort') +
             timers.global.get('build', 'bundles')) /
-            1000).toFixed(2) + 's'
-        )
+            1000).toFixed(2) + 's',
+        ),
     );
   }
 
   _updateStatsCounts(
     buildStats: ?{ [variant: string]: PerfStatsDict },
-    bundleStats: ?{ [variant: string]: PerfStatsDict }
+    bundleStats: ?{ [variant: string]: PerfStatsDict },
   ) {
     if (buildStats) {
       const bs = buildStats;
       this._buildCount = Object.keys(bs).reduce(
         (p, n) => p + Object.keys(bs[n] || {}).length,
-        0
+        0,
       );
     }
     if (bundleStats) {
       const bs = bundleStats;
       this._bundleCount = Object.keys(bs).reduce(
         (p, n) => p + Object.keys(bs[n] || {}).length,
-        0
+        0,
       );
     }
   }
@@ -276,14 +276,14 @@ class ConsoleReporter implements Reporter {
         const bundle = variant[bundleName];
         bundleName = S(bundleName.split('').reverse().join('')).truncate(
           width - LEFT_COL_WIDTH - 5,
-          '...'
+          '...',
         );
         bundleName = bundleName.split('').reverse().join('');
         this._showTableRow(
           ` ${S((bundle.postSize / 1024).toFixed(2) + 'kB').padRight(
-            LEFT_COL_WIDTH
+            LEFT_COL_WIDTH,
           )}${VSPLIT} ${bundleName} `,
-          width
+          width,
         );
       }
       this._showTableFooter(width);
@@ -294,16 +294,16 @@ class ConsoleReporter implements Reporter {
   _showTableHeader(heading: string, width: number) {
     console.log(
       `${String.fromCharCode(9484)}${S(String.fromCharCode(9472)).repeat(
-        width
-      )}${String.fromCharCode(9488)}`
+        width,
+      )}${String.fromCharCode(9488)}`,
     );
     console.log(
-      `${VSPLIT}${chalk.bold(S(` ${heading} `).padRight(width))}${VSPLIT}`
+      `${VSPLIT}${chalk.bold(S(` ${heading} `).padRight(width))}${VSPLIT}`,
     );
     console.log(
       `${String.fromCharCode(9500)}${S(String.fromCharCode(9472)).repeat(
-        width
-      )}${String.fromCharCode(9508)}`
+        width,
+      )}${String.fromCharCode(9508)}`,
     );
   }
 
@@ -314,8 +314,8 @@ class ConsoleReporter implements Reporter {
   _showTableFooter(width: number) {
     console.log(
       `${String.fromCharCode(9492)}${S(String.fromCharCode(9472)).repeat(
-        width
-      )}${String.fromCharCode(9496)}`
+        width,
+      )}${String.fromCharCode(9496)}`,
     );
   }
 
@@ -384,7 +384,7 @@ function printResolverError(err) {
 
 function printWorkerError(err) {
   console.log(
-    chalk.red('Failed due to an unexpected error in worker ' + err.index)
+    chalk.red('Failed due to an unexpected error in worker ' + err.index),
   );
   console.log(err.details);
 }

@@ -16,36 +16,36 @@ export default class TerrainRenderSystem {
   constructor(gl: any) {
     this._programInfo = twgl.createProgramInfo(gl, [
       positionNormalVert,
-      diffuseSpecularFrag
+      diffuseSpecularFrag,
     ]);
     this._bufferInfo = twgl.primitives.createPlaneBufferInfo(
       gl,
       100,
       100,
       10,
-      10
+      10,
     );
   }
 
   worldAddingEntity(entity: Entity): void {
     entity.hasComponent(
       Components.TerrainComponent,
-      terrain => (this._terrain = terrain)
+      terrain => (this._terrain = terrain),
     );
     entity.hasComponent(
       Components.CameraComponent,
-      camera => (this._camera = camera)
+      camera => (this._camera = camera),
     );
   }
 
   worldRemovingEntity(entity: Entity): void {
     entity.hasComponent(
       Components.TerrainComponent,
-      terrain => (this._terrain = null)
+      terrain => (this._terrain = null),
     );
     entity.hasComponent(
       Components.CameraComponent,
-      camera => (this._camera = null)
+      camera => (this._camera = null),
     );
   }
 
@@ -73,7 +73,7 @@ export default class TerrainRenderSystem {
     glm.mat4.mul(worldViewProjection, viewProjection, world);
     glm.mat4.invert(
       invTransposeWorld,
-      glm.mat4.transpose(invTransposeWorld, world)
+      glm.mat4.transpose(invTransposeWorld, world),
     );
 
     gl.useProgram(this._programInfo.program);
@@ -89,7 +89,7 @@ export default class TerrainRenderSystem {
       u_world: world,
       u_worldInverseTranspose: invTransposeWorld,
       u_worldViewProjection: worldViewProjection,
-      u_worldViewPos: cameraPosition
+      u_worldViewPos: cameraPosition,
     });
     twgl.drawBufferInfo(gl, gl.TRIANGLES, this._bufferInfo);
   }

@@ -38,13 +38,13 @@ export default class OrientationComponent {
     glm.mat3.mul(
       rotationInverseInertiaTensor,
       mass.inverseInertiaTensor,
-      rotationInverseInertiaTensor
+      rotationInverseInertiaTensor,
     );
 
     glm.vec3.transformMat3(
       this.angularVelocity,
       this.angularMomentum,
-      rotationInverseInertiaTensor
+      rotationInverseInertiaTensor,
     );
 
     glm.quat.set(
@@ -52,7 +52,7 @@ export default class OrientationComponent {
       this.angularVelocity[0],
       this.angularVelocity[1],
       this.angularVelocity[2],
-      0
+      0,
     );
     glm.quat.mul(angularVelocityQuat, angularVelocityQuat, this.orientation);
     glm.quat.scale(this.spin, angularVelocityQuat, 0.5);

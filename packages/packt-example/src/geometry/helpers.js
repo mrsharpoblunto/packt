@@ -14,7 +14,7 @@ export function closestPointOnTriangle(
   p: Vec3,
   a: vec3,
   b: Vec3,
-  c: Vec3
+  c: Vec3,
 ): number {
   glm.vec3.sub(_ab, b, a);
   glm.vec3.sub(_ac, c, a);
@@ -101,7 +101,7 @@ export function closestPointLineSegments(
   a1: Vec3,
   a2: Vec3,
   b1: Vec3,
-  b2: Vec3
+  b2: Vec3,
 ): number {
   glm.vec3.sub(_da, a2, a1);
   glm.vec3.sub(_db, b2, b1);

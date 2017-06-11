@@ -23,7 +23,7 @@ if (!argv.help) {
   const packt = new Packt(
     process.cwd(),
     argv,
-    new ConsoleReporter(argv.progress, argv.verbose)
+    new ConsoleReporter(argv.progress, argv.verbose),
   );
 
   packt

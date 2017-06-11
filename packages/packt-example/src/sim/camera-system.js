@@ -26,14 +26,14 @@ export default class CameraSystem {
   worldAddingEntity(entity: Entity): void {
     entity.hasComponent(
       Components.CameraComponent,
-      camera => (this._camera = camera)
+      camera => (this._camera = camera),
     );
   }
 
   worldRemovingEntity(entity: Entity): void {
     entity.hasComponent(
       Components.CameraComponent,
-      camera => (this._camera = null)
+      camera => (this._camera = null),
     );
   }
 
@@ -53,7 +53,7 @@ export default class CameraSystem {
         forward,
         forward,
         (this._input.isKeyDown('s') ? 1 : 0) -
-          (this._input.isKeyDown('w') ? 1 : 0)
+          (this._input.isKeyDown('w') ? 1 : 0),
       );
 
       const right = glm.vec3.create();
@@ -62,7 +62,7 @@ export default class CameraSystem {
         right,
         right,
         (this._input.isKeyDown('d') ? 1 : 0) -
-          (this._input.isKeyDown('a') ? 1 : 0)
+          (this._input.isKeyDown('a') ? 1 : 0),
       );
 
       const delta = glm.vec3.create();

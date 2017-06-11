@@ -9,7 +9,7 @@ import path from 'path';
 
 export default function debugJSRuntime(
   data: BundlerData,
-  jsModules: Array<SerializedModule>
+  jsModules: Array<SerializedModule>,
 ): string {
   const aliasMap: { [key: string]: { [key: string]: string } } = {};
 

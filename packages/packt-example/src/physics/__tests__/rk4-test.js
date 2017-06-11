@@ -22,7 +22,7 @@ describe('rk4', () => {
         (outputForce, outputTorque, orientation, mass, dt) => {
           glm.vec3.set(outputForce, 10.0, 0.0, 0.0);
           glm.vec3.set(outputTorque, 0.0, 0.0, 0.0);
-        }
+        },
       );
       // the analytical solution using d = ut + 1/2at^2
       const expected = 0.5 * 10.0 * Math.pow(i + 1, 2);
@@ -48,7 +48,7 @@ describe('rk4', () => {
         (outputForce, outputTorque, orientation, mass, dt) => {
           glm.vec3.set(outputForce, 0.0, 0.0, 0.0);
           glm.vec3.set(outputTorque, 1.0, 0.0, 0.0);
-        }
+        },
       );
       expect(orientation.angularMomentum[0]).toEqual(i + 1);
       expect(orientation.angularVelocity[0]).toEqual((i + 1) * 6);

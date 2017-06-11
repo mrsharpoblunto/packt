@@ -18,7 +18,7 @@ const world = new World(
   gl,
   1920, // max horizontal resolution
   16 / 9, // view area aspect ratio
-  45 // camera field of view
+  45, // camera field of view
 );
 world.mountSimSystems(sims());
 world.mountRenderSystems(renderers(gl));
@@ -27,7 +27,7 @@ init(world);
 
 const runner = new WorldRunner(
   world, // the world to simulate
-  60 // desired simulation frames per second
+  60, // desired simulation frames per second
 );
 runner.start();
 

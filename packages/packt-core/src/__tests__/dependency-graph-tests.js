@@ -15,8 +15,8 @@ describe('dependency graph tests', () => {
       {
         source: './second-level-component',
         symbols: ['*'],
-        type: 'static'
-      }
+        type: 'static',
+      },
     );
 
     graph.imports(
@@ -26,8 +26,8 @@ describe('dependency graph tests', () => {
       {
         source: './third-level-component',
         symbols: ['*'],
-        type: 'static'
-      }
+        type: 'static',
+      },
     );
 
     graph.imports(
@@ -37,8 +37,8 @@ describe('dependency graph tests', () => {
       {
         source: './fourth-level-component',
         symbols: ['*'],
-        type: 'static'
-      }
+        type: 'static',
+      },
     );
 
     graph.imports(
@@ -48,8 +48,8 @@ describe('dependency graph tests', () => {
       {
         source: './third-level-component',
         symbols: ['*'],
-        type: 'static'
-      }
+        type: 'static',
+      },
     );
 
     expect(Object.keys(graph.variants)).toEqual(['default']);
@@ -58,26 +58,26 @@ describe('dependency graph tests', () => {
 
     expect(Object.keys(defaultVariant.roots)).toEqual(['bundle-a', 'bundle-b']);
     expect(
-      Array.from(defaultVariant.roots['bundle-a']).map(m => m.module)
+      Array.from(defaultVariant.roots['bundle-a']).map(m => m.module),
     ).toEqual(['/src/entrypoint-a.js']);
     expect(
-      Array.from(defaultVariant.roots['bundle-b']).map(m => m.module)
+      Array.from(defaultVariant.roots['bundle-b']).map(m => m.module),
     ).toEqual(['/src/entrypoint-b.js']);
     expect(Object.keys(defaultVariant.lookups)).toEqual([
       '/src/entrypoint-a.js',
       '/src/entrypoint-b.js',
       '/src/second-level-component.js',
       '/src/third-level-component.js',
-      '/src/fourth-level-component.js'
+      '/src/fourth-level-component.js',
     ]);
 
     const entrypointA = defaultVariant.lookups['/src/entrypoint-a.js'];
     expect(entrypointA.importedBy).toEqual({});
     expect(Object.keys(entrypointA.imports)).toEqual([
-      '/src/second-level-component.js'
+      '/src/second-level-component.js',
     ]);
     expect(Object.keys(entrypointA.importAliases)).toEqual([
-      './second-level-component'
+      './second-level-component',
     ]);
     expect(entrypointA.bundles.size).toEqual(1);
     expect(entrypointA.bundles.has('bundle-a')).toBe(true);
@@ -85,10 +85,10 @@ describe('dependency graph tests', () => {
     const entrypointB = defaultVariant.lookups['/src/entrypoint-b.js'];
     expect(entrypointB.importedBy).toEqual({});
     expect(Object.keys(entrypointB.imports)).toEqual([
-      '/src/third-level-component.js'
+      '/src/third-level-component.js',
     ]);
     expect(Object.keys(entrypointB.importAliases)).toEqual([
-      './third-level-component'
+      './third-level-component',
     ]);
     expect(entrypointB.bundles.size).toEqual(1);
     expect(entrypointB.bundles.has('bundle-b')).toBe(true);
@@ -96,13 +96,13 @@ describe('dependency graph tests', () => {
     const secondLevel =
       defaultVariant.lookups['/src/second-level-component.js'];
     expect(Object.keys(secondLevel.importedBy)).toEqual([
-      '/src/entrypoint-a.js'
+      '/src/entrypoint-a.js',
     ]);
     expect(Object.keys(secondLevel.imports)).toEqual([
-      '/src/third-level-component.js'
+      '/src/third-level-component.js',
     ]);
     expect(Object.keys(secondLevel.importAliases)).toEqual([
-      './third-level-component'
+      './third-level-component',
     ]);
     expect(secondLevel.bundles.size).toEqual(1);
     expect(secondLevel.bundles.has('bundle-a')).toBe(true);
@@ -110,13 +110,13 @@ describe('dependency graph tests', () => {
     const thirdLevel = defaultVariant.lookups['/src/third-level-component.js'];
     expect(Object.keys(thirdLevel.importedBy)).toEqual([
       '/src/entrypoint-b.js',
-      '/src/second-level-component.js'
+      '/src/second-level-component.js',
     ]);
     expect(Object.keys(thirdLevel.imports)).toEqual([
-      '/src/fourth-level-component.js'
+      '/src/fourth-level-component.js',
     ]);
     expect(Object.keys(thirdLevel.importAliases)).toEqual([
-      './fourth-level-component'
+      './fourth-level-component',
     ]);
     expect(thirdLevel.bundles.size).toEqual(2);
     expect(thirdLevel.bundles.has('bundle-a')).toBe(true);
@@ -125,7 +125,7 @@ describe('dependency graph tests', () => {
     const fourthLevel =
       defaultVariant.lookups['/src/fourth-level-component.js'];
     expect(Object.keys(fourthLevel.importedBy)).toEqual([
-      '/src/third-level-component.js'
+      '/src/third-level-component.js',
     ]);
     expect(Object.keys(fourthLevel.imports)).toEqual([]);
     expect(Object.keys(fourthLevel.importAliases)).toEqual([]);
@@ -134,28 +134,28 @@ describe('dependency graph tests', () => {
     expect(fourthLevel.bundles.has('bundle-b')).toBe(true);
 
     expect(entrypointA.importAliases['./second-level-component'].node).toBe(
-      secondLevel
+      secondLevel,
     );
     expect(entrypointA.imports['/src/second-level-component.js'].node).toBe(
-      secondLevel
+      secondLevel,
     );
     expect(entrypointB.importAliases['./third-level-component'].node).toBe(
-      thirdLevel
+      thirdLevel,
     );
     expect(entrypointB.imports['/src/third-level-component.js'].node).toBe(
-      thirdLevel
+      thirdLevel,
     );
     expect(secondLevel.importAliases['./third-level-component'].node).toBe(
-      thirdLevel
+      thirdLevel,
     );
     expect(secondLevel.imports['/src/third-level-component.js'].node).toBe(
-      thirdLevel
+      thirdLevel,
     );
     expect(thirdLevel.importAliases['./fourth-level-component'].node).toBe(
-      fourthLevel
+      fourthLevel,
     );
     expect(thirdLevel.imports['/src/fourth-level-component.js'].node).toBe(
-      fourthLevel
+      fourthLevel,
     );
   });
 
@@ -173,8 +173,8 @@ describe('dependency graph tests', () => {
       {
         source: './dynamic-component',
         symbols: ['*'],
-        type: 'dynamic'
-      }
+        type: 'dynamic',
+      },
     );
 
     graph.imports(
@@ -184,8 +184,8 @@ describe('dependency graph tests', () => {
       {
         source: './dynamic-component',
         symbols: ['*'],
-        type: 'dynamic'
-      }
+        type: 'dynamic',
+      },
     );
 
     graph.imports(
@@ -195,8 +195,8 @@ describe('dependency graph tests', () => {
       {
         source: './static-component',
         symbols: ['*'],
-        type: 'static'
-      }
+        type: 'static',
+      },
     );
 
     graph.imports(
@@ -206,20 +206,20 @@ describe('dependency graph tests', () => {
       {
         source: './dynamic-component',
         symbols: ['*'],
-        type: 'static'
-      }
+        type: 'static',
+      },
     );
 
     const dynamicComponent =
       graph.variants['default'].lookups['/src/dynamic-component.js'];
 
     expect(dynamicComponent.getImportTypeForBundle('bundle-a')).toEqual(
-      'dynamic'
+      'dynamic',
     );
     // if a module is imported both statically & dynamically in the same bundle
     // then we consider it to be static.
     expect(dynamicComponent.getImportTypeForBundle('bundle-b')).toEqual(
-      'static'
+      'static',
     );
   });
 
@@ -231,27 +231,27 @@ describe('dependency graph tests', () => {
     graph.exports('/src/entrypoint-a.js', ['default'], {
       identifier: '_',
       symbols: ['a'],
-      esModule: true
+      esModule: true,
     });
 
     graph.exports('/src/entrypoint-a.js', ['default'], {
       identifier: '_',
       symbols: ['b'],
-      esModule: true
+      esModule: true,
     });
 
     graph.setContentMetadata(
       '/src/entrypoint-a.js',
       ['default'],
       'text/javascript',
-      'xxxx'
+      'xxxx',
     );
 
     graph.addGenerated(
       '/src/entrypoint-a.js',
       ['default'],
       'foobar.txt',
-      '/built/foobar.txt'
+      '/built/foobar.txt',
     );
 
     const entrypoint =
@@ -262,7 +262,7 @@ describe('dependency graph tests', () => {
     expect(entrypoint.contentType).toEqual('text/javascript');
     expect(entrypoint.contentHash).toEqual('xxxx');
     expect(entrypoint.generatedAssets).toEqual({
-      'foobar.txt': '/built/foobar.txt'
+      'foobar.txt': '/built/foobar.txt',
     });
   });
 
@@ -276,35 +276,35 @@ describe('dependency graph tests', () => {
     graph.imports('/src/entrypoint-b.js', '/src/component-1.js', ['default'], {
       source: './component-2',
       symbols: ['*'],
-      type: 'static'
+      type: 'static',
     });
 
     graph.imports('/src/entrypoint-a.js', '/src/component-1.js', ['default'], {
       source: './component-1',
       symbols: ['a', 'b'],
-      type: 'static'
+      type: 'static',
     });
 
     graph.imports('/src/entrypoint-a.js', '/src/component-2.js', ['default'], {
       source: './component-2',
       symbols: ['*'],
-      type: 'static'
+      type: 'static',
     });
 
     graph.imports('/src/component-2.js', '/src/component-1.js', ['default'], {
       source: './component-1',
       symbols: ['a', 'c'],
-      type: 'static'
+      type: 'static',
     });
 
     const component1 = graph.variants['default'].lookups['/src/component-1.js'];
     expect(Array.from(component1.getUsedSymbolsForBundle('bundle-a'))).toEqual([
       'a',
       'b',
-      'c'
+      'c',
     ]);
     expect(Array.from(component1.getUsedSymbolsForBundle('bundle-b'))).toEqual([
-      '*'
+      '*',
     ]);
   });
 

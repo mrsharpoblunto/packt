@@ -27,7 +27,7 @@ const ARRAYS = {
     0.5,
     0.5,
     0.5,
-    0.5
+    0.5,
   ],
   indices: {
     numComponents: 2,
@@ -55,9 +55,9 @@ const ARRAYS = {
       2,
       6,
       3,
-      7
-    ]
-  }
+      7,
+    ],
+  },
 };
 
 export default function createBufferInfo(gl: any, scale: ?number): any {
@@ -66,7 +66,7 @@ export default function createBufferInfo(gl: any, scale: ?number): any {
   } else {
     const arrays = {
       position: ARRAYS.position.slice(0),
-      indices: ARRAYS.indices
+      indices: ARRAYS.indices,
     };
     for (let i = 0; i < arrays.position.length; ++i) {
       arrays.position[i] *= scale;

@@ -8,7 +8,7 @@ export default class IgnoreHandler implements Handler {
   init(
     invariantOptions: HandlerOptions,
     delegate: HandlerDelegate,
-    callback: HandlerInitCallback
+    callback: HandlerInitCallback,
   ) {
     callback();
   }
@@ -18,7 +18,7 @@ export default class IgnoreHandler implements Handler {
     scopeId: string,
     options: { [key: string]: HandlerOptions },
     delegate: HandlerDelegate,
-    callback: HandlerProcessCallback
+    callback: HandlerProcessCallback,
   ) {
     callback(null, Object.keys(options), {
       content: '',
@@ -31,8 +31,8 @@ export default class IgnoreHandler implements Handler {
         // for the sake of perf, so it wouldn't make sense to load the
         // file just to get this info
         preSize: 0,
-        postSize: 0
-      }
+        postSize: 0,
+      },
     });
   }
 }

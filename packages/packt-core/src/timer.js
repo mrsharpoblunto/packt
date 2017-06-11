@@ -5,7 +5,7 @@
 
 export default class Timer {
   _categories: {
-    [key: string]: { [key: string]: number } | number
+    [key: string]: { [key: string]: number } | number,
   };
 
   constructor() {

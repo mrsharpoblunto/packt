@@ -33,7 +33,7 @@ export default class WorkerPool extends EventEmitter {
   _handleWorkerMessage(
     worker: Worker,
     workerIndex: number,
-    message: MessageType
+    message: MessageType,
   ) {
     switch (message.type) {
       case 'module_content':
@@ -59,7 +59,7 @@ export default class WorkerPool extends EventEmitter {
           case 'error':
             this._emitMessage({
               type: 'worker_error',
-              error: new errors.PacktWorkerError(workerIndex, s.description)
+              error: new errors.PacktWorkerError(workerIndex, s.description),
             });
             break;
         }
@@ -77,7 +77,7 @@ export default class WorkerPool extends EventEmitter {
     this._messageQueue.push({
       type: 'process_module',
       resolvedModule: resolvedModule,
-      scopeId: scopeId
+      scopeId: scopeId,
     });
     this._dequeueMessage();
   }
@@ -87,7 +87,7 @@ export default class WorkerPool extends EventEmitter {
       type: 'process_bundle',
       bundleName,
       variant,
-      data
+      data,
     });
     this._dequeueMessage();
   }
@@ -116,7 +116,7 @@ export default class WorkerPool extends EventEmitter {
       this._workers.map(w => {
         w.removeAllListeners();
         w.stop();
-      })
+      }),
     );
   }
 

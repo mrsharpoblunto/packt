@@ -9,19 +9,19 @@ export type OutputPaths = {|
   assetName: string,
   outputPath: string,
   outputPublicPath: string,
-  outputParentPath: string
+  outputParentPath: string,
 |};
 
 export type PacktOptions = {|
   config: string,
   bail: boolean,
-  moduleScopes: string
+  moduleScopes: string,
 |};
 
 export type BuiltInResolverOptions = {|
   rootPath: string,
   searchPaths: Array<string>,
-  extensions: Array<string>
+  extensions: Array<string>,
 |};
 
 export type PacktConfig = {|
@@ -34,7 +34,7 @@ export type PacktConfig = {|
     rootPath: string,
     outputPublicPath: string,
     outputHash: string,
-    outputHashLength: number
+    outputHashLength: number,
   |},
   hasVariants: boolean,
   options: { [key: string]: Object },
@@ -44,21 +44,21 @@ export type PacktConfig = {|
       requires: Array<
         | {
           name: string,
-          folder: boolean
+          folder: boolean,
         }
-        | string
+        | string,
       >,
       depends: { [key: string]: boolean },
       dynamicChildren: {
-        preserveDuplicates: boolean
+        preserveDuplicates: boolean,
       },
       contentTypes: { [key: string]: boolean },
       threshold: number,
       dependedBy: { [key: string]: boolean },
       commons: { [key: string]: boolean },
       bundler: string,
-      bundlerOptions: { [key: string]: Object }
-    |}
+      bundlerOptions: { [key: string]: Object },
+    |},
   },
   bundlers: {
     [key: string]: {|
@@ -66,27 +66,27 @@ export type PacktConfig = {|
       invariantOptions: {
         dynamicOutputPathFormat: string,
         staticOutputPathFormat: string,
-        assetNameFormat: string
+        assetNameFormat: string,
       },
-      options: { [key: string]: Object }
-    |}
+      options: { [key: string]: Object },
+    |},
   },
   resolvers: {
     custom: Array<{|
       require: string,
       invariantOptions: Object,
-      options: { [key: string]: Object }
+      options: { [key: string]: Object },
     |}>,
     builtIn: {|
-      invariantOptions: BuiltInResolverOptions
-    |}
+      invariantOptions: BuiltInResolverOptions,
+    |},
   },
   handlers: Array<{|
     pattern: string,
     require: string,
     invariantOptions: Object,
-    options: { [key: string]: Object }
-  |}>
+    options: { [key: string]: Object },
+  |}>,
 |};
 
 export interface Resolver {
@@ -95,26 +95,26 @@ export interface Resolver {
     moduleName: string,
     resolvedParentModule: string,
     expectFolder: boolean,
-    callback: (err: ?Error, resolved: ?string) => void
-  ) => void
+    callback: (err: ?Error, resolved: ?string) => void,
+  ) => void,
 }
 
 export type Timer = {
   clear(): void,
   accumulate(
     category: string,
-    values: { [key: string]: number } | number
+    values: { [key: string]: number } | number,
   ): void,
   get(category: string, sub: ?string): number,
   getCategories(): Array<string>,
-  getSubcategories(category: string): Array<string>
+  getSubcategories(category: string): Array<string>,
 };
 
 export type PerfStats = {|
   diskIO: number,
   transform: number,
   preSize: number,
-  postSize: number
+  postSize: number,
 |};
 
 export type PerfStatsDict = { [key: string]: PerfStats };
@@ -129,7 +129,7 @@ export type WorkerStatus =
 
 export type WorkerStatusDescription = {|
   status: WorkerStatus,
-  description: string
+  description: string,
 |};
 
 export interface Reporter {
@@ -139,12 +139,12 @@ export interface Reporter {
   onUpdateBuildStatus(
     workerStatus: Array<WorkerStatusDescription>,
     buildStats: ?{ [variant: string]: PerfStatsDict },
-    bundleStats: ?{ [variant: string]: PerfStatsDict }
+    bundleStats: ?{ [variant: string]: PerfStatsDict },
   ): void,
   onBuildWarning(
     resolvedModule: string,
     variants: Array<string>,
-    warning: string
+    warning: string,
   ): void,
   onBuildError(error: Error): void,
   onBundleWarning(bundleName: string, variant: string, warning: string): void,
@@ -153,62 +153,62 @@ export interface Reporter {
     timers: {|
       global: Timer,
       handlers: Timer,
-      bundlers: Timer
+      bundlers: Timer,
     |},
     buildStats: { [variant: string]: PerfStatsDict },
-    bundleStats: { [variant: string]: PerfStatsDict }
+    bundleStats: { [variant: string]: PerfStatsDict },
   ): void,
-  onError(error: Error): void
+  onError(error: Error): void,
 }
 
 export type ExportDeclaration = {|
   identifier: string,
   esModule: boolean,
-  symbols: Array<string>
+  symbols: Array<string>,
 |};
 
 export type ImportDeclaration = {|
   source: string,
   symbols: Array<string>,
-  type: 'static' | 'dynamic'
+  type: 'static' | 'dynamic',
 |};
 
 export type HandlerDelegate = {|
   importsModule: (
     variants: Array<string>,
-    importDeclaration: ImportDeclaration
+    importDeclaration: ImportDeclaration,
   ) => void,
   exportsSymbols: (
     variants: Array<string>,
-    exportDeclaration: ExportDeclaration
+    exportDeclaration: ExportDeclaration,
   ) => void,
   emitWarning: (variants: Array<string>, warning: string) => void,
   generatedAsset: (
     variants: Array<string>,
     assetName: string,
-    outputPath: string
+    outputPath: string,
   ) => void,
   resolve: (
     path: string,
-    callback: (err: ?Error, resolvedModule: ?string) => void
+    callback: (err: ?Error, resolvedModule: ?string) => void,
   ) => void,
   getOutputPaths: (
     name: string,
     hash: string,
     params: Object,
     outputPathTemplate: string,
-    assetNameTemplate: string
+    assetNameTemplate: string,
   ) => {
     assetName: string,
     outputPath: string,
-    outputParentPath: string
+    outputParentPath: string,
   },
-  generateHash: (content: string) => string
+  generateHash: (content: string) => string,
 |};
 
 export type HandlerOptions = {|
   global: Object,
-  handler: Object
+  handler: Object,
 |};
 
 export type HandlerInitCallback = (err: ?(Error | string)) => void;
@@ -220,15 +220,15 @@ export type HandlerProcessCallback = (
     content: string,
     contentType: string,
     contentHash: string,
-    perfStats: PerfStats
-  |}
+    perfStats: PerfStats,
+  |},
 ) => void;
 
 export interface Handler {
   +init: (
     invariantOptions: HandlerOptions,
     delegate: HandlerDelegate,
-    callback: HandlerInitCallback
+    callback: HandlerInitCallback,
   ) => void,
 
   +process: (
@@ -236,16 +236,16 @@ export interface Handler {
     scopeId: string,
     options: { [key: string]: HandlerOptions },
     delegate: HandlerDelegate,
-    callback: HandlerProcessCallback
-  ) => void
+    callback: HandlerProcessCallback,
+  ) => void,
 }
 
 export type BundlerDelegate = {
   emitWarning: (warning: string) => void,
   resolve: (
     path: string,
-    callback: (err: ?Error, resolvedModule: ?string) => void
-  ) => void
+    callback: (err: ?Error, resolvedModule: ?string) => void,
+  ) => void,
 };
 
 export type SerializedModule = {
@@ -254,7 +254,7 @@ export type SerializedModule = {
   content: string,
   contentHash: string,
   contentType: string,
-  usedSymbols: Array<string>
+  usedSymbols: Array<string>,
 };
 
 export type BundlerData = {
@@ -263,24 +263,24 @@ export type BundlerData = {
   moduleMap: {
     [key: string]: {
       exportsIdentifier: string,
-      exportsESModule: boolean
-    }
+      exportsESModule: boolean,
+    },
   },
   modules: Array<SerializedModule>,
   paths: OutputPaths,
-  hasDependencies: boolean
+  hasDependencies: boolean,
 };
 
 export type BundlerOptions = {|
   global: Object,
-  bundler: Object
+  bundler: Object,
 |};
 
 export type BundlerProcessCallback = (
   err: ?(Error | string),
   response: ?{
-    perfStats: PerfStats
-  }
+    perfStats: PerfStats,
+  },
 ) => void;
 
 export type BundlerInitCallback = (err: ?(Error | string)) => void;
@@ -289,7 +289,7 @@ export interface Bundler {
   +init: (
     invariantOptions: BundlerOptions,
     delegate: BundlerDelegate,
-    callback: BundlerInitCallback
+    callback: BundlerInitCallback,
   ) => void,
 
   +process: (
@@ -297,6 +297,6 @@ export interface Bundler {
     options: BundlerOptions,
     data: BundlerData,
     delegate: BundlerDelegate,
-    callback: BundlerProcessCallback
-  ) => void
+    callback: BundlerProcessCallback,
+  ) => void,
 }

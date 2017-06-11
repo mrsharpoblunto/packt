@@ -9,7 +9,7 @@ export type ForceAccumulator = (
   outTorque: Vec3,
   orientation: OrientationComponent,
   mass: MassComponent,
-  dt: number
+  dt: number,
 ) => void;
 
 class Derivative {
@@ -45,20 +45,20 @@ function evaluate(
   mass: MassComponent,
   dt: number,
   sumForces: ForceAccumulator,
-  inDerivative: ?Derivative
+  inDerivative: ?Derivative,
 ) {
   if (inDerivative) {
     glm.vec3.scaleAndAdd(
       tmp.position,
       orientation.position,
       inDerivative.velocity,
-      dt
+      dt,
     );
     glm.vec3.scaleAndAdd(
       tmp.momentum,
       orientation.momentum,
       inDerivative.force,
-      dt
+      dt,
     );
 
     // no scaleAndAdd for quaternions
@@ -70,14 +70,14 @@ function evaluate(
       tmp.angularMomentum,
       orientation.angularMomentum,
       inDerivative.torque,
-      dt
+      dt,
     );
     tmp.recalculate(mass, false);
   }
 
   glm.vec3.copy(
     outDerivative.velocity,
-    inDerivative ? tmp.velocity : orientation.velocity
+    inDerivative ? tmp.velocity : orientation.velocity,
   );
   glm.quat.copy(outDerivative.spin, inDerivative ? tmp.spin : orientation.spin);
 
@@ -90,7 +90,7 @@ export default function integrate(
   orientation: OrientationComponent,
   mass: MassComponent,
   dt: number,
-  sumForces: ForceAccumulator
+  sumForces: ForceAccumulator,
 ) {
   evaluate(a, orientation, mass, 0.0, sumForces);
   evaluate(b, orientation, mass, dt * 0.5, sumForces, a);
@@ -127,7 +127,7 @@ export default function integrate(
   glm.vec3.add(
     orientation.angularMomentum,
     orientation.angularMomentum,
-    angularMomentum
+    angularMomentum,
   );
 
   orientation.recalculate(mass, true);
