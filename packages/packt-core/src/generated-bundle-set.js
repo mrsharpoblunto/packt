@@ -1,22 +1,14 @@
 /**
  * @flow
  */
-import {
-  DependencyNode,
-  DependencyGraph,
-} from './dependency-graph';
-import type {DependencyVariant} from './dependency-graph';
+import { DependencyNode, DependencyGraph } from './dependency-graph';
+import type { DependencyVariant } from './dependency-graph';
 import path from 'path';
-import {
-  getOrCreate,
-  objectMap,
-} from './helpers';
-import type {WorkingSet} from './working-set';
+import { getOrCreate, objectMap } from './helpers';
+import type { WorkingSet } from './working-set';
 import type OutputPathHelpers from './output-path-helpers';
 
-function sortBundle(
-  modules: Set<DependencyNode>,
-): Array<DependencyNode> {
+function sortBundle(modules: Set<DependencyNode>): Array<DependencyNode> {
   const sorted = [];
   const visited: Set<DependencyNode> = new Set();
   const tmp: Set<DependencyNode> = new Set();
@@ -29,12 +21,12 @@ function sortBundle(
 }
 
 function visit(
-  node: DependencyNode, 
+  node: DependencyNode,
   whitelist: ?Set<DependencyNode>,
   visited: Set<DependencyNode>,
   tempVisited: Set<DependencyNode>,
   staticOnly: boolean,
-  output: Array<DependencyNode>,
+  output: Array<DependencyNode>
 ): boolean {
   // when we sort, sometimes we want to ensure that
   // sorting doesn't pull in children of the selected nodes
@@ -49,7 +41,14 @@ function visit(
     for (let i in node.imports) {
       const imported = node.imports[i];
       if (!staticOnly || imported.type === 'static') {
-        visit(imported.node, whitelist, visited, tempVisited, staticOnly, output);
+        visit(
+          imported.node,
+          whitelist,
+          visited,
+          tempVisited,
+          staticOnly,
+          output
+        );
       }
     }
     visited.add(node);
@@ -65,34 +64,42 @@ export function generateBundleSets(
   config: PacktConfig,
   outputPathHelpers: OutputPathHelpers
 ): { [variant: string]: GeneratedBundleSet } {
-  return objectMap(graph.variants, (variant, variantName) => new GeneratedBundleSet(
-    variantName,
-    variant,
-    workingSet,
-    config,
-    outputPathHelpers
-  ));
-} 
+  return objectMap(
+    graph.variants,
+    (variant, variantName) =>
+      new GeneratedBundleSet(
+        variantName,
+        variant,
+        workingSet,
+        config,
+        outputPathHelpers
+      )
+  );
+}
 
 export type GeneratedBundleData = {|
   hash: string,
   paths: OutputPaths,
   type: 'static' | 'dynamic',
   modules: Array<DependencyNode>,
-  usedSymbols: { [moduleName: string]: Array<string> },
+  usedSymbols: { [moduleName: string]: Array<string> }
 |};
 
 export class GeneratedBundleSet {
-  _staticBundles: { [bundleName: string]: {
-    hash: string,
-    paths: OutputPaths,
-    usedSymbols: { [moduleName: string]: Array<string> },
-  }};
-  _dynamicBundles: { [bundleName: string]: {
-    hash: string,
-    paths: OutputPaths,
-    usedSymbols: { [moduleName: string]: Array<string> },
-  }};
+  _staticBundles: {
+    [bundleName: string]: {
+      hash: string,
+      paths: OutputPaths,
+      usedSymbols: { [moduleName: string]: Array<string> }
+    }
+  };
+  _dynamicBundles: {
+    [bundleName: string]: {
+      hash: string,
+      paths: OutputPaths,
+      usedSymbols: { [moduleName: string]: Array<string> }
+    }
+  };
   _symbols: { [bundleName: string]: Map<DependencyNode, Set<string>> };
   _modules: { [bundleHash: string]: Array<DependencyNode> };
   _variant: string;
@@ -102,7 +109,7 @@ export class GeneratedBundleSet {
   _pendingDynamicBundles: Array<{
     parentBundleName: string,
     rootModule: DependencyNode,
-    modules: Set<DependencyNode>,
+    modules: Set<DependencyNode>
   }>;
 
   constructor(
@@ -120,10 +127,7 @@ export class GeneratedBundleSet {
     this._config = config;
     this._outputPathHelpers = outputPathHelpers;
 
-    this._generatePendingBundles(
-      graphVariant, 
-      workingSet
-    );
+    this._generatePendingBundles(graphVariant, workingSet);
     this._extractDynamicBundles(graphVariant);
     this._extractCommonBundles();
     this._finalizeDynamicBundles();
@@ -137,7 +141,7 @@ export class GeneratedBundleSet {
       paths: staticBundle.paths,
       type: 'static',
       modules: this._modules[staticBundle.hash],
-      usedSymbols: staticBundle.usedSymbols,
+      usedSymbols: staticBundle.usedSymbols
     };
   }
 
@@ -148,43 +152,52 @@ export class GeneratedBundleSet {
       paths: dynamicBundle.paths,
       type: 'dynamic',
       modules: this._modules[dynamicBundle.hash],
-      usedSymbols: dynamicBundle.usedSymbols,
+      usedSymbols: dynamicBundle.usedSymbols
     };
   }
 
   getStaticBundles(): { [bundleName: string]: GeneratedBundleData } {
-    return objectMap(this._staticBundles, (value, bundleName) => this.getStaticBundle(bundleName));
+    return objectMap(this._staticBundles, (value, bundleName) =>
+      this.getStaticBundle(bundleName)
+    );
   }
 
   getDynamicBundles(): { [bundleName: string]: GeneratedBundleData } {
-    return objectMap(this._dynamicBundles, (value, bundleName) => this.getDynamicBundle(bundleName));
+    return objectMap(this._dynamicBundles, (value, bundleName) =>
+      this.getDynamicBundle(bundleName)
+    );
   }
 
   getBundles(): { [bundleName: string]: GeneratedBundleData } {
     return {
       ...this.getStaticBundles(),
-      ...this.getDynamicBundles(),
+      ...this.getDynamicBundles()
     };
   }
 
   _generatePendingBundles(
     graphVariant: DependencyVariant,
-    workingSet: WorkingSet,
+    workingSet: WorkingSet
   ) {
     this._pendingBundles = {};
     for (let moduleName in graphVariant.lookups) {
       const module = graphVariant.lookups[moduleName];
-      const moduleBundles = this._getModuleBundles(
-        module,
-        workingSet,
-      );
+      const moduleBundles = this._getModuleBundles(module, workingSet);
 
       for (let bundleName of moduleBundles) {
-        const symbolMap = getOrCreate(this._symbols, bundleName, () => new Map());
+        const symbolMap = getOrCreate(
+          this._symbols,
+          bundleName,
+          () => new Map()
+        );
         if (!symbolMap.has(module)) {
           symbolMap.set(module, module.getUsedSymbolsForBundle(bundleName));
         }
-        const pendingBundle = getOrCreate(this._pendingBundles, bundleName, () => new Set());
+        const pendingBundle = getOrCreate(
+          this._pendingBundles,
+          bundleName,
+          () => new Set()
+        );
         pendingBundle.add(module);
       }
     }
@@ -192,7 +205,7 @@ export class GeneratedBundleSet {
 
   _getModuleBundles(
     module: DependencyNode,
-    workingSet: WorkingSet,
+    workingSet: WorkingSet
   ): Array<string> {
     const bundles: Array<string> = [];
     for (let b in workingSet.bundles) {
@@ -205,7 +218,10 @@ export class GeneratedBundleSet {
       // depends on, then this module should be externalized into the library
       // bundle and left out of this one
       const bundleConfig = this._config.bundles[b];
-      if (bundleConfig.type === 'entrypoint' && Object.keys(bundleConfig.depends).length) {
+      if (
+        bundleConfig.type === 'entrypoint' &&
+        Object.keys(bundleConfig.depends).length
+      ) {
         let isExternal = false;
         for (let db of module.bundles) {
           if (bundleConfig.depends[db]) {
@@ -224,9 +240,7 @@ export class GeneratedBundleSet {
     return bundles;
   }
 
-  _extractDynamicBundles(
-    graphVariant: DependencyVariant,
-  ) {
+  _extractDynamicBundles(graphVariant: DependencyVariant) {
     this._pendingDynamicBundles = [];
     const tmp: Set<DependencyNode> = new Set();
     for (let bundleName in this._pendingBundles) {
@@ -235,7 +249,7 @@ export class GeneratedBundleSet {
       const extracted: Array<DependencyNode> = [];
 
       let staticVisited: ?Set<DependencyNode> = null;
-      const isStaticallyImported = (node: DependencyNode):boolean => {
+      const isStaticallyImported = (node: DependencyNode): boolean => {
         if (!staticVisited) {
           staticVisited = new Set();
           const roots = graphVariant.roots[bundleName];
@@ -246,7 +260,7 @@ export class GeneratedBundleSet {
           }
         }
         return staticVisited.has(node);
-      }
+      };
 
       for (let module of pendingBundle) {
         if (
@@ -257,7 +271,9 @@ export class GeneratedBundleSet {
           const visited: Set<DependencyNode> = new Set();
           const possibleDynamicModules: Array<DependencyNode> = [];
           const modules: Set<DependencyNode> = new Set();
-          if (!visit(module, null, visited, tmp, true, possibleDynamicModules)) {
+          if (
+            !visit(module, null, visited, tmp, true, possibleDynamicModules)
+          ) {
             throw new Error('cycle detected');
           }
 
@@ -279,7 +295,7 @@ export class GeneratedBundleSet {
           this._pendingDynamicBundles.push({
             parentBundleName: bundleName,
             rootModule: module,
-            modules,
+            modules
           });
         }
       }
@@ -290,7 +306,7 @@ export class GeneratedBundleSet {
   }
 
   _extractCommonBundles() {
-    const alreadyChecked: { [key: string]: boolean }  = {};
+    const alreadyChecked: { [key: string]: boolean } = {};
     const pendingBundleNames = Object.keys(this._pendingBundles);
     for (let bundleName of pendingBundleNames) {
       const bundleConfig = this._config.bundles[bundleName];
@@ -310,15 +326,17 @@ export class GeneratedBundleSet {
           }
 
           const commonConfig = this._config.bundles[common];
-          const commonBundle = getOrCreate(this._pendingBundles, common, () => new Set());
+          const commonBundle = getOrCreate(
+            this._pendingBundles,
+            common,
+            () => new Set()
+          );
           if (
             !Object.keys(commonConfig.contentTypes).length ||
-            (
-              module.contentType && 
-              commonConfig.contentTypes[module.contentType]
-            )
+            (module.contentType &&
+              commonConfig.contentTypes[module.contentType])
           ) {
-            // if it passes the content type check, then we see how often this module 
+            // if it passes the content type check, then we see how often this module
             // appears in other bundles that share this same commons dependency
             const dependedBy = Object.keys(commonConfig.dependedBy);
             const frequency = dependedBy.reduce((prev, next) => {
@@ -349,11 +367,7 @@ export class GeneratedBundleSet {
     }
   }
 
-  _mergeSymbols(
-    fromBundle: string,
-    toBundle: string,
-    module: DependencyNode,
-  ) {
+  _mergeSymbols(fromBundle: string, toBundle: string, module: DependencyNode) {
     // take the symbols in from & merge them into the symbols for to.
     // if either from or to contains '*', then the result becomes '*'
     const fromMap = getOrCreate(this._symbols, fromBundle, () => new Map());
@@ -361,19 +375,19 @@ export class GeneratedBundleSet {
 
     let fromSymbolSet = fromMap.get(module);
     if (!fromSymbolSet) {
-      fromSymbolSet = module.getUsedSymbolsForBundle(fromBundle); 
+      fromSymbolSet = module.getUsedSymbolsForBundle(fromBundle);
       fromMap.set(module, fromSymbolSet);
     }
 
     let toSymbolSet = toMap.get(module);
     if (!toSymbolSet) {
-      toSymbolSet = module.getUsedSymbolsForBundle(toBundle); 
+      toSymbolSet = module.getUsedSymbolsForBundle(toBundle);
       toMap.set(module, toSymbolSet);
     }
 
     if (fromSymbolSet.has('*')) {
       if (!toSymbolSet.has('*')) {
-        toMap.set(module,new Set(['*']));
+        toMap.set(module, new Set(['*']));
       }
       return;
     }
@@ -388,8 +402,8 @@ export class GeneratedBundleSet {
   _finalizeDynamicBundles() {
     for (let bundle of this._pendingDynamicBundles) {
       const bundleConfig = this._config.bundles[bundle.parentBundleName];
-      // if any module in this dynamic bundle also exists in this 
-      // parent bundles common set, we should remove it from the 
+      // if any module in this dynamic bundle also exists in this
+      // parent bundles common set, we should remove it from the
       // dynamic bundle
       for (let common in bundleConfig.commons) {
         const commonModules = this._pendingBundles[common];
@@ -403,7 +417,10 @@ export class GeneratedBundleSet {
       }
 
       const modules: Array<DependencyNode> = Array.from(bundle.modules);
-      const {hash, usedSymbols} = this._getHashAndUsedSymbols(bundle.parentBundleName, modules);
+      const { hash, usedSymbols } = this._getHashAndUsedSymbols(
+        bundle.parentBundleName,
+        modules
+      );
       const paths = this._outputPathHelpers.getBundlerDynamicOutputPaths(
         bundle.parentBundleName + '_' + path.basename(bundle.rootModule.module),
         hash,
@@ -413,10 +430,12 @@ export class GeneratedBundleSet {
 
       // calculate the bundle hash and add the modules to the final dynamic bundle.
       // They're already in the right order as visit sorts them for us
-      this._dynamicBundles[bundle.parentBundleName + ':' + bundle.rootModule.module] = {
+      this._dynamicBundles[
+        bundle.parentBundleName + ':' + bundle.rootModule.module
+      ] = {
         paths,
         hash,
-        usedSymbols,
+        usedSymbols
       };
       this._modules[hash] = modules;
     }
@@ -428,28 +447,34 @@ export class GeneratedBundleSet {
       const pendingBundle = this._pendingBundles[bundleName];
       const bundleConfig = this._config.bundles[bundleName];
       const modules = sortBundle(pendingBundle);
-      const {hash, usedSymbols} = this._getHashAndUsedSymbols(bundleName, modules);
+      const { hash, usedSymbols } = this._getHashAndUsedSymbols(
+        bundleName,
+        modules
+      );
       const paths = this._outputPathHelpers.getBundlerStaticOutputPaths(
         bundleName,
         hash,
         bundleConfig.bundler,
-        this._variant,
+        this._variant
       );
 
       this._staticBundles[bundleName] = {
         hash,
         paths,
-        usedSymbols,
-      }
+        usedSymbols
+      };
       this._modules[hash] = modules;
     }
     this._pendingBundles = {};
     this._symbols = {};
   }
 
-  _getHashAndUsedSymbols(bundleName: string, modules: Array<DependencyNode>): {
+  _getHashAndUsedSymbols(
+    bundleName: string,
+    modules: Array<DependencyNode>
+  ): {
     hash: string,
-    usedSymbols: { [moduleName: string]: Array<string> },
+    usedSymbols: { [moduleName: string]: Array<string> }
   } {
     const usedSymbols: { [moduleName: string]: Array<string> } = {};
 
@@ -459,14 +484,13 @@ export class GeneratedBundleSet {
       const symbols = symbolSet ? Array.from(symbolSet) : [];
       symbols.sort();
       usedSymbols[module.module] = symbols;
-      hashComponents += (module.contentHash || '');
+      hashComponents += module.contentHash || '';
       hashComponents += symbols.join(',');
     }
 
     return {
       hash: this._outputPathHelpers.generateHash(hashComponents),
-      usedSymbols,
+      usedSymbols
     };
   }
-
 }

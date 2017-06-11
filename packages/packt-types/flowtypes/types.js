@@ -8,19 +8,19 @@ export type OutputPaths = {|
   assetName: string,
   outputPath: string,
   outputPublicPath: string,
-  outputParentPath: string,
+  outputParentPath: string
 |};
 
 export type PacktOptions = {|
   config: string,
   bail: boolean,
-  moduleScopes: string,
+  moduleScopes: string
 |};
 
 export type BuiltInResolverOptions = {|
   rootPath: string,
   searchPaths: Array<string>,
-  extensions: Array<string>,
+  extensions: Array<string>
 |};
 
 export type PacktConfig = {|
@@ -33,94 +33,102 @@ export type PacktConfig = {|
     rootPath: string,
     outputPublicPath: string,
     outputHash: string,
-    outputHashLength: number,
+    outputHashLength: number
   |},
   hasVariants: boolean,
   options: { [key: string]: Object },
-  bundles: { 
+  bundles: {
     [key: string]: {|
       type: 'library' | 'entrypoint' | 'common',
-      requires: Array<{
-        name: string,
-        folder: boolean,
-      } | string>,
+      requires: Array<
+        | {
+          name: string,
+          folder: boolean
+        }
+        | string
+      >,
       depends: { [key: string]: boolean },
       dynamicChildren: {
-        preserveDuplicates: boolean,
+        preserveDuplicates: boolean
       },
       contentTypes: { [key: string]: boolean },
       threshold: number,
       dependedBy: { [key: string]: boolean },
       commons: { [key: string]: boolean },
       bundler: string,
-      bundlerOptions: { [key: string]: Object },
+      bundlerOptions: { [key: string]: Object }
     |}
   },
-  bundlers: { [key: string]: {|
-    require: string,
-    invariantOptions: {
-      dynamicOutputPathFormat: string,
-      staticOutputPathFormat: string,
-      assetNameFormat: string,
-    },
-    options: { [key: string]: Object },
-  |}},
+  bundlers: {
+    [key: string]: {|
+      require: string,
+      invariantOptions: {
+        dynamicOutputPathFormat: string,
+        staticOutputPathFormat: string,
+        assetNameFormat: string
+      },
+      options: { [key: string]: Object }
+    |}
+  },
   resolvers: {
     custom: Array<{|
       require: string,
       invariantOptions: Object,
-      options: { [key: string]: Object },
+      options: { [key: string]: Object }
     |}>,
     builtIn: {|
-      invariantOptions: BuiltInResolverOptions,
-    |},
+      invariantOptions: BuiltInResolverOptions
+    |}
   },
   handlers: Array<{|
     pattern: string,
     require: string,
     invariantOptions: Object,
-    options: { [key: string]: Object },
-  |}>,
+    options: { [key: string]: Object }
+  |}>
 |};
 
 export interface Resolver {
   +clearCache: () => void,
   +resolve: (
-    moduleName: string, 
-    resolvedParentModule: string, 
+    moduleName: string,
+    resolvedParentModule: string,
     expectFolder: boolean,
     callback: (err: ?Error, resolved: ?string) => void
-  ) => void,
-};
+  ) => void
+}
 
 export type Timer = {
-  clear(): void;
-  accumulate(category: string, values: { [key: string]: number} | number): void;
-  get(category: string, sub: ?string): number;
-  getCategories(): Array<string>;
-  getSubcategories(category: string): Array<string>;
+  clear(): void,
+  accumulate(
+    category: string,
+    values: { [key: string]: number } | number
+  ): void,
+  get(category: string, sub: ?string): number,
+  getCategories(): Array<string>,
+  getSubcategories(category: string): Array<string>
 };
 
 export type PerfStats = {|
   diskIO: number,
   transform: number,
   preSize: number,
-  postSize: number,
+  postSize: number
 |};
 
 export type PerfStatsDict = { [key: string]: PerfStats };
 
 export type WorkerStatus =
-  'configuring' |
-  'idle' |
-  'error' |
-  'processing' |
-  'bundling' |
-  'stopped';
+  | 'configuring'
+  | 'idle'
+  | 'error'
+  | 'processing'
+  | 'bundling'
+  | 'stopped';
 
 export type WorkerStatusDescription = {|
   status: WorkerStatus,
-  description: string,
+  description: string
 |};
 
 export interface Reporter {
@@ -130,47 +138,38 @@ export interface Reporter {
   onUpdateBuildStatus(
     workerStatus: Array<WorkerStatusDescription>,
     buildStats: ?{ [variant: string]: PerfStatsDict },
-    bundleStats: ?{ [variant: string]: PerfStatsDict },
+    bundleStats: ?{ [variant: string]: PerfStatsDict }
   ): void,
   onBuildWarning(
     resolvedModule: string,
     variants: Array<string>,
     warning: string
   ): void,
-  onBuildError(
-    error: Error
-  ): void,
-  onBundleWarning(
-    bundleName: string,
-    variant: string,
-    warning: string
-  ): void,
-  onBundleError(
-    error: Error
-  ): void,
+  onBuildError(error: Error): void,
+  onBundleWarning(bundleName: string, variant: string, warning: string): void,
+  onBundleError(error: Error): void,
   onFinishBuild(
     timers: {|
-      global: Timer, 
+      global: Timer,
       handlers: Timer,
-      bundlers: Timer,
+      bundlers: Timer
     |},
     buildStats: { [variant: string]: PerfStatsDict },
-    bundleStats: { [variant: string]: PerfStatsDict },
+    bundleStats: { [variant: string]: PerfStatsDict }
   ): void,
-  onError(error: Error): void,
-};
-
+  onError(error: Error): void
+}
 
 export type ExportDeclaration = {|
   identifier: string,
   esModule: boolean,
-  symbols: Array<string>,
+  symbols: Array<string>
 |};
 
 export type ImportDeclaration = {|
   source: string,
   symbols: Array<string>,
-  type: 'static' | 'dynamic',
+  type: 'static' | 'dynamic'
 |};
 
 export type HandlerDelegate = {|
@@ -182,58 +181,53 @@ export type HandlerDelegate = {|
     variants: Array<string>,
     exportDeclaration: ExportDeclaration
   ) => void,
-  emitWarning: (
-    variants: Array<string>,
-    warning: string,
-  ) => void,
+  emitWarning: (variants: Array<string>, warning: string) => void,
   generatedAsset: (
     variants: Array<string>,
     assetName: string,
-    outputPath: string,
+    outputPath: string
   ) => void,
   resolve: (
-    path: string, 
-    callback: (err: ?Error, resolvedModule: ?string) => void,
+    path: string,
+    callback: (err: ?Error, resolvedModule: ?string) => void
   ) => void,
   getOutputPaths: (
-    name: string, 
-    hash: string, 
+    name: string,
+    hash: string,
     params: Object,
-    outputPathTemplate: string, 
+    outputPathTemplate: string,
     assetNameTemplate: string
   ) => {
     assetName: string,
     outputPath: string,
-    outputParentPath: string,
+    outputParentPath: string
   },
-  generateHash: (content: string) => string,
+  generateHash: (content: string) => string
 |};
 
 export type HandlerOptions = {|
   global: Object,
-  handler: Object,
+  handler: Object
 |};
 
-export type HandlerInitCallback = (
-  err: ?(Error | string)
-) => void;
+export type HandlerInitCallback = (err: ?(Error | string)) => void;
 
-export type HandlerProcessCallback =  (
+export type HandlerProcessCallback = (
   err: ?(Error | string),
   variants: ?Array<string>,
   response: ?{|
     content: string,
-    contentType: string, 
+    contentType: string,
     contentHash: string,
-    perfStats: PerfStats,
+    perfStats: PerfStats
   |}
 ) => void;
 
 export interface Handler {
-  +init: ( 
+  +init: (
     invariantOptions: HandlerOptions,
     delegate: HandlerDelegate,
-    callback: HandlerInitCallback,
+    callback: HandlerInitCallback
   ) => void,
 
   +process: (
@@ -241,18 +235,16 @@ export interface Handler {
     scopeId: string,
     options: { [key: string]: HandlerOptions },
     delegate: HandlerDelegate,
-    callback: HandlerProcessCallback,
-  ) => void,
-};
+    callback: HandlerProcessCallback
+  ) => void
+}
 
 export type BundlerDelegate = {
-  emitWarning: (
-    warning: string,
-  ) => void,
+  emitWarning: (warning: string) => void,
   resolve: (
-    path: string, 
-    callback: (err: ?Error, resolvedModule: ?string) => void,
-  ) => void,
+    path: string,
+    callback: (err: ?Error, resolvedModule: ?string) => void
+  ) => void
 };
 
 export type SerializedModule = {
@@ -261,49 +253,49 @@ export type SerializedModule = {
   content: string,
   contentHash: string,
   contentType: string,
-  usedSymbols: Array<string>,
+  usedSymbols: Array<string>
 };
 
 export type BundlerData = {
   assetMap: { [key: string]: string },
   dynamicBundleMap: { [key: string]: string },
-  moduleMap: { [key: string]: {
-    exportsIdentifier: string,
-    exportsESModule: boolean,
-  }},
+  moduleMap: {
+    [key: string]: {
+      exportsIdentifier: string,
+      exportsESModule: boolean
+    }
+  },
   modules: Array<SerializedModule>,
   paths: OutputPaths,
-  hasDependencies: boolean,
+  hasDependencies: boolean
 };
 
 export type BundlerOptions = {|
   global: Object,
-  bundler: Object,
+  bundler: Object
 |};
 
 export type BundlerProcessCallback = (
   err: ?(Error | string),
   response: ?{
-    perfStats: PerfStats,
+    perfStats: PerfStats
   }
 ) => void;
 
-export type BundlerInitCallback = (
-  err: ?(Error | string)
-) => void;
+export type BundlerInitCallback = (err: ?(Error | string)) => void;
 
 export interface Bundler {
-  +init: ( 
+  +init: (
     invariantOptions: BundlerOptions,
     delegate: BundlerDelegate,
-    callback: BundlerInitCallback,
+    callback: BundlerInitCallback
   ) => void,
 
   +process: (
     bundleName: string,
     options: BundlerOptions,
-    data: BundlerData, 
+    data: BundlerData,
     delegate: BundlerDelegate,
-    callback: BundlerProcessCallback,
-  ) => void,
-};
+    callback: BundlerProcessCallback
+  ) => void
+}

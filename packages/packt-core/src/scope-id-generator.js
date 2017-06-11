@@ -3,8 +3,9 @@
  */
 import fs from 'fs';
 
-const DIGITS = 
-  '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz$_'.split('');
+const DIGITS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz$_'.split(
+  ''
+);
 const DIGITS_MAP = {};
 for (let i = 0; i < DIGITS.length; ++i) {
   DIGITS_MAP[DIGITS[i]] = i;
@@ -52,28 +53,29 @@ export default class ScopeIdGenerator {
     return result;
   }
 
-  save(
-    filename: string, 
-    filter: (id: string) => boolean
-  ): Promise<any> {
+  save(filename: string, filter: (id: string) => boolean): Promise<any> {
     for (let key in this._map) {
       if (!filter(this._map[key])) {
         delete this._map[key];
       }
     }
 
-    return new Promise((resolve,reject) => {
-      fs.writeFile(filename,JSON.stringify({
-        idPool: this._idPool,
-        map: this._map,
-        nextId: this._nextId,
-      }),(err) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve();
+    return new Promise((resolve, reject) => {
+      fs.writeFile(
+        filename,
+        JSON.stringify({
+          idPool: this._idPool,
+          map: this._map,
+          nextId: this._nextId
+        }),
+        err => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve();
+          }
         }
-      });
+      );
     });
   }
 }

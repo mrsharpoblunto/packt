@@ -3,12 +3,10 @@
  */
 import events from 'events';
 import Worker from './worker';
-import type {
-  MessageType,
-} from './message-types';
+import type { MessageType } from './message-types';
 import * as errors from 'packt-types';
 
-const {EventEmitter} = events;
+const { EventEmitter } = events;
 
 export default class WorkerPool extends EventEmitter {
   _messageQueue: Array<MessageType>;
@@ -32,7 +30,7 @@ export default class WorkerPool extends EventEmitter {
   }
 
   _handleWorkerMessage(
-    worker: Worker, 
+    worker: Worker,
     workerIndex: number,
     message: MessageType
   ) {
@@ -60,7 +58,7 @@ export default class WorkerPool extends EventEmitter {
           case 'error':
             this._emitMessage({
               type: 'worker_error',
-              error: new errors.PacktWorkerError(workerIndex, s.description),
+              error: new errors.PacktWorkerError(workerIndex, s.description)
             });
             break;
         }
@@ -69,36 +67,26 @@ export default class WorkerPool extends EventEmitter {
 
   start() {
     this._workers.forEach((w, index) => {
-      w.on(
-        'worker_message',
-        this._handleWorkerMessage.bind(this, w, index)
-      );
-      w.start()
+      w.on('worker_message', this._handleWorkerMessage.bind(this, w, index));
+      w.start();
     });
   }
 
-  processModule(
-    resolvedModule: string, 
-    scopeId: string
-  ) {
+  processModule(resolvedModule: string, scopeId: string) {
     this._messageQueue.push({
       type: 'process_module',
       resolvedModule: resolvedModule,
-      scopeId: scopeId,
+      scopeId: scopeId
     });
     this._dequeueMessage();
   }
 
-  processBundle(
-    bundleName: string, 
-    variant: string,
-    data: BundlerData
-  ) {
+  processBundle(bundleName: string, variant: string, data: BundlerData) {
     this._messageQueue.push({
       type: 'process_bundle',
       bundleName,
       variant,
-      data,
+      data
     });
     this._dequeueMessage();
   }
@@ -116,17 +104,19 @@ export default class WorkerPool extends EventEmitter {
         }
       }
     } else {
-      this._idle = this._workers.reduce((prev,next) => {
+      this._idle = this._workers.reduce((prev, next) => {
         return prev && next.status().status === 'idle';
-      },true);
+      }, true);
     }
   }
 
   stop(): Promise<any> {
-    return Promise.all(this._workers.map((w) => {
-      w.removeAllListeners();
-      w.stop()
-    }));
+    return Promise.all(
+      this._workers.map(w => {
+        w.removeAllListeners();
+        w.stop();
+      })
+    );
   }
 
   idle(): boolean {
@@ -134,6 +124,6 @@ export default class WorkerPool extends EventEmitter {
   }
 
   status(): Array<WorkerStatusDescription> {
-    return this._workers.map((w) => w.status());
+    return this._workers.map(w => w.status());
   }
 }

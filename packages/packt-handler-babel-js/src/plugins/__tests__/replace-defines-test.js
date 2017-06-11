@@ -1,83 +1,72 @@
 import replaceDefines from '../replace-defines';
-import {transform as babelTransform} from 'babel-core';
+import { transform as babelTransform } from 'babel-core';
 
 function transform(src, defines) {
-  return babelTransform(
-    src,
-    {
-      plugins: [
-        [
-          replaceDefines,
-          {
-            defines: defines,
-          },
-        ],
-      ],
-    }
-  ).code;
+  return babelTransform(src, {
+    plugins: [
+      [
+        replaceDefines,
+        {
+          defines: defines
+        }
+      ]
+    ]
+  }).code;
 }
 
-describe('Replaces all compile time defines',() => {
-  it('replaces process.env settings when defined in config',() => {
-    const output = transform(
-`var foo = process.env.FOO;`
-    ,{
-      'process.env.FOO': 'production',
+describe('Replaces all compile time defines', () => {
+  it('replaces process.env settings when defined in config', () => {
+    const output = transform(`var foo = process.env.FOO;`, {
+      'process.env.FOO': 'production'
     });
 
-    expect(output).toBe(
-`var foo = "production";`
-    );
+    expect(output).toBe(`var foo = "production";`);
   });
 
-  it('replaces process.env settings from the current process.env',() => {
-    process.env.FOO = "test";
-    const output = transform(
-`var foo = process.env.FOO;`
-    ,{
-    });
+  it('replaces process.env settings from the current process.env', () => {
+    process.env.FOO = 'test';
+    const output = transform(`var foo = process.env.FOO;`, {});
 
-    expect(output).toBe(
-`var foo = "test";`
-    );
+    expect(output).toBe(`var foo = "test";`);
   });
 
-  it('replaces identifiers',() => {
+  it('replaces identifiers', () => {
     const output = transform(
-`var foo = __FOO__;
+      `var foo = __FOO__;
 var bar = __BAR__; 
-var baz = __BAZ__;`
-    ,{
-      __FOO__: "foo",
-      __BAR__: true,
-      __BAZ__: 2.5,
-    });
+var baz = __BAZ__;`,
+      {
+        __FOO__: 'foo',
+        __BAR__: true,
+        __BAZ__: 2.5
+      }
+    );
 
     expect(output).toBe(
-`var foo = "foo";
+      `var foo = "foo";
 var bar = true;
 var baz = 2.5;`
     );
   });
 
-  it('doesnt replace identifiers declared in scope',() => {
+  it('doesnt replace identifiers declared in scope', () => {
     const output = transform(
-`function x() {
+      `function x() {
   var __FOO__ = "bar";
   __FOO__;
 }
-__FOO__;`
-    ,{
-      __FOO__: "foo",
-    });
+__FOO__;`,
+      {
+        __FOO__: 'foo'
+      }
+    );
 
     expect(output).toBe(
-`function x() {
+      `function x() {
   var __FOO__ = "bar";
   __FOO__;
 }
 "foo";`
     );
-
   });
 });

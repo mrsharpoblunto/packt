@@ -1,24 +1,24 @@
 /**
  * @flow
  */
-import type {DependencyGraph} from './dependency-graph';
+import type { DependencyGraph } from './dependency-graph';
 import type {
   GeneratedBundleData,
-  GeneratedBundleSet,
+  GeneratedBundleSet
 } from './generated-bundle-set';
-import {
-  objectMap,
-} from './helpers';
-import type {ReadOnlyContentMapVariant} from './content-map';
+import { objectMap } from './helpers';
+import type { ReadOnlyContentMapVariant } from './content-map';
 
 export type GeneratedBundleLookupVariant = {|
   assetMap: { [key: string]: string },
   dynamicBundleMap: { [key: string]: string },
-  moduleMap: { [key: string]: {
-    exportsIdentifier: string,
-    exportsESModule: boolean,
-  }},
-|}
+  moduleMap: {
+    [key: string]: {
+      exportsIdentifier: string,
+      exportsESModule: boolean
+    }
+  }
+|};
 
 export type GeneratedBundleLookups = {
   [variant: string]: GeneratedBundleLookupVariant
@@ -31,11 +31,14 @@ export function generateBundleLookups(
   const output = {};
 
   for (let v in graph.variants) {
-    const variant = output[v] =  {
+    const variant = (output[v] = {
       assetMap: {},
       moduleMap: {},
-      dynamicBundleMap: objectMap(bundles[v].getDynamicBundles(), (bundle) => bundle.paths.outputPublicPath),
-    };
+      dynamicBundleMap: objectMap(
+        bundles[v].getDynamicBundles(),
+        bundle => bundle.paths.outputPublicPath
+      )
+    });
 
     const lookups = graph.variants[v].lookups;
     for (let m in lookups) {
@@ -45,7 +48,7 @@ export function generateBundleLookups(
       }
       variant.moduleMap[m] = {
         exportsIdentifier: module.exports.identifier,
-        exportsESModule: module.exports.esModule,
+        exportsESModule: module.exports.esModule
       };
     }
   }
@@ -58,28 +61,27 @@ export function serializeBundle({
   bundle,
   bundleLookups,
   config,
-  contentMap,
+  contentMap
 }: {|
   bundleName: string,
   bundle: GeneratedBundleData,
   bundleLookups: GeneratedBundleLookupVariant,
   contentMap: ReadOnlyContentMapVariant,
-  config: PacktConfig,
+  config: PacktConfig
 |}): BundlerData {
-  return { 
-    modules: bundle.modules.map(
-      (m) => m.serialize(
-         bundle.usedSymbols[m.module],
-         m.contentHash ? contentMap(m.module) : ''
-      )
-    ), 
-    paths: bundle.paths,
-    hasDependencies: bundle.type === 'dynamic' || (
-      config.bundles[bundleName].type === 'entrypoint' && (
-        Object.keys(config.bundles[bundleName].commons).length!==0 ||
-        Object.keys(config.bundles[bundleName].depends).length!==0
+  return {
+    modules: bundle.modules.map(m =>
+      m.serialize(
+        bundle.usedSymbols[m.module],
+        m.contentHash ? contentMap(m.module) : ''
       )
     ),
+    paths: bundle.paths,
+    hasDependencies:
+      bundle.type === 'dynamic' ||
+        (config.bundles[bundleName].type === 'entrypoint' &&
+          (Object.keys(config.bundles[bundleName].commons).length !== 0 ||
+            Object.keys(config.bundles[bundleName].depends).length !== 0)),
     ...bundleLookups
   };
 }

@@ -4,7 +4,7 @@
 
 export default class Timer {
   _categories: {
-    [key: string]: ({ [key: string]: number } | number),
+    [key: string]: { [key: string]: number } | number
   };
 
   constructor() {
@@ -15,15 +15,12 @@ export default class Timer {
     this._categories = {};
   }
 
-  accumulate(
-    category: string,
-    values: { [key: string]: number} | number
-  ) {
+  accumulate(category: string, values: { [key: string]: number } | number) {
     const c = this._categories[category];
 
     if (!c) {
-      this._categories[category] = (typeof values === 'object') 
-        ? Object.assign({},values)
+      this._categories[category] = typeof values === 'object'
+        ? Object.assign({}, values)
         : values;
     } else if (typeof values === 'object' && typeof c === 'object') {
       for (let sub in values) {
@@ -38,19 +35,16 @@ export default class Timer {
     }
   }
 
-  get(
-    category: string,
-    sub: ?string
-  ): number {
+  get(category: string, sub: ?string): number {
     const c = this._categories[category];
     if (!sub) {
-      return (typeof c === 'number') ? c : 0;
+      return typeof c === 'number' ? c : 0;
     } else {
-      return (typeof c === 'object') ? c[sub] : 0;
+      return typeof c === 'object' ? c[sub] : 0;
     }
   }
 
-  getCategories(): Array<string>  {
+  getCategories(): Array<string> {
     return Object.keys(this._categories);
   }
 

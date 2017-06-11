@@ -9,30 +9,29 @@ const path = require('path');
  * allowed!
  */
 module.exports = {
-
   /**
    * option which for performance or logical reasons cannot vary
    * between build variants
    */
   invariantOptions: {
     workers: os.cpus().length - 1,
-    outputPath: path.join(__dirname,'_build'),
+    outputPath: path.join(__dirname, '_build'),
     outputHash: 'md5',
-    outputHashLength: 12,
-  }, 
+    outputHashLength: 12
+  },
 
   resolvers: {
     builtIn: {
       invariantOptions: {
         searchPaths: [
           __dirname,
-          path.join(__dirname,'src'),
-          path.join(__dirname,'node_modules'),
-          path.join(__dirname,'shaders'),
+          path.join(__dirname, 'src'),
+          path.join(__dirname, 'node_modules'),
+          path.join(__dirname, 'shaders')
         ],
-        extensions: ['.html','.js','.glsl','.css'],
-      },
-    },
+        extensions: ['.html', '.js', '.glsl', '.css']
+      }
+    }
   },
 
   bundles: {
@@ -40,40 +39,40 @@ module.exports = {
       type: 'entrypoint',
       requires: ['src/main.js'],
       depends: ['vendor.js'],
-      bundler: 'js',
+      bundler: 'js'
     },
     'vendor.js': {
       type: 'library',
       requires: ['node_modules/twgl.js', 'node_modules/gl-matrix'],
-      bundler: 'js',
+      bundler: 'js'
     },
     'index.html': {
       type: 'entrypoint',
       requires: ['src/index.html'],
-      bundler: 'raw',
-    },
+      bundler: 'raw'
+    }
   },
 
   /**
    * configures how resources get bundled together
    */
   bundlers: {
-    'js': {
+    js: {
       require: 'packt-bundler-js',
       invariantOptions: {
-        outputPathFormat: '/bundles/${name}${ext}',
+        outputPathFormat: '/bundles/${name}${ext}'
       },
       options: {
         base: {
-          minify: true,
-        },
-      },
+          minify: true
+        }
+      }
     },
-    'raw': {
+    raw: {
       require: 'packt-bundler-raw',
       invariantOptions: {
-        outputPathFormat: '/${name}${ext}',
-      },
+        outputPathFormat: '/${name}${ext}'
+      }
     }
   },
 
@@ -89,10 +88,10 @@ module.exports = {
       options: {
         base: {
           babelOptions: {
-            babelrc: false,
-          },
-        },
-      },
+            babelrc: false
+          }
+        }
+      }
     },
     {
       pattern: '\\.js$',
@@ -100,35 +99,30 @@ module.exports = {
       options: {
         base: {
           babelOptions: {
-            plugins: [
-              "transform-flow-strip-types",
-            ],
-            presets: [
-              ["es2015", { "modules": false }],
-              "stage-0",
-            ],
-            compact: false,
+            plugins: ['transform-flow-strip-types'],
+            presets: [['es2015', { modules: false }], 'stage-0'],
+            compact: false
           },
           defines: {
-            "foo": "bar",
-            "__DEV__": false,
-            "baz": 1,
-          },
+            foo: 'bar',
+            __DEV__: false,
+            baz: 1
+          }
           //preserveIdentifiers: false,
-        },
-      },
+        }
+      }
     },
     {
       pattern: '\\.css$',
-      require: 'packt-handler-post-css',
+      require: 'packt-handler-post-css'
     },
     {
       pattern: '\\.glsl$',
-      require: 'packt-handler-raw-to-js',
+      require: 'packt-handler-raw-to-js'
     },
     {
       pattern: '\\.html$',
-      require: 'packt-handler-raw',
-    },
-  ],
+      require: 'packt-handler-raw'
+    }
+  ]
 };

@@ -10,8 +10,7 @@ export function getLiteralOrConst(node, scope) {
           const boundNode = bound.path.node;
           if (!boundNode.init) {
             return { value: undefined };
-          }
-          else if (
+          } else if (
             boundNode.init.type === 'StringLiteral' ||
             boundNode.init.type === 'NumericLiteral' ||
             boundNode.init.type === 'BooleanLiteral'
@@ -28,7 +27,8 @@ export function getLiteralOrConst(node, scope) {
   } else if (
     node.type === 'StringLiteral' ||
     node.type === 'NumericLiteral' ||
-    node.type === 'BooleanLiteral') {
+    node.type === 'BooleanLiteral'
+  ) {
     return { value: node.value };
   } else if (node.type === 'NullLiteral') {
     return { value: null };
@@ -37,7 +37,7 @@ export function getLiteralOrConst(node, scope) {
 }
 
 export function createLiteral(value) {
-  switch (typeof(value)) {
+  switch (typeof value) {
     case 'string':
       return t.stringLiteral(value);
     case 'boolean':

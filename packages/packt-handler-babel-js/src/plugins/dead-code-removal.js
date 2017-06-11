@@ -6,23 +6,25 @@ export default function transform(babel) {
     visitor: {
       // try to collapse and eliminate dead conditional branches
       IfStatement: {
-        exit: collapseConditional,
+        exit: collapseConditional
       },
       ConditionalExpression: {
-        exit: collapseConditional,
-      },
-    },
+        exit: collapseConditional
+      }
+    }
   };
 }
 
 function collapseConditional(path) {
-  path.traverse(evaluateExpression,{});
+  path.traverse(evaluateExpression, {});
   const value = helpers.getLiteralOrConst(path.node.test, path.scope);
   if (value) {
     if (!value.value && !path.node.alternate) {
       path.remove();
     } else {
-      path.replaceWith(value.value ? path.node.consequent : path.node.alternate);
+      path.replaceWith(
+        value.value ? path.node.consequent : path.node.alternate
+      );
     }
   }
 }

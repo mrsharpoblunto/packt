@@ -17,8 +17,7 @@ export default function debugJSRuntime(
     aliasMap[mapEntry.exportsIdentifier] = module.importAliases;
   }
 
-  return (
-`window.module=window.module||{};
+  return `window.module=window.module||{};
 window.__packt_alias_map__ = Object.assign(
   window.__packt_alias_map__||{},
   ${JSON.stringify(aliasMap)}
@@ -47,6 +46,5 @@ window.__packt_dynamic_import__ = window.__packt_dynamic_import__ || function(bu
   ];
   var e = window.__packt_identifier_map__[importModule];
   return window.__packt_dynamic_import_impl__(url, e.exportsIdentifier);
-};`
-  );
+};`;
 }

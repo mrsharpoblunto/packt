@@ -6,7 +6,7 @@ import type {
   MessageType,
   ProcessConfigMessage,
   ProcessModuleMessage,
-  ProcessBundleMessage,
+  ProcessBundleMessage
 } from './message-types';
 import path from 'path';
 import BuiltInResolver from './built-in-resolver';
@@ -17,23 +17,23 @@ class WorkerProcess {
   _handlers: Array<{|
     pattern: RegExp,
     invariantOptions: HandlerOptions,
-    options: {[key: string]: HandlerOptions},
+    options: { [key: string]: HandlerOptions },
     handler: Handler,
-    delegateFactory: (resolvedModule: string) => HandlerDelegate,
+    delegateFactory: (resolvedModule: string) => HandlerDelegate
   |}>;
   _bundles: {
     [key: string]: {
       bundler: string,
-      bundlerOptions: {[key: string]: Object},
-    },
+      bundlerOptions: { [key: string]: Object }
+    }
   };
   _bundlers: {
     [key: string]: {|
       invariantOptions: BundlerOptions,
-      options: {[key: string]: BundlerOptions},
+      options: { [key: string]: BundlerOptions },
       bundler: Bundler,
-      delegateFactory: (bundleName: string, variant: string) => BundlerDelegate,
-    |},
+      delegateFactory: (bundleName: string, variant: string) => BundlerDelegate
+    |}
   };
 
   constructor() {
@@ -46,7 +46,7 @@ class WorkerProcess {
     process.on('uncaughtException', (err: Error) => {
       this._sendMessage({
         type: 'raw_worker_error',
-        error: err.stack,
+        error: err.stack
       });
       process.exit(0);
     });
@@ -77,7 +77,7 @@ class WorkerProcess {
 
   _handlerDelegateFactory(
     pathUtils: OutputPathHelpers,
-    resolver: BuiltInResolver,
+    resolver: BuiltInResolver
   ): (resolvedModule: string) => HandlerDelegate {
     return (resolvedModule: string) => ({});
   }
@@ -85,7 +85,7 @@ class WorkerProcess {
   _processConfig(msg: ProcessConfigMessage) {
     const pathUtils = new OutputPathHelpers(msg.config);
     const resolver = new BuiltInResolver(
-      BuiltInResolver.defaultOptions(msg.config.workingDirectory),
+      BuiltInResolver.defaultOptions(msg.config.workingDirectory)
     );
 
     this._allVariants = Object.keys(msg.config.options);
@@ -97,18 +97,18 @@ class WorkerProcess {
         delegateFactory: this._handlerDelegateFactory(
           pathUtils,
           resolver,
-          msg.config.configFile,
+          msg.config.configFile
         ),
         invariantOptions: {
           global: msg.config.invariantOptions,
-          handler: handlerConfig.invariantOptions,
+          handler: handlerConfig.invariantOptions
         },
-        options: {},
+        options: {}
       };
       for (let v in msg.config.options) {
         handler.options[v] = {
           global: msg.config.options[v],
-          handler: handlerConfig.options[v],
+          handler: handlerConfig.options[v]
         };
       }
       this._handlers.push(handler);
@@ -121,12 +121,12 @@ class WorkerProcess {
             h.handler.init(
               h.invariantOptions,
               h.delegateFactory(''),
-              err => (err ? reject(err) : resolve()),
+              err => (err ? reject(err) : resolve())
             );
           } catch (ex) {
             reject(ex);
           }
-        }),
+        })
     );
 
     for (let b in msg.config.bundlers) {
@@ -135,18 +135,18 @@ class WorkerProcess {
         bundler: new (require(bundlerConfig.require))(),
         delegateFactory: this._bundlerDelegateFactory(
           resolver,
-          msg.config.configFile,
+          msg.config.configFile
         ),
         invariantOptions: {
           global: msg.config.invariantOptions,
-          bundler: bundlerConfig.invariantOptions,
+          bundler: bundlerConfig.invariantOptions
         },
-        options: {},
+        options: {}
       };
       for (let v in msg.config.options) {
         bundler.options[v] = {
           global: msg.config.options[v],
-          bundler: bundlerConfig.options[v],
+          bundler: bundlerConfig.options[v]
         };
       }
       this._bundlers[b] = bundler;
@@ -156,7 +156,7 @@ class WorkerProcess {
       const bundle = msg.config.bundles[next];
       prev[next] = {
         bundler: bundle.bundler,
-        bundlerOptions: bundle.bundlerOptions,
+        bundlerOptions: bundle.bundlerOptions
       };
       return prev;
     }, {});
@@ -171,26 +171,26 @@ class WorkerProcess {
               bundler.bundler.init(
                 bundler.invariantOptions,
                 bundler.delegateFactory('', ''),
-                err => (err ? reject(err) : resolve()),
+                err => (err ? reject(err) : resolve())
               );
             } catch (ex) {
               reject(ex);
             }
-          }),
-      ),
+          })
+      )
     );
 
     Promise.all(initializing).then(
       () => {
-        this._sendMessage({type: 'task_complete'});
+        this._sendMessage({ type: 'task_complete' });
       },
       (err: Error) => {
         this._sendMessage({
           type: 'raw_worker_error',
-          error: err.stack,
+          error: err.stack
         });
         process.exit(0);
-      },
+      }
     );
   }
 
@@ -211,29 +211,29 @@ class WorkerProcess {
   _handlerDelegateFactory(
     outputPathHelpers: OutputPathHelpers,
     resolver: BuiltInResolver,
-    configFile: string,
+    configFile: string
   ): (resolvedModule: string) => HandlerDelegate {
     return (resolvedModule: string) => ({
       importsModule: (
         variants: Array<string>,
-        importDeclaration: ImportDeclaration,
+        importDeclaration: ImportDeclaration
       ) => {
         this._sendMessage({
           type: 'module_import',
           variants,
           resolvedModule,
-          importDeclaration,
+          importDeclaration
         });
       },
       exportsSymbols: (
         variants: Array<string>,
-        exportDeclaration: ExportDeclaration,
+        exportDeclaration: ExportDeclaration
       ) => {
         this._sendMessage({
           type: 'module_export',
           variants,
           resolvedModule,
-          exportDeclaration,
+          exportDeclaration
         });
       },
       emitWarning: (variants: Array<string>, warning: string) => {
@@ -241,36 +241,36 @@ class WorkerProcess {
           type: 'module_warning',
           variants,
           resolvedModule,
-          warning,
+          warning
         });
       },
       generatedAsset: (
         variants: Array<string>,
         assetName: string,
-        outputPath: string,
+        outputPath: string
       ) => {
         this._sendMessage({
           type: 'module_generated_asset',
           variants,
           resolvedModule,
           assetName,
-          outputPath,
+          outputPath
         });
       },
       resolve: (
         path: string,
-        callback: (err: ?Error, resolved: ?string) => void,
+        callback: (err: ?Error, resolved: ?string) => void
       ) => {
         resolver.resolve(path, configFile, false, callback);
       },
       getOutputPaths: outputPathHelpers.getOutputPaths.bind(outputPathHelpers),
-      generateHash: outputPathHelpers.generateHash.bind(outputPathHelpers),
+      generateHash: outputPathHelpers.generateHash.bind(outputPathHelpers)
     });
   }
 
   _bundlerDelegateFactory(
     resolver: BuiltInResolver,
-    configFile: string,
+    configFile: string
   ): (bundleName: string, variant: string) => BundlerDelegate {
     return (bundleName: string, variant: string) => ({
       emitWarning: (warning: string) => {
@@ -278,15 +278,15 @@ class WorkerProcess {
           type: 'bundle_warning',
           warning: warning,
           bundleName,
-          variant,
+          variant
         });
       },
       resolve: (
         path: string,
-        callback: (err: ?Error, resolved: ?string) => void,
+        callback: (err: ?Error, resolved: ?string) => void
       ) => {
         resolver.resolve(path, configFile, false, callback);
-      },
+      }
     });
   }
 
@@ -298,9 +298,9 @@ class WorkerProcess {
         variants: this._allVariants,
         error: 'No handler matched resolved resource ' + msg.resolvedModule,
         resolvedModule: msg.resolvedModule,
-        handler: '',
+        handler: ''
       });
-      this._sendMessage({type: 'task_complete'});
+      this._sendMessage({ type: 'task_complete' });
       return;
     }
 
@@ -319,7 +319,7 @@ class WorkerProcess {
             handler: handler.pattern.toString(),
             variants: variants || this._allVariants,
             error: typeof err === 'string' ? err : err.stack,
-            resolvedModule: msg.resolvedModule,
+            resolvedModule: msg.resolvedModule
           });
         } else if (variants && response) {
           this._sendMessage({
@@ -330,18 +330,18 @@ class WorkerProcess {
             contentType: response.contentType,
             contentHash: response.contentHash,
             perfStats: response.perfStats,
-            resolvedModule: msg.resolvedModule,
+            resolvedModule: msg.resolvedModule
           });
         }
 
         // once all the expected variants are processed, go onto the next task
         remaining = remaining.filter(
-          r => !(variants || this._allVariants).find(v => v === r),
+          r => !(variants || this._allVariants).find(v => v === r)
         );
         if (!remaining.length) {
-          this._sendMessage({type: 'task_complete'});
+          this._sendMessage({ type: 'task_complete' });
         }
-      },
+      }
     );
   }
 
@@ -358,18 +358,18 @@ class WorkerProcess {
         bundleName: msg.bundleName,
         variant: msg.variant,
         bundler: '',
-        error: 'No bundler matched the name ' + bundleName,
+        error: 'No bundler matched the name ' + bundleName
       });
-      this._sendMessage({type: 'task_complete'});
+      this._sendMessage({ type: 'task_complete' });
       return;
     }
 
     const delegate = bundler.delegateFactory(bundleName, msg.variant);
 
-    const bundlerOptions = {...bundler.options[msg.variant]};
+    const bundlerOptions = { ...bundler.options[msg.variant] };
     bundlerOptions.bundler = {
       ...bundlerOptions.bundler,
-      ...bundle.bundlerOptions[msg.variant],
+      ...bundle.bundlerOptions[msg.variant]
     };
 
     bundler.bundler.process(
@@ -384,7 +384,7 @@ class WorkerProcess {
             bundleName: msg.bundleName,
             variant: msg.variant,
             bundler: bundle.bundler,
-            error: typeof err === 'string' ? err : err.stack,
+            error: typeof err === 'string' ? err : err.stack
           });
         } else if (response) {
           this._sendMessage({
@@ -392,11 +392,11 @@ class WorkerProcess {
             bundleName: msg.bundleName,
             variant: msg.variant,
             bundler: bundle.bundler,
-            perfStats: response.perfStats,
+            perfStats: response.perfStats
           });
         }
-        this._sendMessage({type: 'task_complete'});
-      },
+        this._sendMessage({ type: 'task_complete' });
+      }
     );
   }
 }

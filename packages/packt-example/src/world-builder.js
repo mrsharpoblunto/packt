@@ -9,16 +9,16 @@ import glm from 'gl-matrix';
  * world
  */
 export default function buildWorld(world: World): void {
-    world.createEntity(Builders.camera,{
-        lockPitch: true,
-        fov: 45,
-        position: glm.vec3.fromValues(0,5,10),
-        focalPoint: glm.vec3.fromValues(0,0,0),
-    });
+  world.createEntity(Builders.camera, {
+    lockPitch: true,
+    fov: 45,
+    position: glm.vec3.fromValues(0, 5, 10),
+    focalPoint: glm.vec3.fromValues(0, 0, 0)
+  });
 
-    world.createEntity(Builders.terrain);
+  world.createEntity(Builders.terrain);
 
-    world.createEntity(Builders.cube, {
-        position: glm.vec3.fromValues(0,3,0),
-    });
+  world.createEntity(Builders.cube, {
+    position: glm.vec3.fromValues(0, 3, 0)
+  });
 }

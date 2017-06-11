@@ -19,7 +19,7 @@ export default class RawHandler implements Handler {
   }
 
   process(
-    resolvedModule: string, 
+    resolvedModule: string,
     scopeId: string,
     options: { [key: string]: HandlerOptions },
     delegate: HandlerDelegate,
@@ -27,7 +27,7 @@ export default class RawHandler implements Handler {
   ) {
     const stats = {};
     let start = Date.now();
-    fs.readFile(resolvedModule, (err,data) => {
+    fs.readFile(resolvedModule, (err, data) => {
       stats.diskIO = Date.now() - start;
       if (err) {
         return callback(err);
@@ -36,9 +36,7 @@ export default class RawHandler implements Handler {
       try {
         start = Date.now();
         let contentType = mime.lookup(resolvedModule);
-        let encoding = (
-          contentType.indexOf('text/')===0 ? 'utf8' : 'base64'
-        );
+        let encoding = contentType.indexOf('text/') === 0 ? 'utf8' : 'base64';
 
         let source = new Buffer(data).toString(encoding);
 
@@ -46,31 +44,20 @@ export default class RawHandler implements Handler {
         stats.postSize = source.length;
         stats.transform = Date.now() - start;
 
-        delegate.exportsSymbols(
-          Object.keys(options),
-          {
-            identifier: scopeId,
-            symbols: ['*'],
-            esModule: false,
-          }
-        );
+        delegate.exportsSymbols(Object.keys(options), {
+          identifier: scopeId,
+          symbols: ['*'],
+          esModule: false
+        });
 
-        callback(
-          null,
-          Object.keys(options),
-          {
-            content: source,
-            contentType: contentType,
-            contentHash: delegate.generateHash(source),
-            perfStats: stats,
-          }
-        );
-      }
-      catch (err) {
-        callback(
-          err,
-          Object.keys(options)
-        );
+        callback(null, Object.keys(options), {
+          content: source,
+          contentType: contentType,
+          contentHash: delegate.generateHash(source),
+          perfStats: stats
+        });
+      } catch (err) {
+        callback(err, Object.keys(options));
       }
     });
   }

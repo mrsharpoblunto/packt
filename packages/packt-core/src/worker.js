@@ -4,14 +4,12 @@
 import child_process from 'child_process';
 import path from 'path';
 import events from 'events';
-import type {
-  MessageType
-} from './message-types';
+import type { MessageType } from './message-types';
 
-const {EventEmitter} = events;
+const { EventEmitter } = events;
 
-const WORKER_PROCESS = process.env.NODE_ENV==='packtdev' 
-  ? 'worker-process-dev.js' 
+const WORKER_PROCESS = process.env.NODE_ENV === 'packtdev'
+  ? 'worker-process-dev.js'
   : 'worker-process.js';
 
 export default class Worker extends EventEmitter {
@@ -24,21 +22,21 @@ export default class Worker extends EventEmitter {
     this._config = config;
     this._status = {
       status: 'idle',
-      description: '',
+      description: ''
     };
   }
 
   start() {
-    const process = child_process.fork(path.join(__dirname,WORKER_PROCESS), {
-      cwd: this._config.workingDirectory,
+    const process = child_process.fork(path.join(__dirname, WORKER_PROCESS), {
+      cwd: this._config.workingDirectory
     });
-    process.on('message',this._onMessage.bind(this));
-    process.on('close',this._onClose.bind(this));
+    process.on('message', this._onMessage.bind(this));
+    process.on('close', this._onClose.bind(this));
     this._process = process;
 
     this.sendMessage({
       type: 'process_config',
-      config: this._config,
+      config: this._config
     });
   }
 
@@ -59,10 +57,7 @@ export default class Worker extends EventEmitter {
         this._setStatus('idle');
         break;
       case 'raw_worker_error':
-        this._setStatus(
-          'error',
-          message.error,
-        );
+        this._setStatus('error', message.error);
         break;
       default:
         throw new Error('Unknown message type ' + message.type);
@@ -72,22 +67,16 @@ export default class Worker extends EventEmitter {
   _onClose(code: number) {
     this._process = null;
     if (code) {
-      this._setStatus(
-        'error',
-        'Exited with code ' + code
-      );
+      this._setStatus('error', 'Exited with code ' + code);
     }
   }
 
-  _setStatus(
-    status: WorkerStatus,
-    description: ?string
-  ) {
+  _setStatus(status: WorkerStatus, description: ?string) {
     this._status.status = status;
     this._status.description = description || '';
     this._emitMessage({
       type: 'status_change',
-      status: this._status,
+      status: this._status
     });
   }
 
@@ -103,16 +92,10 @@ export default class Worker extends EventEmitter {
         );
         break;
       case 'process_module':
-        this._setStatus(
-          'processing',
-          message.resolvedModule
-        );
+        this._setStatus('processing', message.resolvedModule);
         break;
       case 'process_bundle':
-        this._setStatus(
-          'bundling',
-          message.bundleName
-        );
+        this._setStatus('bundling', message.bundleName);
         break;
       default:
         throw new Error('Unknown message type ' + message.type);
@@ -140,16 +123,16 @@ export default class Worker extends EventEmitter {
       return Promise.resolve();
     }
 
-    this._sendMessage({type: 'close'});
-    return new Promise((resolve) => {
+    this._sendMessage({ type: 'close' });
+    return new Promise(resolve => {
       const awaitClose = () => {
         if (this._process) {
-          setTimeout(awaitClose,100);
+          setTimeout(awaitClose, 100);
         } else {
           this._setStatus('stopped');
           resolve();
         }
-      }
+      };
       awaitClose();
     });
   }

@@ -22,21 +22,17 @@ export default function transform(babel) {
       // inform the dependency graph what exported symbols
       // this module provides, & under what identifier they are
       // associated in the global scope
-      this.opts.delegate.exportsSymbols(
-        this.opts.variants,
-        {
-            identifier: this.moduleExport,
-            symbols: this.exportedSymbols.slice(0),
-            esModule: this.exportedSymbols.esModule,
-        }
-      );
+      this.opts.delegate.exportsSymbols(this.opts.variants, {
+        identifier: this.moduleExport,
+        symbols: this.exportedSymbols.slice(0),
+        esModule: this.exportedSymbols.esModule
+      });
     },
     visitor: {
       Program: {
         enter: function(path) {
           this.exportAlias = path.scope.generateUidIdentifier(
-            this.moduleScope + 
-            (this.opts.preserveIdentifiers ? 'exports' : '')
+            this.moduleScope + (this.opts.preserveIdentifiers ? 'exports' : '')
           );
           this.moduleExport = this.exportAlias.name;
         },
@@ -51,20 +47,18 @@ export default function transform(babel) {
 
           if (this.exportedSymbols.length) {
             // create top level export object
-            path.unshiftContainer('body', 
+            path.unshiftContainer(
+              'body',
               t.expressionStatement(
                 t.assignmentExpression(
                   '=',
-                  t.memberExpression(
-                    t.identifier('window'),
-                    this.exportAlias
-                  ),
+                  t.memberExpression(t.identifier('window'), this.exportAlias),
                   t.objectExpression([])
                 )
               )
             );
           }
-        },
+        }
       },
       VariableDeclaration: function(path) {
         // hoist top level variable declarations to the global scope
@@ -78,10 +72,10 @@ export default function transform(babel) {
               continue;
             }
             const alias = path.scope.generateUidIdentifier(
-              this.moduleScope + 
-              (this.opts.preserveIdentifiers ? decl.id.name : '')
+              this.moduleScope +
+                (this.opts.preserveIdentifiers ? decl.id.name : '')
             );
-            path.scope.rename(decl.id.name,alias.name);
+            path.scope.rename(decl.id.name, alias.name);
           }
         }
       },
@@ -95,10 +89,10 @@ export default function transform(babel) {
           !this.hoisted.hasOwnProperty(path.node.id.name)
         ) {
           const alias = path.scope.generateUidIdentifier(
-            this.moduleScope + 
-            (this.opts.preserveIdentifiers ? path.node.id.name : '')
+            this.moduleScope +
+              (this.opts.preserveIdentifiers ? path.node.id.name : '')
           );
-          path.scope.rename(path.node.id.name,alias.name);
+          path.scope.rename(path.node.id.name, alias.name);
         }
       },
       ClassDeclaration: function(path) {
@@ -106,10 +100,10 @@ export default function transform(babel) {
         // inserting the unique scope id for this module
         if (!path.scope.parent.parent) {
           const alias = path.scope.generateUidIdentifier(
-            this.moduleScope + 
-            (this.opts.preserveIdentifiers ? path.node.id.name : '')
+            this.moduleScope +
+              (this.opts.preserveIdentifiers ? path.node.id.name : '')
           );
-          path.scope.rename(path.node.id.name,alias.name);
+          path.scope.rename(path.node.id.name, alias.name);
           this.hoisted[alias.name] = true;
         }
       },
@@ -126,26 +120,19 @@ export default function transform(babel) {
             this.importAliases,
             this.symbolAliases
           );
-          path.replaceWith(t.objectProperty(
-            path.node.key,
-            localImport
-          ));
+          path.replaceWith(t.objectProperty(path.node.key, localImport));
           path.skip();
         }
       },
       Identifier: function(path) {
         const parentNodeType = path.parentPath.node.type;
         if (
-          (
-            parentNodeType === 'MemberExpression' &&
-            path.node === path.parentPath.node.property
-          ) ||
+          (parentNodeType === 'MemberExpression' &&
+            path.node === path.parentPath.node.property) ||
           parentNodeType === 'FunctionDeclaration' ||
           parentNodeType === 'ClassMethod' ||
-          (
-            parentNodeType === 'ObjectProperty' &&
-            path.node === path.parentPath.node.key
-          )
+          (parentNodeType === 'ObjectProperty' &&
+            path.node === path.parentPath.node.key)
         ) {
           return;
         }
@@ -156,12 +143,7 @@ export default function transform(babel) {
           this.exportedByValue.hasOwnProperty(path.node.name) &&
           hasProgramLevelBindingOnly(path, path.node.name)
         ) {
-          path.replaceWith(
-            t.memberExpression(
-              this.exportAlias,
-              path.node
-            )
-          );
+          path.replaceWith(t.memberExpression(this.exportAlias, path.node));
           path.skip();
         } else if (
           this.importAliases.hasOwnProperty(path.node.name) &&
@@ -197,31 +179,24 @@ export default function transform(babel) {
         }
       },
       ExportAllDeclaration: function(path) {
-        this.opts.delegate.importsModule(
-          this.opts.variants,
-          {
-            source: path.node.source.value,
-            symbols: ['*'],
-            type: 'static',
-          }
-        );
+        this.opts.delegate.importsModule(this.opts.variants, {
+          source: path.node.source.value,
+          symbols: ['*'],
+          type: 'static'
+        });
         exportSymbol(this.exportedSymbols, '*', true);
-        path.replaceWith(t.callExpression(
-          t.memberExpression(
-            t.identifier('Object'),
-            t.identifier('assign')
-          ),
-          [
-            this.exportAlias,
-            t.callExpression(
-              t.identifier(constants.PACKT_IMPORT_PLACEHOLDER),
-              [
-                t.stringLiteral(this.exportAlias.name),
-                path.node.source,
-              ]
-            ),
-          ]
-        ));
+        path.replaceWith(
+          t.callExpression(
+            t.memberExpression(t.identifier('Object'), t.identifier('assign')),
+            [
+              this.exportAlias,
+              t.callExpression(
+                t.identifier(constants.PACKT_IMPORT_PLACEHOLDER),
+                [t.stringLiteral(this.exportAlias.name), path.node.source]
+              )
+            ]
+          )
+        );
         path.skip();
       },
       ExportDefaultDeclaration: function(path) {
@@ -238,30 +213,26 @@ export default function transform(babel) {
             decl.type === 'VariableDeclaration'
           ) {
             if (!decl.id) {
-              decl.id = path.scope.generateUidIdentifier(
-                this.moduleScope
-              );
+              decl.id = path.scope.generateUidIdentifier(this.moduleScope);
               this.hoisted[decl.id.name] = true;
             }
             path.replaceWithMultiple([
               symbolMarkerStart(decl, 'default'),
-              symbolMarkerEnd(t.expressionStatement(
-                t.assignmentExpression(
-                  '=',
-                  defaultMember,
-                  decl.id
-                )
-              ), 'default')
+              symbolMarkerEnd(
+                t.expressionStatement(
+                  t.assignmentExpression('=', defaultMember, decl.id)
+                ),
+                'default'
+              )
             ]);
           } else {
             path.replaceWith(
-              symbolMarkerWrap(t.expressionStatement(
-                t.assignmentExpression(
-                  '=',
-                  defaultMember,
-                  decl
-                )
-              ), 'default')
+              symbolMarkerWrap(
+                t.expressionStatement(
+                  t.assignmentExpression('=', defaultMember, decl)
+                ),
+                'default'
+              )
             );
           }
         }
@@ -284,13 +255,16 @@ export default function transform(babel) {
             );
             path.replaceWithMultiple([
               symbolMarkerStart(path.node.declaration, exportName),
-              symbolMarkerEnd(t.expressionStatement(
-                t.assignmentExpression(
-                  '=',
-                  namedMember,
-                  path.node.declaration.id
-                )
-              ), exportName)
+              symbolMarkerEnd(
+                t.expressionStatement(
+                  t.assignmentExpression(
+                    '=',
+                    namedMember,
+                    path.node.declaration.id
+                  )
+                ),
+                exportName
+              )
             ]);
           } else if (path.node.declaration.type === 'VariableDeclaration') {
             const assignments = [];
@@ -304,10 +278,7 @@ export default function transform(babel) {
                   t.expressionStatement(
                     t.assignmentExpression(
                       '=',
-                      t.memberExpression(
-                        this.exportAlias,
-                        decl.id
-                      ),
+                      t.memberExpression(this.exportAlias, decl.id),
                       decl.init
                     )
                   )
@@ -342,25 +313,28 @@ export default function transform(babel) {
             const exportName = spec.exported.name;
             if (path.node.source) {
               objectProps.push(
-                symbolMarkerWrap(t.objectProperty(
-                  spec.exported,
-                  t.memberExpression(
-                    t.callExpression(
-                      t.identifier(constants.PACKT_IMPORT_PLACEHOLDER),
-                      [
-                        t.stringLiteral(this.exportAlias.name),
-                        path.node.source,
-                      ]
-                    ),
-                    local || spec.exported
-                  )
-                ), exportName)
+                symbolMarkerWrap(
+                  t.objectProperty(
+                    spec.exported,
+                    t.memberExpression(
+                      t.callExpression(
+                        t.identifier(constants.PACKT_IMPORT_PLACEHOLDER),
+                        [
+                          t.stringLiteral(this.exportAlias.name),
+                          path.node.source
+                        ]
+                      ),
+                      local || spec.exported
+                    )
+                  ),
+                  exportName
+                )
               );
               symbols.push(exportName);
             } else {
               objectProps.push(
                 symbolMarkerWrap(
-                  t.objectProperty(spec.exported,local),
+                  t.objectProperty(spec.exported, local),
                   exportName
                 )
               );
@@ -369,14 +343,11 @@ export default function transform(babel) {
           }
 
           if (symbols.length) {
-            this.opts.delegate.importsModule(
-              this.opts.variants,
-              {
-                source: path.node.source.value,
-                symbols: symbols,
-                type: 'static',
-              }
-            );
+            this.opts.delegate.importsModule(this.opts.variants, {
+              source: path.node.source.value,
+              symbols: symbols,
+              type: 'static'
+            });
           }
 
           path.replaceWith(
@@ -385,10 +356,7 @@ export default function transform(babel) {
                 t.identifier('Object'),
                 t.identifier('assign')
               ),
-              [
-                this.exportAlias,
-                t.objectExpression(objectProps)
-              ]
+              [this.exportAlias, t.objectExpression(objectProps)]
             )
           );
           path.skip();
@@ -419,19 +387,16 @@ export default function transform(babel) {
           symbols.push(symbol);
           this.importAliases[spec.local.name] = {
             moduleName: moduleName,
-            symbol: symbol,
+            symbol: symbol
           };
           path.scope.removeBinding(spec.local.name);
         }
 
-        this.opts.delegate.importsModule(
-          this.opts.variants,
-          {
-            source: path.node.source.value,
-            symbols: symbols,
-            type: 'static',
-          }
-        );
+        this.opts.delegate.importsModule(this.opts.variants, {
+          source: path.node.source.value,
+          symbols: symbols,
+          type: 'static'
+        });
 
         path.remove();
       },
@@ -439,27 +404,28 @@ export default function transform(babel) {
         exit: function(path) {
           let required;
           if (
-            (path.node.callee.type === 'Import' || (
-                path.node.callee.name === 'require' &&
-                !path.scope.hasBinding('require')
-              )
-            ) && !isUnreachable(path)
+            (path.node.callee.type === 'Import' ||
+              (path.node.callee.name === 'require' &&
+                !path.scope.hasBinding('require'))) &&
+            !isUnreachable(path)
           ) {
             if (path.node.arguments.length !== 1) {
-              throw path.buildCodeFrameError(`Expected a single argument to ${node.callee.name}`);
+              throw path.buildCodeFrameError(
+                `Expected a single argument to ${node.callee.name}`
+              );
             } else if (path.node.arguments[0].type !== 'StringLiteral') {
-              path.traverse(evaluateExpression,{
-                skipIdentifier: path.node.callee.name || 'import',
+              path.traverse(evaluateExpression, {
+                skipIdentifier: path.node.callee.name || 'import'
               });
               if (path.node.arguments[0].type !== 'StringLiteral') {
-                const nodeStr = generate(
-                  path.node.arguments[0],
-                );
+                const nodeStr = generate(path.node.arguments[0]);
                 this.opts.delegate.emitWarning(
                   this.opts.variants,
-                  `Argument (${nodeStr.code}) to ${path.node.callee.name} should be a string literal, or expression that can be evaluated statically at build time. This statement will cause an exception if called at runtime`
+                  `Argument (${nodeStr.code}) to ${path.node.callee
+                    .name} should be a string literal, or expression that can be evaluated statically at build time. This statement will cause an exception if called at runtime`
                 );
-                path.node.callee.name = constants.PACKT_UNRESOLVABLE_IMPORT_PLACEHOLDER;
+                path.node.callee.name =
+                  constants.PACKT_UNRESOLVABLE_IMPORT_PLACEHOLDER;
                 return;
               }
             }
@@ -472,32 +438,28 @@ export default function transform(babel) {
             path.node.callee.type = 'Identifier';
             path.node.callee.name = constants.PACKT_DYNAMIC_IMPORT_PLACEHOLDER;
             path.node.arguments.unshift(t.stringLiteral(this.exportAlias.name));
-            path.node.arguments.unshift(t.identifier(constants.PACKT_BUNDLE_CONTEXT_PLACEHOLDER));
-
-            this.opts.delegate.importsModule(
-              this.opts.variants,
-              {
-                source: required,
-                symbols: ['*'],
-                type: 'dynamic',
-              }
+            path.node.arguments.unshift(
+              t.identifier(constants.PACKT_BUNDLE_CONTEXT_PLACEHOLDER)
             );
+
+            this.opts.delegate.importsModule(this.opts.variants, {
+              source: required,
+              symbols: ['*'],
+              type: 'dynamic'
+            });
           } else {
             path.node.callee.name = constants.PACKT_IMPORT_PLACEHOLDER;
             path.node.arguments.unshift(t.stringLiteral(this.exportAlias.name));
 
-            this.opts.delegate.importsModule(
-              this.opts.variants,
-              {
-                source: required,
-                symbols: ['*'],
-                type: 'static',
-              }
-            );
+            this.opts.delegate.importsModule(this.opts.variants, {
+              source: required,
+              symbols: ['*'],
+              type: 'static'
+            });
           }
-        },
-      },
-    },
+        }
+      }
+    }
   };
 }
 
@@ -506,9 +468,8 @@ function isUnreachable(path) {
   // anywhere from the path in question to the root scope, then the
   // code is unreachable
   while (path) {
-    path = path.findParent((path) =>
-      path.isConditionalExpression() ||
-      path.isIfStatement()
+    path = path.findParent(
+      path => path.isConditionalExpression() || path.isIfStatement()
     );
     if (path) {
       path.traverse(evaluateExpression);
@@ -533,7 +494,7 @@ function getImportPlaceholder(
   const localImport = importAliases[name];
   const args = [
     t.stringLiteral(exportAlias.name),
-    t.stringLiteral(localImport.moduleName),
+    t.stringLiteral(localImport.moduleName)
   ];
 
   if (localImport.symbol === '*') {
@@ -547,26 +508,24 @@ function getImportPlaceholder(
     // variable that we can refer to, so we can save both the space of
     // re-referring to the exportIdentifer + symbolName and save an
     // extra property access.
-    let symbolAlias = symbolAliases[localImport.moduleName+':'+localImport.symbol];
+    let symbolAlias =
+      symbolAliases[localImport.moduleName + ':' + localImport.symbol];
     if (!symbolAlias) {
       args.push(t.stringLiteral(localImport.symbol));
-      const identifier = scope.generateUidIdentifier(
-        exportAlias.name
-      );
-      symbolAlias = symbolAliases[localImport.moduleName+':'+localImport.symbol] = {
+      const identifier = scope.generateUidIdentifier(exportAlias.name);
+      symbolAlias = symbolAliases[
+        localImport.moduleName + ':' + localImport.symbol
+      ] = {
         identifier,
-        declaration: t.variableDeclaration(
-          'var',
-          [
-            t.variableDeclarator(
-              identifier, 
-              t.callExpression(
-                t.identifier(constants.PACKT_IMPORT_PLACEHOLDER),
-                args
-              )
-            ),
-          ]
-        ),
+        declaration: t.variableDeclaration('var', [
+          t.variableDeclarator(
+            identifier,
+            t.callExpression(
+              t.identifier(constants.PACKT_IMPORT_PLACEHOLDER),
+              args
+            )
+          )
+        ])
       };
     }
     return symbolAlias.identifier;
@@ -584,7 +543,7 @@ function symbolMarkerStart(node, symbolName) {
   }
   node.leadingComments.push({
     type: 'CommentBlock',
-    value: `<${constants.PACKT_SYMBOL_PLACEHOLDER}${symbolName}>`,
+    value: `<${constants.PACKT_SYMBOL_PLACEHOLDER}${symbolName}>`
   });
   return node;
 }
@@ -595,7 +554,7 @@ function symbolMarkerEnd(node, symbolName) {
   }
   node.trailingComments.push({
     type: 'CommentBlock',
-    value: `</${constants.PACKT_SYMBOL_PLACEHOLDER}${symbolName}>`,
+    value: `</${constants.PACKT_SYMBOL_PLACEHOLDER}${symbolName}>`
   });
   return node;
 }
@@ -606,7 +565,7 @@ function exportSymbol(exportedSymbols, symbol, esModule) {
     exportedSymbols.length = 0;
     exportedSymbols.push('*');
   }
-  if (!exportedSymbols.length || exportedSymbols[0]!=='*') {
+  if (!exportedSymbols.length || exportedSymbols[0] !== '*') {
     exportedSymbols.push(symbol);
   }
 }

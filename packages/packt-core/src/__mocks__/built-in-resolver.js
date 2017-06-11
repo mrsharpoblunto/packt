@@ -3,18 +3,15 @@ export default class MockBuiltInResolver {
   static defaultOptions = function(workingDirectory) {
     return {
       rootPath: workingDirectory,
-      searchPaths: [
-        workingDirectory,
-        'node_modules',
-      ],
-      extensions: ['.js'],
-    }
+      searchPaths: [workingDirectory, 'node_modules'],
+      extensions: ['.js']
+    };
   };
 
-  resolve(module,resolvedParentModule,expectFolder,cb) {
+  resolve(module, resolvedParentModule, expectFolder, cb) {
     const resolved = MockBuiltInResolver.__resolvableDirectories[module];
     if (resolved) {
-      cb(null,resolved);
+      cb(null, resolved);
     } else {
       cb(new Error());
     }

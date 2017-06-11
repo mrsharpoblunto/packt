@@ -1,19 +1,19 @@
 /**
  * @flow
  */
-import {getOrCreate} from './helpers';
-import type {WorkingSet} from './working-set';
+import { getOrCreate } from './helpers';
+import type { WorkingSet } from './working-set';
 
 export type DependencyNodeImport = {|
   node: DependencyNode,
   symbols: Set<string>,
-  type: 'static' | 'dynamic',
+  type: 'static' | 'dynamic'
 |};
 
 export class DependencyNode {
   importedBy: { [key: string]: DependencyNode };
   imports: { [key: string]: DependencyNodeImport };
-  importAliases: { [key: string]: DependencyNodeImport }; 
+  importAliases: { [key: string]: DependencyNodeImport };
   exports: ExportDeclaration;
   module: string;
   contentType: ?string;
@@ -32,7 +32,7 @@ export class DependencyNode {
     this.exports = {
       identifier: '',
       esModule: false,
-      symbols: [],
+      symbols: []
     };
     this.contentType = null;
     this.contentHash = null;
@@ -52,21 +52,21 @@ export class DependencyNode {
       i = this.imports[node.module] = {
         node: node,
         symbols: new Set(),
-        type: 'dynamic',
+        type: 'dynamic'
       };
     }
     this.importAliases[imported.source] = i;
 
     if (
-      imported.type === 'dynamic' || 
-      (imported.symbols.length === 1 && imported.symbols[0] === '*') 
+      imported.type === 'dynamic' ||
+      (imported.symbols.length === 1 && imported.symbols[0] === '*')
     ) {
       if (i.symbols.size !== 1 || !i.symbols.has('*')) {
         i.symbols = new Set(['*']);
       }
     } else if (!i.symbols.has('*')) {
       for (let s of imported.symbols) {
-        i.symbols.add(s); 
+        i.symbols.add(s);
       }
     }
 
@@ -89,7 +89,7 @@ export class DependencyNode {
       }
     }
 
-    // recursively add the new bundles to all modules imported by this 
+    // recursively add the new bundles to all modules imported by this
     // module
     if (difference.size) {
       for (let imported in this.imports) {
@@ -114,16 +114,13 @@ export class DependencyNode {
     if (exported.symbols.length === 1 && exported.symbols[0] === '*') {
       this.exports.symbols = ['*'];
     } else if (this.exports.symbols !== '*') {
-      this.exports.symbols.push.apply(
-        this.exports.symbols,
-        exported.symbols
-      );
+      this.exports.symbols.push.apply(this.exports.symbols, exported.symbols);
     }
     this.exports.identifier = exported.identifier;
     this.exports.esModule = exported.esModule;
   }
 
-  getImportTypeForBundle(bundleName: string): ('static' | 'dynamic') {
+  getImportTypeForBundle(bundleName: string): 'static' | 'dynamic' {
     let cached = this._importCache[bundleName];
     if (cached) {
       return cached;
@@ -175,31 +172,28 @@ export class DependencyNode {
     return used;
   }
 
-  serialize(
-    usedSymbols: Array<string>,
-    content: string
-  ): SerializedModule {
+  serialize(usedSymbols: Array<string>, content: string): SerializedModule {
     return {
-      importAliases: Object.keys(this.importAliases).reduce((p,n) => {
+      importAliases: Object.keys(this.importAliases).reduce((p, n) => {
         p[n] = this.importAliases[n].node.module;
         return p;
-      },{}),
+      }, {}),
       resolvedModule: this.module,
       contentHash: this.contentHash || '',
       contentType: this.contentType || '',
       content,
-      usedSymbols,
-    }
+      usedSymbols
+    };
   }
 }
 
 // during parse, treat dynamic imports the same as static imports
-// When doing bundle sort, determine if a bundle only is being included as a 
+// When doing bundle sort, determine if a bundle only is being included as a
 // dynamic import & if so build an additional asset.
 export type DependencyVariant = {|
   lookups: { [key: string]: DependencyNode },
   identifiers: { [key: string]: ExportDeclaration },
-  roots: { [bundleName: string]: Set<DependencyNode> },
+  roots: { [bundleName: string]: Set<DependencyNode> }
 |};
 
 export class DependencyGraph {
@@ -215,7 +209,7 @@ export class DependencyGraph {
       v = this.variants[variant] = {
         lookups: {},
         identifiers: {},
-        roots: {},
+        roots: {}
       };
     }
     return v;
@@ -232,7 +226,7 @@ export class DependencyGraph {
   exports(
     resolvedModule: string,
     variants: Array<string>,
-    exported: ExportDeclaration,
+    exported: ExportDeclaration
   ) {
     for (let v of variants) {
       const variant = this._getVariant(v);
@@ -245,7 +239,7 @@ export class DependencyGraph {
     resolvedModule: string,
     variants: Array<string>,
     contentType: string,
-    contentHash: string,
+    contentHash: string
   ) {
     for (let v of variants) {
       const variant = this._getVariant(v);
@@ -301,6 +295,5 @@ export class DependencyGraph {
     return true;
   }
 
-  trim() {
-  }
+  trim() {}
 }

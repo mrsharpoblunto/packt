@@ -10,8 +10,8 @@ export default class RawToJSHandler implements Handler {
   _handlerInvariants: Object;
 
   init(
-    invariants: HandlerOptions, 
-    delegate: HandlerDelegate, 
+    invariants: HandlerOptions,
+    delegate: HandlerDelegate,
     callback: HandlerInitCallback
   ) {
     this._handlerInvariants = invariants.handler;
@@ -19,15 +19,15 @@ export default class RawToJSHandler implements Handler {
   }
 
   process(
-    resolvedModule: string, 
-    scopeId: string, 
+    resolvedModule: string,
+    scopeId: string,
     options: { [key: string]: HandlerOptions },
     delegate: HandlerDelegate,
     callback: HandlerProcessCallback
   ) {
     const stats = {};
     let start = Date.now();
-    fs.readFile(resolvedModule, (err,data) => {
+    fs.readFile(resolvedModule, (err, data) => {
       stats.diskIO = Date.now() - start;
       if (err) {
         return callback(err);
@@ -36,9 +36,7 @@ export default class RawToJSHandler implements Handler {
       try {
         start = Date.now();
         let contentType = mime.lookup(resolvedModule);
-        let encoding = (
-          contentType.indexOf('text/')===0 ? 'utf8' : 'base64'
-        );
+        let encoding = contentType.indexOf('text/') === 0 ? 'utf8' : 'base64';
 
         let source = new Buffer(data).toString(encoding);
         if (encoding === 'utf8') {
@@ -52,31 +50,20 @@ export default class RawToJSHandler implements Handler {
         stats.transform = Date.now() - start;
         stats.postSize = transformed.length;
 
-        delegate.exportsSymbols(
-          Object.keys(options),
-          {
-            identifier: scopeId,
-            symbols: ['*'],
-            esModule: false,
-          }
-        );
+        delegate.exportsSymbols(Object.keys(options), {
+          identifier: scopeId,
+          symbols: ['*'],
+          esModule: false
+        });
 
-        callback(
-          null,
-          Object.keys(options),
-          {
-            content: transformed,
-            contentType: 'text/javascript',
-            contentHash: delegate.generateHash(transformed),
-            perfStats: stats,
-          }
-        );
-      }
-      catch (err) {
-        callback(
-          err,
-          Object.keys(options)
-        );
+        callback(null, Object.keys(options), {
+          content: transformed,
+          contentType: 'text/javascript',
+          contentHash: delegate.generateHash(transformed),
+          perfStats: stats
+        });
+      } catch (err) {
+        callback(err, Object.keys(options));
       }
     });
   }

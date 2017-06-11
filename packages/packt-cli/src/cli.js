@@ -7,8 +7,8 @@ import ConsoleReporter from './console-reporter';
 
 const argv = yargs
   .usage('Usage: $0 [options]')
-  .default('config','packt.config.js')
-  .default('module-scopes','')
+  .default('config', 'packt.config.js')
+  .default('module-scopes', '')
   .boolean('progress')
   .default('progress', true)
   .boolean('verbose')
@@ -16,8 +16,7 @@ const argv = yargs
   .boolean('watch')
   .default('watch', false)
   .help('h')
-  .alias('h','help')
-  .argv;
+  .alias('h', 'help').argv;
 
 if (!argv.help) {
   const packt = new Packt(
@@ -26,14 +25,17 @@ if (!argv.help) {
     new ConsoleReporter(argv.progress, argv.verbose)
   );
 
-  packt.start().then(() => {
-    return (argv.watch ? packt.watch : packt.build).apply(packt)
-    .then(() => packt.stop())
+  packt
+    .start()
     .then(() => {
-      return 0;
+      return (argv.watch ? packt.watch : packt.build)
+        .apply(packt)
+        .then(() => packt.stop())
+        .then(() => {
+          return 0;
+        });
+    })
+    .catch(err => {
+      return 1;
     });
-  }).catch((err) => {
-    return 1;
-  });
 }
-

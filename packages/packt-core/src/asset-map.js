@@ -5,8 +5,8 @@ import path from 'path';
 import fs from 'fs';
 import mkdirp from 'mkdirp';
 import type OutputPathHelpers from './output-path-helpers';
-import type {DependencyGraph} from './dependency-graph';
-import type {GeneratedBundleSet} from './generated-bundle-set';
+import type { DependencyGraph } from './dependency-graph';
+import type { GeneratedBundleSet } from './generated-bundle-set';
 
 export default class AssetMap {
   _map: { [assetName: string]: string };
@@ -39,36 +39,42 @@ export default class AssetMap {
 
       const generatedBundles = generatedBundleSets[variant].getBundles();
       for (let bundleName in generatedBundles) {
-          const bundlePaths = generatedBundles[bundleName].paths;
-          if (this._map[bundlePaths.assetName]) {
-            promises.push(this._removeFile(this._map[bundlePaths.assetName]));
-          }
-          this._map[bundlePaths.assetName] = bundlePaths.outputPath;
+        const bundlePaths = generatedBundles[bundleName].paths;
+        if (this._map[bundlePaths.assetName]) {
+          promises.push(this._removeFile(this._map[bundlePaths.assetName]));
+        }
+        this._map[bundlePaths.assetName] = bundlePaths.outputPath;
       }
     }
 
     // save out the updated asset map
-    promises.push(new Promise((resolve, reject) => {
-      mkdirp(this._assetMapPaths.outputParentPath,(err) => {
-        if (err) {
-          return reject(err);
-        }
-        fs.writeFile(this._assetMapPaths.outputPath, JSON.stringify(this._map), (err) => {
+    promises.push(
+      new Promise((resolve, reject) => {
+        mkdirp(this._assetMapPaths.outputParentPath, err => {
           if (err) {
-            reject(err);
-          } else {
-            resolve();
+            return reject(err);
           }
+          fs.writeFile(
+            this._assetMapPaths.outputPath,
+            JSON.stringify(this._map),
+            err => {
+              if (err) {
+                reject(err);
+              } else {
+                resolve();
+              }
+            }
+          );
         });
-      });
-    }));
+      })
+    );
 
     return Promise.all(promises);
   }
 
   _removeFile(filename: string): Promise<any> {
     return new Promise((resolve, reject) => {
-      fs.unlink(filename, (err) => {
+      fs.unlink(filename, err => {
         // we don't care if the call fails - it might
         // if we're removing multiple dynamic modules with
         // the same filesystem destination

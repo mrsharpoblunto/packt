@@ -5,36 +5,36 @@
 import path from 'path';
 import rimraf from 'rimraf';
 import mkdirp from 'mkdirp';
-import type {MessageType} from './message-types';
-import type {WorkingSet} from './working-set';
-import {DependencyNode, DependencyGraph} from './dependency-graph';
+import type { MessageType } from './message-types';
+import type { WorkingSet } from './working-set';
+import { DependencyNode, DependencyGraph } from './dependency-graph';
 import WorkerPool from './worker-pool';
 import ResolverChain from './resolver-chain';
 import Timer from './timer';
 import ContentMap from './content-map';
 import AssetMap from './asset-map';
-import type {ReadOnlyContentMapVariant} from './content-map';
-import {generateBundleSets} from './generated-bundle-set';
+import type { ReadOnlyContentMapVariant } from './content-map';
+import { generateBundleSets } from './generated-bundle-set';
 import type {
   GeneratedBundleSet,
-  GeneratedBundleData,
+  GeneratedBundleData
 } from './generated-bundle-set';
-import {generateBundleLookups, serializeBundle} from './bundle-utils';
+import { generateBundleLookups, serializeBundle } from './bundle-utils';
 import type {
   GeneratedBundleLookups,
-  GeneratedBundleLookupVariant,
+  GeneratedBundleLookupVariant
 } from './bundle-utils';
 import * as errors from 'packt-types';
 import ScopeIdGenerator from './scope-id-generator';
 import OutputPathHelpers from './output-path-helpers';
-import {parseConfig} from './packt-config';
+import { parseConfig } from './packt-config';
 import {
   determineIncrementalWorkingSet,
-  determineInitialWorkingSet,
+  determineInitialWorkingSet
 } from './working-set';
-import {getOrCreate} from './helpers';
+import { getOrCreate } from './helpers';
 import events from 'events';
-import {type ChangeDetails} from './change-watcher';
+import { type ChangeDetails } from './change-watcher';
 import ChangeWatcher from './change-watcher';
 
 type BuildState = {|
@@ -42,14 +42,14 @@ type BuildState = {|
   assetMap: AssetMap,
   dependencyGraph: DependencyGraph,
   scopeGenerator: ScopeIdGenerator,
-  bundleSets: ?{[variant: string]: GeneratedBundleSet},
-  bundleLookups: ?GeneratedBundleLookups,
+  bundleSets: ?{ [variant: string]: GeneratedBundleSet },
+  bundleLookups: ?GeneratedBundleLookups
 |};
 
 type BuildUtils = {|
   pathHelpers: OutputPathHelpers,
   resolvers: ResolverChain,
-  pool: WorkerPool,
+  pool: WorkerPool
 |};
 
 type BuildParams = {|
@@ -58,7 +58,7 @@ type BuildParams = {|
   config: PacktConfig,
   utils: BuildUtils,
   state: BuildState,
-  bail: boolean,
+  bail: boolean
 |};
 
 export default class Packt extends events.EventEmitter {
@@ -74,7 +74,7 @@ export default class Packt extends events.EventEmitter {
   constructor(
     workingDirectory: string,
     options: PacktOptions,
-    reporter: Reporter,
+    reporter: Reporter
   ) {
     super();
     this._timer = new Timer();
@@ -82,7 +82,7 @@ export default class Packt extends events.EventEmitter {
     this._bundlerTimer = new Timer();
     this._reporter = reporter;
 
-    this._options = ({...options}: any);
+    this._options = ({ ...options }: any);
     this._options.config = path.resolve(workingDirectory, options.config);
 
     const version = require('../package.json').version;
@@ -132,8 +132,8 @@ export default class Packt extends events.EventEmitter {
     if (!utils || !state || !config) {
       return this._fatalError(
         new Error(
-          'Packt build has not been initialized. Make sure to call start() before calling build()',
-        ),
+          'Packt build has not been initialized. Make sure to call start() before calling build()'
+        )
       );
     }
 
@@ -148,7 +148,7 @@ export default class Packt extends events.EventEmitter {
               determineIncrementalWorkingSet(
                 config,
                 state.dependencyGraph,
-                changes,
+                changes
               )
                 .then((workingSet: ?WorkingSet) => {
                   if (workingSet) {
@@ -174,8 +174,8 @@ export default class Packt extends events.EventEmitter {
     if (!utils || !state || !config) {
       return this._fatalError(
         new Error(
-          'Packt build has not been initialized. Make sure to call start() before calling watch() or build()',
-        ),
+          'Packt build has not been initialized. Make sure to call start() before calling watch() or build()'
+        )
       );
     }
 
@@ -187,8 +187,8 @@ export default class Packt extends events.EventEmitter {
       return this._fatalError(
         new Error(
           `Unable to clean build directory ${config.invariantOptions
-            .outputPath}: ${ex.toString()}`,
-        ),
+            .outputPath}: ${ex.toString()}`
+        )
       );
     }
 
@@ -206,8 +206,8 @@ export default class Packt extends events.EventEmitter {
     if (!utils || !state || !config) {
       return this._fatalError(
         new Error(
-          'Packt build has not been initialized. Make sure to call start() before calling watch() or build()',
-        ),
+          'Packt build has not been initialized. Make sure to call start() before calling watch() or build()'
+        )
       );
     }
 
@@ -218,7 +218,7 @@ export default class Packt extends events.EventEmitter {
       config,
       utils,
       state,
-      bail,
+      bail
     };
     return this._buildModules(params)
       .then(buildResult => {
@@ -232,10 +232,10 @@ export default class Packt extends events.EventEmitter {
                 {
                   global: params.timer,
                   handlers: br.handlerTimer,
-                  bundlers: bundleResult.bundlerTimer,
+                  bundlers: bundleResult.bundlerTimer
                 },
                 br.buildStats,
-                bundleResult.bundleStats,
+                bundleResult.bundleStats
               );
               this.emit('buildFinish');
             }
@@ -264,15 +264,15 @@ export default class Packt extends events.EventEmitter {
         return Promise.reject(
           new errors.PacktError(
             'No config file found at ' + this._options.config,
-            ex,
-          ),
+            ex
+          )
         );
       } else {
         return Promise.reject(
           new errors.PacktError(
             'Unable to parse config file ' + this._options.config,
-            ex,
-          ),
+            ex
+          )
         );
       }
     }
@@ -283,7 +283,7 @@ export default class Packt extends events.EventEmitter {
     return Promise.resolve({
       pathHelpers: new OutputPathHelpers(config),
       resolvers: new ResolverChain(config),
-      pool: new WorkerPool(config),
+      pool: new WorkerPool(config)
     });
   }
 
@@ -295,8 +295,8 @@ export default class Packt extends events.EventEmitter {
       return Promise.reject(
         new errors.PacktError(
           'Failed to load module scopes map at ' + this._options.moduleScopes,
-          ex,
-        ),
+          ex
+        )
       );
     }
 
@@ -306,7 +306,7 @@ export default class Packt extends events.EventEmitter {
       contentMap: new ContentMap(),
       dependencyGraph: new DependencyGraph(),
       bundleSets: null,
-      bundleLookups: null,
+      bundleLookups: null
     });
   }
 
@@ -316,10 +316,10 @@ export default class Packt extends events.EventEmitter {
     config,
     utils,
     state,
-    bail,
+    bail
   }: BuildParams): Promise<?{
-    buildStats: {[variant: string]: PerfStatsDict},
-    handlerTimer: Timer,
+    buildStats: { [variant: string]: PerfStatsDict },
+    handlerTimer: Timer
   }> {
     const bundles = Object.keys(workingSet.bundles);
     if (!bundles.length) {
@@ -331,16 +331,16 @@ export default class Packt extends events.EventEmitter {
         this._reporter.onUpdateBuildStatus(
           utils.pool.status(),
           buildStats,
-          null,
+          null
         );
       }, 100);
 
       const start = Date.now();
-      const buildStats: {[variant: string]: PerfStatsDict} = {};
+      const buildStats: { [variant: string]: PerfStatsDict } = {};
       const handlerTimer = new Timer();
 
       const cleanup = (forceBail: boolean, err: ?Error) => {
-        timer.accumulate('build', {modules: Date.now() - start});
+        timer.accumulate('build', { modules: Date.now() - start });
         clearInterval(updateReporter);
         utils.pool.removeAllListeners();
         utils.resolvers.removeAllListeners();
@@ -354,7 +354,7 @@ export default class Packt extends events.EventEmitter {
         } else {
           resolve({
             buildStats,
-            handlerTimer,
+            handlerTimer
           });
         }
       };
@@ -370,14 +370,14 @@ export default class Packt extends events.EventEmitter {
                 state.dependencyGraph.bundleEntrypoint(
                   resolvedModule,
                   m.variants,
-                  m.resolvedParentModuleOrBundle,
+                  m.resolvedParentModuleOrBundle
                 );
               } else {
                 state.dependencyGraph.imports(
                   m.resolvedParentModuleOrBundle,
                   resolvedModule,
                   m.variants,
-                  m.importedByDeclaration,
+                  m.importedByDeclaration
                 );
               }
 
@@ -412,22 +412,22 @@ export default class Packt extends events.EventEmitter {
                 transform: m.perfStats.transform / m.variants.length,
                 diskIO: m.perfStats.diskIO / m.variants.length,
                 preSize: m.perfStats.preSize,
-                postSize: m.perfStats.postSize,
+                postSize: m.perfStats.postSize
               };
             }
             handlerTimer.accumulate(m.handler, m.perfStats);
-            handlerTimer.accumulate(m.handler, {modules: m.variants.length});
+            handlerTimer.accumulate(m.handler, { modules: m.variants.length });
 
             state.dependencyGraph.setContentMetadata(
               m.resolvedModule,
               m.variants,
               m.contentType,
-              m.contentHash,
+              m.contentHash
             );
             state.contentMap.setContent(
               m.resolvedModule,
               m.variants,
-              m.content,
+              m.content
             );
             break;
 
@@ -438,8 +438,8 @@ export default class Packt extends events.EventEmitter {
                 m.handler,
                 m.variants,
                 m.error,
-                m.resolvedModule,
-              ),
+                m.resolvedModule
+              )
             );
             break;
 
@@ -447,7 +447,7 @@ export default class Packt extends events.EventEmitter {
             this._reporter.onBuildWarning(
               m.resolvedModule,
               m.variants,
-              m.warning,
+              m.warning
             );
             break;
 
@@ -455,7 +455,7 @@ export default class Packt extends events.EventEmitter {
             state.dependencyGraph.exports(
               m.resolvedModule,
               m.variants,
-              m.exportDeclaration,
+              m.exportDeclaration
             );
             break;
 
@@ -464,11 +464,11 @@ export default class Packt extends events.EventEmitter {
               m.importDeclaration.source,
               m.variants,
               {
-                importedByDeclaration: m.importDeclaration,
+                importedByDeclaration: m.importDeclaration
               },
               {
-                resolvedParentModule: m.resolvedModule,
-              },
+                resolvedParentModule: m.resolvedModule
+              }
             );
             break;
 
@@ -477,7 +477,7 @@ export default class Packt extends events.EventEmitter {
               m.resolvedModule,
               m.variants,
               m.assetName,
-              m.outputPath,
+              m.outputPath
             );
             break;
 
@@ -496,11 +496,11 @@ export default class Packt extends events.EventEmitter {
             m.name,
             Object.keys(config.options),
             {
-              bundleName,
+              bundleName
             },
             {
-              expectFolder: m.folder,
-            },
+              expectFolder: m.folder
+            }
           );
         });
       }
@@ -513,10 +513,10 @@ export default class Packt extends events.EventEmitter {
     config,
     utils,
     state,
-    bail,
+    bail
   }: BuildParams): {|
-    bundleSets: {[variant: string]: GeneratedBundleSet},
-    bundleLookups: GeneratedBundleLookups,
+    bundleSets: { [variant: string]: GeneratedBundleSet },
+    bundleLookups: GeneratedBundleLookups
   |} {
     // we can avoid rebuilding the structure of the bundles if we know
     // that no dependency changes occurred since the last build i.e. no
@@ -536,19 +536,19 @@ export default class Packt extends events.EventEmitter {
         state.dependencyGraph,
         workingSet,
         config,
-        utils.pathHelpers,
+        utils.pathHelpers
       );
 
       bundleLookups = generateBundleLookups(state.dependencyGraph, bundleSets);
 
       Object.assign(state, {
         bundleSets,
-        bundleLookups,
+        bundleLookups
       });
     }
     return {
       bundleSets,
-      bundleLookups,
+      bundleLookups
     };
   }
 
@@ -558,42 +558,42 @@ export default class Packt extends events.EventEmitter {
     config,
     utils,
     state,
-    bail,
+    bail
   }: BuildParams): Promise<?{
-    bundleStats: {[variant: string]: PerfStatsDict},
-    bundlerTimer: Timer,
+    bundleStats: { [variant: string]: PerfStatsDict },
+    bundlerTimer: Timer
   }> {
     let start = Date.now();
-    const {bundleSets, bundleLookups} = this._prepareBundles({
+    const { bundleSets, bundleLookups } = this._prepareBundles({
       workingSet,
       timer,
       config,
       utils,
       state,
-      bail,
+      bail
     });
-    timer.accumulate('build', {'bundle-sort': Date.now() - start});
+    timer.accumulate('build', { 'bundle-sort': Date.now() - start });
 
     start = Date.now();
     return state.assetMap.update(state.dependencyGraph, bundleSets).then(
       () =>
         new Promise((resolve, reject) => {
-          timer.accumulate('build', {'asset-map': Date.now() - start});
+          timer.accumulate('build', { 'asset-map': Date.now() - start });
 
           start = Date.now();
-          const bundleStats: {[variant: string]: PerfStatsDict} = {};
+          const bundleStats: { [variant: string]: PerfStatsDict } = {};
           const bundlerTimer = new Timer();
 
           const updateReporter = setInterval(() => {
             this._reporter.onUpdateBuildStatus(
               utils.pool.status(),
               null,
-              bundleStats,
+              bundleStats
             );
           }, 100);
 
           const cleanup = (forceBail: boolean, err: ?Error) => {
-            timer.accumulate('build', {bundles: Date.now() - start});
+            timer.accumulate('build', { bundles: Date.now() - start });
             clearInterval(updateReporter);
             utils.pool.removeAllListeners();
             if (err) {
@@ -606,7 +606,7 @@ export default class Packt extends events.EventEmitter {
             } else {
               resolve({
                 bundleStats,
-                bundlerTimer,
+                bundlerTimer
               });
             }
           };
@@ -622,7 +622,7 @@ export default class Packt extends events.EventEmitter {
               case 'bundle_content_error':
                 cleanup(
                   false,
-                  new errors.PacktBundleError(m.bundler, m.error, m.bundleName),
+                  new errors.PacktBundleError(m.bundler, m.error, m.bundleName)
                 );
                 break;
 
@@ -630,7 +630,7 @@ export default class Packt extends events.EventEmitter {
                 this._reporter.onBundleWarning(
                   m.bundleName,
                   m.variant,
-                  m.warning,
+                  m.warning
                 );
                 break;
 
@@ -666,13 +666,13 @@ export default class Packt extends events.EventEmitter {
                     bundle,
                     bundleLookups: bundleLookupVariant,
                     contentMap,
-                    config,
-                  }),
+                    config
+                  })
                 );
               }
             }
           }
-        }),
+        })
     );
   }
 }

@@ -13,15 +13,15 @@ export default class JsonHandler implements Handler {
   }
 
   process(
-    resolvedModule: string, 
-    scopeId: string, 
+    resolvedModule: string,
+    scopeId: string,
     options: { [key: string]: HandlerOptions },
     delegate: HandlerDelegate,
     callback: HandlerProcessCallback
   ) {
     const stats = {};
     let start = Date.now();
-    fs.readFile(resolvedModule,'utf8',(err,source) => {
+    fs.readFile(resolvedModule, 'utf8', (err, source) => {
       stats.diskIO = Date.now() - start;
       if (err) {
         callback(err);
@@ -36,31 +36,20 @@ export default class JsonHandler implements Handler {
         const transformed = 'var ' + scopeId + '=' + source + ';';
         stats.postSize = transformed.length;
 
-        delegate.exportsSymbols(
-          Object.keys(options),
-          {
-            identifier: scopeId,
-            symbols: ['*'],
-            esModule: false,
-          }
-        );
+        delegate.exportsSymbols(Object.keys(options), {
+          identifier: scopeId,
+          symbols: ['*'],
+          esModule: false
+        });
 
-        callback(
-          null,
-          Object.keys(options),
-          {
-            content: transformed,
-            contentType: 'text/javascript',
-            contentHash: delegate.generateHash(transformed),
-            perfStats: stats,
-          }
-        );
-      }
-      catch (err) {
-        callback(
-          err,
-          Object.keys(options)
-        );
+        callback(null, Object.keys(options), {
+          content: transformed,
+          contentType: 'text/javascript',
+          contentHash: delegate.generateHash(transformed),
+          perfStats: stats
+        });
+      } catch (err) {
+        callback(err, Object.keys(options));
       }
     });
   }

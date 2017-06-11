@@ -7,7 +7,7 @@ import fs from 'fs';
 
 export default class RawBundler implements Bundler {
   init(
-    invariantOptions: BundlerOptions, 
+    invariantOptions: BundlerOptions,
     delegate: BundlerDelegate,
     callback: BundlerInitCallback
   ) {
@@ -20,7 +20,7 @@ export default class RawBundler implements Bundler {
     delegate: BundlerDelegate,
     callback: BundlerProcessCallback
   ): void {
-    mkdirp(data.paths.outputParentPath,(err: ?Error) => {
+    mkdirp(data.paths.outputParentPath, (err: ?Error) => {
       if (err) {
         return callback(err);
       }
@@ -29,26 +29,26 @@ export default class RawBundler implements Bundler {
         transform: 0,
         diskIO: 0,
         preSize: 0,
-        postSize: 0,
+        postSize: 0
       };
 
       const start = Date.now();
       var wstream = fs.createWriteStream(data.paths.outputPath);
-      wstream.on('finish',() => {
+      wstream.on('finish', () => {
         perfStats.diskIO = Date.now() - start;
-        callback(null,{
-          perfStats: perfStats,
+        callback(null, {
+          perfStats: perfStats
         });
       });
-      wstream.on('error',(err) => {
+      wstream.on('error', err => {
         callback(err);
       });
       for (let module of data.modules) {
         perfStats.preSize += module.content.length;
         perfStats.postSize += module.content.length;
         wstream.write(
-          module.content, 
-          module.contentType.indexOf('text/')===0?'utf8':'base64'
+          module.content,
+          module.contentType.indexOf('text/') === 0 ? 'utf8' : 'base64'
         );
       }
       wstream.end();

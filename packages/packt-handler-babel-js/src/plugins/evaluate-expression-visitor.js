@@ -9,7 +9,7 @@ export default {
     if (this && this.skipIdentifier && path.node.name === this.skipIdentifier) {
       return;
     }
-    const value = helpers.getLiteralOrConst(path.node,path.scope);
+    const value = helpers.getLiteralOrConst(path.node, path.scope);
     if (value) {
       path.replaceWith(helpers.createLiteral(value.value));
     } else {
@@ -18,12 +18,12 @@ export default {
   },
   LogicalExpression: {
     exit: function(path) {
-      const left = helpers.getLiteralOrConst(path.node.left,path.scope);
+      const left = helpers.getLiteralOrConst(path.node.left, path.scope);
       if (!left) {
         path.stop();
         return;
       }
-      const right = helpers.getLiteralOrConst(path.node.right,path.scope);
+      const right = helpers.getLiteralOrConst(path.node.right, path.scope);
       if (!right) {
         path.stop();
         return;
@@ -40,16 +40,16 @@ export default {
           path.stop();
           break;
       }
-    },
+    }
   },
   BinaryExpression: {
     exit: function(path) {
-      const left = helpers.getLiteralOrConst(path.node.left,path.scope);
+      const left = helpers.getLiteralOrConst(path.node.left, path.scope);
       if (!left) {
         path.stop();
         return;
       }
-      const right = helpers.getLiteralOrConst(path.node.right,path.scope);
+      const right = helpers.getLiteralOrConst(path.node.right, path.scope);
       if (!right) {
         path.stop();
         return;
@@ -75,19 +75,22 @@ export default {
           path.stop();
           break;
       }
-    },
+    }
   },
   UnaryExpression: {
     exit: function(path) {
       if (path.node.operator === '!') {
-        const argument = helpers.getLiteralOrConst(path.node.argument,path.scope);
+        const argument = helpers.getLiteralOrConst(
+          path.node.argument,
+          path.scope
+        );
         if (argument) {
           path.replaceWith(helpers.createLiteral(!argument.value));
         } else {
           path.stop();
         }
       }
-    },
+    }
   },
   ConditionalExpression: {
     exit: function(path) {
@@ -99,6 +102,6 @@ export default {
       } else {
         path.stop();
       }
-    },
-  },
+    }
+  }
 };

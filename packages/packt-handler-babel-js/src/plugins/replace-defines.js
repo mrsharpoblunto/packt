@@ -15,7 +15,9 @@ export default function transform(babel) {
           path.node.object.property.name === 'env' &&
           path.node.property.type === 'Identifier'
         ) {
-          let value = this.opts.defines.hasOwnProperty(`process.env.${path.node.property.name}`)
+          let value = this.opts.defines.hasOwnProperty(
+            `process.env.${path.node.property.name}`
+          )
             ? this.opts.defines[`process.env.${path.node.property.name}`]
             : process.env[path.node.property.name];
           const literalValue = helpers.createLiteral(value);
@@ -26,13 +28,13 @@ export default function transform(babel) {
       },
       Identifier: function(path) {
         if (
-          this.opts.defines.hasOwnProperty(path.node.name) && 
+          this.opts.defines.hasOwnProperty(path.node.name) &&
           !path.scope.hasBinding(path.node.name)
         ) {
           const d = this.opts.defines[path.node.name];
           path.replaceWith(helpers.createLiteral(d));
         }
-      },
-    },
+      }
+    }
   };
 }

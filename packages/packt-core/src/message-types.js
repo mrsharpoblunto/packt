@@ -2,30 +2,30 @@
  * @flow
  */
 export type IdleMessage = {|
-  type: 'idle',
+  type: 'idle'
 |};
 
 export type RawWorkerErrorMessage = {|
   type: 'raw_worker_error',
-  error: string,
+  error: string
 |};
 
 export type WorkerErrorMessage = {|
   type: 'worker_error',
-  error: Error,
+  error: Error
 |};
 
 export type CloseMessage = {|
-  type: 'close',
+  type: 'close'
 |};
 
 export type StatusChangeMessage = {|
   type: 'status_change',
-  status: WorkerStatusDescription,
+  status: WorkerStatusDescription
 |};
 
 export type TaskCompleteMessage = {|
-  type: 'task_complete',
+  type: 'task_complete'
 |};
 
 export type ModuleContentMessage = {|
@@ -36,7 +36,7 @@ export type ModuleContentMessage = {|
   contentHash: string,
   perfStats: PerfStats,
   variants: Array<string>,
-  resolvedModule: string,
+  resolvedModule: string
 |};
 
 export type ModuleContentErrorMessage = {|
@@ -44,21 +44,21 @@ export type ModuleContentErrorMessage = {|
   variants: Array<string>,
   resolvedModule: string,
   handler: string,
-  error: string,
+  error: string
 |};
 
 export type ModuleImportMessage = {|
   type: 'module_import',
   variants: Array<string>,
   resolvedModule: string,
-  importDeclaration: ImportDeclaration,
+  importDeclaration: ImportDeclaration
 |};
 
 export type ModuleExportMessage = {|
   type: 'module_export',
   variants: Array<string>,
   resolvedModule: string,
-  exportDeclaration: ExportDeclaration,
+  exportDeclaration: ExportDeclaration
 |};
 
 export type ModuleGeneratedAssetMessage = {|
@@ -66,14 +66,14 @@ export type ModuleGeneratedAssetMessage = {|
   variants: Array<string>,
   resolvedModule: string,
   assetName: string,
-  outputPath: string,
+  outputPath: string
 |};
 
 export type ModuleWarningMessage = {|
   type: 'module_warning',
   variants: Array<string>,
   resolvedModule: string,
-  warning: string,
+  warning: string
 |};
 
 export type ModuleResolvedMessage = {|
@@ -82,32 +82,32 @@ export type ModuleResolvedMessage = {|
   resolvedModule: string,
   perfStats: { [key: string]: number },
   resolvedParentModuleOrBundle: string,
-  importedByDeclaration: ?ImportDeclaration,
+  importedByDeclaration: ?ImportDeclaration
 |};
 
 export type ModuleResolveErrorMessage = {|
   type: 'module_resolve_error',
-  error: Error,
+  error: Error
 |};
 
 export type BundleWarningMessage = {|
   type: 'bundle_warning',
   bundleName: string,
   variant: string,
-  warning: string,
+  warning: string
 |};
 
 export type ProcessModuleMessage = {|
   type: 'process_module',
   resolvedModule: string,
-  scopeId: string,
+  scopeId: string
 |};
 
 export type ProcessBundleMessage = {|
   type: 'process_bundle',
   bundleName: string,
   variant: string,
-  data: BundlerData,
+  data: BundlerData
 |};
 
 export type BundleContentMessage = {|
@@ -115,7 +115,7 @@ export type BundleContentMessage = {|
   bundleName: string,
   variant: string,
   bundler: string,
-  perfStats: PerfStats,
+  perfStats: PerfStats
 |};
 
 export type BundleContentErrorMessage = {|
@@ -123,32 +123,32 @@ export type BundleContentErrorMessage = {|
   bundleName: string,
   variant: string,
   bundler: string,
-  error: string,
+  error: string
 |};
 
 export type ProcessConfigMessage = {|
   type: 'process_config',
-  config: PacktConfig,
+  config: PacktConfig
 |};
 
 export type MessageType =
-  IdleMessage |
-  RawWorkerErrorMessage |
-  WorkerErrorMessage |
-  StatusChangeMessage |
-  CloseMessage |
-  TaskCompleteMessage |
-  ModuleContentMessage |
-  ModuleContentErrorMessage |
-  ModuleImportMessage | 
-  ModuleExportMessage |
-  ModuleGeneratedAssetMessage |
-  ModuleWarningMessage |
-  ModuleResolvedMessage |
-  ModuleResolveErrorMessage |
-  BundleWarningMessage |
-  BundleContentMessage |
-  BundleContentErrorMessage |
-  ProcessModuleMessage |
-  ProcessBundleMessage |
-  ProcessConfigMessage;
+  | IdleMessage
+  | RawWorkerErrorMessage
+  | WorkerErrorMessage
+  | StatusChangeMessage
+  | CloseMessage
+  | TaskCompleteMessage
+  | ModuleContentMessage
+  | ModuleContentErrorMessage
+  | ModuleImportMessage
+  | ModuleExportMessage
+  | ModuleGeneratedAssetMessage
+  | ModuleWarningMessage
+  | ModuleResolvedMessage
+  | ModuleResolveErrorMessage
+  | BundleWarningMessage
+  | BundleContentMessage
+  | BundleContentErrorMessage
+  | ProcessModuleMessage
+  | ProcessBundleMessage
+  | ProcessConfigMessage;
