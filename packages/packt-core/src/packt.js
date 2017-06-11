@@ -1,19 +1,13 @@
 /**
  * @flow
+ * @format
  */
 import path from 'path';
 import rimraf from 'rimraf';
 import mkdirp from 'mkdirp';
-import type {
-  MessageType,
-} from './message-types';
-import type {
-  WorkingSet,
-} from './working-set';
-import {
-  DependencyNode,
-  DependencyGraph,
-} from './dependency-graph';
+import type {MessageType} from './message-types';
+import type {WorkingSet} from './working-set';
+import {DependencyNode, DependencyGraph} from './dependency-graph';
 import WorkerPool from './worker-pool';
 import ResolverChain from './resolver-chain';
 import Timer from './timer';
@@ -25,10 +19,7 @@ import type {
   GeneratedBundleSet,
   GeneratedBundleData,
 } from './generated-bundle-set';
-import {
-  generateBundleLookups,
-  serializeBundle,
-} from './bundle-utils';
+import {generateBundleLookups, serializeBundle} from './bundle-utils';
 import type {
   GeneratedBundleLookups,
   GeneratedBundleLookupVariant,
@@ -43,9 +34,7 @@ import {
 } from './working-set';
 import {getOrCreate} from './helpers';
 import events from 'events';
-import {
-  type ChangeDetails,
-}from './change-watcher';
+import {type ChangeDetails} from './change-watcher';
 import ChangeWatcher from './change-watcher';
 
 type BuildState = {|
@@ -53,7 +42,7 @@ type BuildState = {|
   assetMap: AssetMap,
   dependencyGraph: DependencyGraph,
   scopeGenerator: ScopeIdGenerator,
-  bundleSets: ?{ [variant: string]: GeneratedBundleSet },
+  bundleSets: ?{[variant: string]: GeneratedBundleSet},
   bundleLookups: ?GeneratedBundleLookups,
 |};
 
@@ -64,7 +53,7 @@ type BuildUtils = {|
 |};
 
 type BuildParams = {|
-  workingSet: WorkingSet, 
+  workingSet: WorkingSet,
   timer: Timer,
   config: PacktConfig,
   utils: BuildUtils,
@@ -85,7 +74,7 @@ export default class Packt extends events.EventEmitter {
   constructor(
     workingDirectory: string,
     options: PacktOptions,
-    reporter: Reporter
+    reporter: Reporter,
   ) {
     super();
     this._timer = new Timer();
@@ -93,7 +82,7 @@ export default class Packt extends events.EventEmitter {
     this._bundlerTimer = new Timer();
     this._reporter = reporter;
 
-    this._options = (({...options}): any);
+    this._options = ({...options}: any);
     this._options.config = path.resolve(workingDirectory, options.config);
 
     const version = require('../package.json').version;
@@ -102,21 +91,22 @@ export default class Packt extends events.EventEmitter {
 
   start(): Promise<Packt> {
     return this._loadConfig()
-      .then((config) => {
+      .then(config => {
         this._config = config;
         this._reporter.onLoadConfig(config);
         return this._createBuildUtils(config);
       })
-      .then((utils) => {
+      .then(utils => {
         this._utils = utils;
         utils.pool.start();
-        return this._loadBuildState(utils)
-      }).then((state) => {
+        return this._loadBuildState(utils);
+      })
+      .then(state => {
         this._state = state;
         this.emit('start');
         return this;
       })
-      .catch((err) => this._fatalError(err));
+      .catch(err => this._fatalError(err));
   }
 
   stop(): Promise<Packt> {
@@ -140,34 +130,41 @@ export default class Packt extends events.EventEmitter {
     const state = this._state;
     const config = this._config;
     if (!utils || !state || !config) {
-      return this._fatalError(new Error(
-        'Packt build has not been initialized. Make sure to call start() before calling build()'
-      ));
+      return this._fatalError(
+        new Error(
+          'Packt build has not been initialized. Make sure to call start() before calling build()',
+        ),
+      );
     }
 
-    this._build(this._options.bail).then(() => {
-      return new Promise((resolve, reject) => {
-        const watcher = new ChangeWatcher(config);
-        watcher.onChange((err: ?Error, changes?: Array<ChangeDetails>) => {
-          if (err) {
-            return reject(err);
-          } else if (changes) {
-            determineIncrementalWorkingSet(config, state.dependencyGraph, changes)
-            .then((workingSet: ?WorkingSet) => {
-              if (workingSet) {
-                this.emit('buildStart');
-                return this._doBuild(workingSet, this._options.bail);
-              }
-            })
-            .then(() => {
-              watcher.resume();
-            })
-            .catch((err) => reject(err));
-          }
+    this._build(this._options.bail)
+      .then(() => {
+        return new Promise((resolve, reject) => {
+          const watcher = new ChangeWatcher(config);
+          watcher.onChange((err: ?Error, changes?: Array<ChangeDetails>) => {
+            if (err) {
+              return reject(err);
+            } else if (changes) {
+              determineIncrementalWorkingSet(
+                config,
+                state.dependencyGraph,
+                changes,
+              )
+                .then((workingSet: ?WorkingSet) => {
+                  if (workingSet) {
+                    this.emit('buildStart');
+                    return this._doBuild(workingSet, this._options.bail);
+                  }
+                })
+                .then(() => {
+                  watcher.resume();
+                })
+                .catch(err => reject(err));
+            }
+          });
         });
-      });
-    })
-    .catch((err) => this._fatalError(err));
+      })
+      .catch(err => this._fatalError(err));
   }
 
   _build(bail: boolean): Promise<Packt> {
@@ -175,9 +172,11 @@ export default class Packt extends events.EventEmitter {
     const state = this._state;
     const config = this._config;
     if (!utils || !state || !config) {
-      return this._fatalError(new Error(
-        'Packt build has not been initialized. Make sure to call start() before calling watch() or build()'
-      ));
+      return this._fatalError(
+        new Error(
+          'Packt build has not been initialized. Make sure to call start() before calling watch() or build()',
+        ),
+      );
     }
 
     this.emit('buildStart');
@@ -185,16 +184,19 @@ export default class Packt extends events.EventEmitter {
     try {
       rimraf.sync(config.invariantOptions.outputPath);
     } catch (ex) {
-      return this._fatalError(new Error(
-        `Unable to clean build directory ${config.invariantOptions.outputPath}: ${ex.toString()}`
-      ));
+      return this._fatalError(
+        new Error(
+          `Unable to clean build directory ${config.invariantOptions
+            .outputPath}: ${ex.toString()}`,
+        ),
+      );
     }
 
     return determineInitialWorkingSet(config)
       .then(workingSet => {
         return this._doBuild(workingSet, bail);
       })
-      .catch((err) => this._fatalError(err));
+      .catch(err => this._fatalError(err));
   }
 
   _doBuild(workingSet: WorkingSet, bail: boolean): Promise<Packt> {
@@ -202,42 +204,46 @@ export default class Packt extends events.EventEmitter {
     const state = this._state;
     const config = this._config;
     if (!utils || !state || !config) {
-      return this._fatalError(new Error(
-        'Packt build has not been initialized. Make sure to call start() before calling watch() or build()'
-      ));
+      return this._fatalError(
+        new Error(
+          'Packt build has not been initialized. Make sure to call start() before calling watch() or build()',
+        ),
+      );
     }
 
     this._reporter.onStartBuild();
     const params = {
-      workingSet, 
+      workingSet,
       timer: new Timer(),
       config,
       utils,
       state,
       bail,
     };
-    return this._buildModules(params).then((buildResult) => {
-      if (!buildResult) {
-        return Promise.resolve();
-      } else {
-        const br = buildResult;
-        return this._bundleModules(params).then((bundleResult) => {
-          if (bundleResult) {
-            this._reporter.onFinishBuild(
-              {
-                global: params.timer,
-                handlers: br.handlerTimer,
-                bundlers: bundleResult.bundlerTimer,
-              },
-              br.buildStats,
-              bundleResult.bundleStats
-            );
-            this.emit('buildFinish');
-          }
+    return this._buildModules(params)
+      .then(buildResult => {
+        if (!buildResult) {
           return Promise.resolve();
-        });
-      }
-    }).then(() => this);
+        } else {
+          const br = buildResult;
+          return this._bundleModules(params).then(bundleResult => {
+            if (bundleResult) {
+              this._reporter.onFinishBuild(
+                {
+                  global: params.timer,
+                  handlers: br.handlerTimer,
+                  bundlers: bundleResult.bundlerTimer,
+                },
+                br.buildStats,
+                bundleResult.bundleStats,
+              );
+              this.emit('buildFinish');
+            }
+            return Promise.resolve();
+          });
+        }
+      })
+      .then(() => this);
   }
 
   _fatalError(err: Error): Promise<Packt> {
@@ -245,7 +251,7 @@ export default class Packt extends events.EventEmitter {
       this._utils.pool.stop();
     }
     this._reporter.onError(err);
-    this.emit('error',err);
+    this.emit('error', err);
     return Promise.reject(err);
   }
 
@@ -255,15 +261,19 @@ export default class Packt extends events.EventEmitter {
       json = require(this._options.config);
     } catch (ex) {
       if (ex.message === 'missing path') {
-        return Promise.reject(new errors.PacktError(
-          'No config file found at ' + this._options.config,
-          ex
-        ));
+        return Promise.reject(
+          new errors.PacktError(
+            'No config file found at ' + this._options.config,
+            ex,
+          ),
+        );
       } else {
-        return Promise.reject(new errors.PacktError(
-          'Unable to parse config file ' + this._options.config,
-          ex
-        ));
+        return Promise.reject(
+          new errors.PacktError(
+            'Unable to parse config file ' + this._options.config,
+            ex,
+          ),
+        );
       }
     }
     return parseConfig(this._options.config, json);
@@ -282,10 +292,12 @@ export default class Packt extends events.EventEmitter {
     try {
       scopeGenerator = new ScopeIdGenerator(this._options.moduleScopes);
     } catch (ex) {
-      return Promise.reject(new errors.PacktError(
-        'Failed to load module scopes map at ' + this._options.moduleScopes,
-        ex
-      ));
+      return Promise.reject(
+        new errors.PacktError(
+          'Failed to load module scopes map at ' + this._options.moduleScopes,
+          ex,
+        ),
+      );
     }
 
     return Promise.resolve({
@@ -298,7 +310,6 @@ export default class Packt extends events.EventEmitter {
     });
   }
 
-
   _buildModules({
     workingSet,
     timer,
@@ -307,8 +318,8 @@ export default class Packt extends events.EventEmitter {
     state,
     bail,
   }: BuildParams): Promise<?{
-    buildStats: { [variant: string]: PerfStatsDict },
-    handlerTimer: Timer
+    buildStats: {[variant: string]: PerfStatsDict},
+    handlerTimer: Timer,
   }> {
     const bundles = Object.keys(workingSet.bundles);
     if (!bundles.length) {
@@ -317,15 +328,19 @@ export default class Packt extends events.EventEmitter {
 
     return new Promise((resolve, reject) => {
       const updateReporter = setInterval(() => {
-        this._reporter.onUpdateBuildStatus(utils.pool.status(), buildStats, null);
-      },100);
+        this._reporter.onUpdateBuildStatus(
+          utils.pool.status(),
+          buildStats,
+          null,
+        );
+      }, 100);
 
       const start = Date.now();
-      const buildStats: { [variant: string]: PerfStatsDict } = {};
+      const buildStats: {[variant: string]: PerfStatsDict} = {};
       const handlerTimer = new Timer();
 
       const cleanup = (forceBail: boolean, err: ?Error) => {
-        timer.accumulate('build',{ 'modules': Date.now() - start });
+        timer.accumulate('build', {modules: Date.now() - start});
         clearInterval(updateReporter);
         utils.pool.removeAllListeners();
         utils.resolvers.removeAllListeners();
@@ -344,36 +359,34 @@ export default class Packt extends events.EventEmitter {
         }
       };
 
-      utils.resolvers.on('resolver_chain_message',(m: MessageType) => {
+      utils.resolvers.on('resolver_chain_message', (m: MessageType) => {
         switch (m.type) {
-          case 'module_resolved': {
-            timer.accumulate('resolvers',m.perfStats);
-            const resolvedModule = m.resolvedModule;
+          case 'module_resolved':
+            {
+              timer.accumulate('resolvers', m.perfStats);
+              const resolvedModule = m.resolvedModule;
 
-            if (!m.importedByDeclaration) {
-              state.dependencyGraph.bundleEntrypoint(
-                resolvedModule,
-                m.variants,
-                m.resolvedParentModuleOrBundle
-              );
-            } else {
-              state.dependencyGraph.imports(
-                m.resolvedParentModuleOrBundle,
-                resolvedModule,
-                m.variants,
-                m.importedByDeclaration
-              );
-            }
-
-            state.contentMap.addIfNotPresent(
-              resolvedModule,
-              () => {
-                const scopeId = state.scopeGenerator.getId(resolvedModule);
-                utils.pool.processModule(resolvedModule, scopeId)
+              if (!m.importedByDeclaration) {
+                state.dependencyGraph.bundleEntrypoint(
+                  resolvedModule,
+                  m.variants,
+                  m.resolvedParentModuleOrBundle,
+                );
+              } else {
+                state.dependencyGraph.imports(
+                  m.resolvedParentModuleOrBundle,
+                  resolvedModule,
+                  m.variants,
+                  m.importedByDeclaration,
+                );
               }
-            );
-          }
-          break;
+
+              state.contentMap.addIfNotPresent(resolvedModule, () => {
+                const scopeId = state.scopeGenerator.getId(resolvedModule);
+                utils.pool.processModule(resolvedModule, scopeId);
+              });
+            }
+            break;
 
           case 'module_resolve_error':
             cleanup(false, m.error);
@@ -395,43 +408,46 @@ export default class Packt extends events.EventEmitter {
 
           case 'module_content':
             for (let variant of m.variants) {
-              getOrCreate(buildStats, variant,()=> ({}))[m.resolvedModule] = {
+              getOrCreate(buildStats, variant, () => ({}))[m.resolvedModule] = {
                 transform: m.perfStats.transform / m.variants.length,
                 diskIO: m.perfStats.diskIO / m.variants.length,
                 preSize: m.perfStats.preSize,
                 postSize: m.perfStats.postSize,
               };
             }
-            handlerTimer.accumulate(m.handler,m.perfStats);
-            handlerTimer.accumulate(m.handler,{ modules: m.variants.length });
+            handlerTimer.accumulate(m.handler, m.perfStats);
+            handlerTimer.accumulate(m.handler, {modules: m.variants.length});
 
             state.dependencyGraph.setContentMetadata(
               m.resolvedModule,
               m.variants,
               m.contentType,
-              m.contentHash
+              m.contentHash,
             );
             state.contentMap.setContent(
               m.resolvedModule,
               m.variants,
-              m.content
+              m.content,
             );
             break;
 
           case 'module_content_error':
-            cleanup(false, new errors.PacktContentError(
-              m.handler,
-              m.variants,
-              m.error,
-              m.resolvedModule
-            ));
+            cleanup(
+              false,
+              new errors.PacktContentError(
+                m.handler,
+                m.variants,
+                m.error,
+                m.resolvedModule,
+              ),
+            );
             break;
 
           case 'module_warning':
             this._reporter.onBuildWarning(
               m.resolvedModule,
               m.variants,
-              m.warning
+              m.warning,
             );
             break;
 
@@ -439,7 +455,7 @@ export default class Packt extends events.EventEmitter {
             state.dependencyGraph.exports(
               m.resolvedModule,
               m.variants,
-              m.exportDeclaration
+              m.exportDeclaration,
             );
             break;
 
@@ -461,10 +477,10 @@ export default class Packt extends events.EventEmitter {
               m.resolvedModule,
               m.variants,
               m.assetName,
-              m.outputPath
+              m.outputPath,
             );
             break;
-            
+
           case 'idle':
             if (utils.resolvers.idle()) {
               cleanup(false);
@@ -475,7 +491,7 @@ export default class Packt extends events.EventEmitter {
 
       for (let bundleName of bundles) {
         const modules = workingSet.bundles[bundleName];
-        modules.forEach((m) => {
+        modules.forEach(m => {
           utils.resolvers.resolve(
             m.name,
             Object.keys(config.options),
@@ -483,8 +499,8 @@ export default class Packt extends events.EventEmitter {
               bundleName,
             },
             {
-              expectFolder: m.folder
-            }
+              expectFolder: m.folder,
+            },
           );
         });
       }
@@ -499,7 +515,7 @@ export default class Packt extends events.EventEmitter {
     state,
     bail,
   }: BuildParams): {|
-    bundleSets: { [variant: string]: GeneratedBundleSet },
+    bundleSets: {[variant: string]: GeneratedBundleSet},
     bundleLookups: GeneratedBundleLookups,
   |} {
     // we can avoid rebuilding the structure of the bundles if we know
@@ -508,7 +524,7 @@ export default class Packt extends events.EventEmitter {
     let bundleSets = state.bundleSets;
     let bundleLookups = state.bundleLookups;
     if (
-      !bundleSets || 
+      !bundleSets ||
       !bundleLookups ||
       state.dependencyGraph.hasChanges(workingSet)
     ) {
@@ -520,13 +536,10 @@ export default class Packt extends events.EventEmitter {
         state.dependencyGraph,
         workingSet,
         config,
-        utils.pathHelpers
+        utils.pathHelpers,
       );
 
-      bundleLookups = generateBundleLookups(
-        state.dependencyGraph,
-        bundleSets
-      );
+      bundleLookups = generateBundleLookups(state.dependencyGraph, bundleSets);
 
       Object.assign(state, {
         bundleSets,
@@ -547,7 +560,7 @@ export default class Packt extends events.EventEmitter {
     state,
     bail,
   }: BuildParams): Promise<?{
-    bundleStats: { [variant: string]: PerfStatsDict },
+    bundleStats: {[variant: string]: PerfStatsDict},
     bundlerTimer: Timer,
   }> {
     let start = Date.now();
@@ -557,105 +570,109 @@ export default class Packt extends events.EventEmitter {
       config,
       utils,
       state,
-      bail
+      bail,
     });
-    timer.accumulate('build',{ 'bundle-sort': Date.now() - start });
+    timer.accumulate('build', {'bundle-sort': Date.now() - start});
 
     start = Date.now();
-    return state.assetMap.update(
-      state.dependencyGraph,
-      bundleSets,
-    ).then(() => new Promise((resolve,reject) => {
-      timer.accumulate('build',{ 'asset-map': Date.now() - start });
+    return state.assetMap.update(state.dependencyGraph, bundleSets).then(
+      () =>
+        new Promise((resolve, reject) => {
+          timer.accumulate('build', {'asset-map': Date.now() - start});
 
-      start = Date.now();
-      const bundleStats: { [variant: string]: PerfStatsDict } = {};
-      const bundlerTimer = new Timer();
+          start = Date.now();
+          const bundleStats: {[variant: string]: PerfStatsDict} = {};
+          const bundlerTimer = new Timer();
 
-      const updateReporter = setInterval(() => {
-        this._reporter.onUpdateBuildStatus(utils.pool.status(), null, bundleStats);
-      },100);
+          const updateReporter = setInterval(() => {
+            this._reporter.onUpdateBuildStatus(
+              utils.pool.status(),
+              null,
+              bundleStats,
+            );
+          }, 100);
 
-      const cleanup = (forceBail: boolean, err: ?Error) => {
-        timer.accumulate('build',{ 'bundles': Date.now() - start });
-        clearInterval(updateReporter);
-        utils.pool.removeAllListeners();
-        if (err) {
-          if (bail || forceBail) {
-            reject(err);
-          } else {
-            this._reporter.onBundleError(err);
-            resolve(null);
-          }
-        } else {
-          resolve({
-            bundleStats,
-            bundlerTimer,
+          const cleanup = (forceBail: boolean, err: ?Error) => {
+            timer.accumulate('build', {bundles: Date.now() - start});
+            clearInterval(updateReporter);
+            utils.pool.removeAllListeners();
+            if (err) {
+              if (bail || forceBail) {
+                reject(err);
+              } else {
+                this._reporter.onBundleError(err);
+                resolve(null);
+              }
+            } else {
+              resolve({
+                bundleStats,
+                bundlerTimer,
+              });
+            }
+          };
+
+          utils.pool.on('worker_pool_message', (m: MessageType) => {
+            switch (m.type) {
+              case 'bundle_content':
+                bundlerTimer.accumulate(m.bundler, m.perfStats);
+                getOrCreate(bundleStats, m.variant, () => ({}))[m.bundleName] =
+                  m.perfStats;
+                break;
+
+              case 'bundle_content_error':
+                cleanup(
+                  false,
+                  new errors.PacktBundleError(m.bundler, m.error, m.bundleName),
+                );
+                break;
+
+              case 'bundle_warning':
+                this._reporter.onBundleWarning(
+                  m.bundleName,
+                  m.variant,
+                  m.warning,
+                );
+                break;
+
+              case 'worker_error':
+                cleanup(true, m.error);
+                break;
+
+              case 'idle':
+                cleanup(false);
+                break;
+            }
           });
-        }
-      };
 
-      utils.pool.on('worker_pool_message', (m: MessageType) => {
-        switch (m.type) {
-          case 'bundle_content':
-            bundlerTimer.accumulate(m.bundler,m.perfStats);
-            getOrCreate(bundleStats, m.variant,() => ({}))[m.bundleName] = m.perfStats;
-            break;
-
-          case 'bundle_content_error':
-            cleanup(false, new errors.PacktBundleError(
-              m.bundler,
-              m.error,
-              m.bundleName
-            ));
-            break;
-
-          case 'bundle_warning':
-            this._reporter.onBundleWarning(
-              m.bundleName,
-              m.variant,
-              m.warning
-            );
-            break;
-
-          case 'worker_error':
-            cleanup(true, m.error);
-            break;
-
-          case 'idle':
-            cleanup(false);
-            break;
-        }
-      });
-
-      const duplicateBundles: Set<string> = new Set();
-      for (let variant in bundleSets) {
-        const generatedVariant = bundleSets[variant];
-        const bundleLookupVariant = bundleLookups[variant];
-        const contentMap = state.contentMap.readOnlyVariant(variant);
-        const bundles = generatedVariant.getBundles();
-        for (let bundleName in bundles) {
-          const bundle = bundles[bundleName];
-          // certain bundles, especially dynamic bundles may be 
-          // indepdendently generated via different static parents - 
-          // but since the output is the same, theres no point
-          // generating these over and over
-          if (!duplicateBundles.has(bundle.paths.outputPath)) {
-            duplicateBundles.add(bundle.paths.outputPath);
-            utils.pool.processBundle(
-              bundleName,
-              variant,
-              serializeBundle({
-                bundleName,
-                bundle,
-                bundleLookups: bundleLookupVariant,
-                contentMap,
-                config
-              })
-            );
+          const duplicateBundles: Set<string> = new Set();
+          for (let variant in bundleSets) {
+            const generatedVariant = bundleSets[variant];
+            const bundleLookupVariant = bundleLookups[variant];
+            const contentMap = state.contentMap.readOnlyVariant(variant);
+            const bundles = generatedVariant.getBundles();
+            for (let bundleName in bundles) {
+              const bundle = bundles[bundleName];
+              // certain bundles, especially dynamic bundles may be
+              // indepdendently generated via different static parents -
+              // but since the output is the same, theres no point
+              // generating these over and over
+              if (!duplicateBundles.has(bundle.paths.outputPath)) {
+                duplicateBundles.add(bundle.paths.outputPath);
+                utils.pool.processBundle(
+                  bundleName,
+                  variant,
+                  serializeBundle({
+                    bundleName,
+                    bundle,
+                    bundleLookups: bundleLookupVariant,
+                    contentMap,
+                    config,
+                  }),
+                );
+              }
+            }
           }
-        }
-      }
-    }));
+        }),
+    );
   }
 }
