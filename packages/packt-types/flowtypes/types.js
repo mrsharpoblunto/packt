@@ -256,12 +256,17 @@ export interface Handler {
   ) => void,
 }
 
+export type BundlerCacheEntry = {|
+  content: string,
+|};
+
 export type BundlerDelegate = {
   emitWarning: (warning: string) => void,
   resolve: (
     path: string,
     callback: (err: ?Error, resolvedModule: ?string) => void,
   ) => void,
+  cachePut: (entry: BundlerCacheEntry) => void,
 };
 
 export type SerializedModule = {
@@ -282,6 +287,7 @@ export type BundlerData = {
       exportsESModule: boolean,
     },
   },
+  hash: string,
   modules: Array<SerializedModule>,
   paths: OutputPaths,
   hasDependencies: boolean,

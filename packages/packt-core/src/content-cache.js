@@ -13,30 +13,55 @@ export default class ContentCache {
     this._cachePath = config.invariantOptions.cachePath;
   }
 
-  get(variant: string, hash: string): ?HandlerCacheEntry {
+  getHandler(variant: string, hash: string): ?HandlerCacheEntry {
+    return this._get('handlers', variant, hash);
+  }
+
+  putHandler(
+    variant: string,
+    hash: string,
+    cacheEntry: HandlerCacheEntry,
+  ): Promise<any> {
+    return this._put('handlers', variant, hash, cacheEntry);
+  }
+
+  getBundler(variant: string, hash: string): ?BundlerCacheEntry {
+    return this._get('bundlers', variant, hash);
+  }
+
+  putBundler(
+    variant: string,
+    hash: string,
+    cacheEntry: BundlerCacheEntry,
+  ): Promise<any> {
+    return this._put('bundlers', variant, hash, cacheEntry);
+  }
+
+  _get<T>(pathKey: string, variant: string, hash: string): ?T {
     try {
       const data = fs.readFileSync(
-        path.join(this._cachePath, `handlers/${variant}/${hash}.json`),
+        path.join(this._cachePath, `${pathKey}/${variant}/${hash}.json`),
         'utf8',
       );
-      return JSON.parse(data);
+      return (JSON.parse(data): T);
     } catch (ex) {
       return null;
     }
   }
 
-  put(
+  _put(
+    pathKey: string,
     variant: string,
     hash: string,
-    cacheEntry: HandlerCacheEntry,
+    cacheEntry: T,
   ): Promise<any> {
     return new Promise((resolve, reject) => {
-      mkdirp(path.join(this._cachePath, `handlers/${variant}`), err => {
+      mkdirp(path.join(this._cachePath, `${pathKey}/${variant}`), err => {
         if (err) {
           reject(err);
         } else {
           fs.writeFile(
-            path.join(this._cachePath, `handlers/${variant}/${hash}.json`),
+            path.join(this._cachePath, `${pathKey}/${variant}/${hash}.json`),
             JSON.stringify(cacheEntry),
             err => {
               if (err) {

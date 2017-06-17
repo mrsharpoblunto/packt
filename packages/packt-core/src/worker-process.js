@@ -317,7 +317,7 @@ class WorkerProcess {
       getOutputPaths: outputPathHelpers.getOutputPaths.bind(outputPathHelpers),
       generateHash: outputPathHelpers.generateHash.bind(outputPathHelpers),
       cacheGet: (variant: string, hash: string) => {
-        return this._contentCache.get(variant, hash);
+        return this._contentCache.getHandler(variant, hash);
       },
     });
   }
@@ -325,8 +325,12 @@ class WorkerProcess {
   _bundlerDelegateFactory(
     resolver: BuiltInResolver,
     configFile: string,
-  ): (bundleName: string, variant: string) => BundlerDelegate {
-    return (bundleName: string, variant: string) => ({
+  ): (
+    bundleName: string,
+    bundleHash: string,
+    variant: string,
+  ) => BundlerDelegate {
+    return (bundleName: string, bundleHash: string, variant: string) => ({
       emitWarning: (warning: string) => {
         this._sendMessage({
           type: 'bundle_warning',
@@ -340,6 +344,9 @@ class WorkerProcess {
         callback: (err: ?Error, resolved: ?string) => void,
       ) => {
         resolver.resolve(path, configFile, false, callback);
+      },
+      cachePut: (entry: BundlerCacheEntry) => {
+        return this._contentCache.putBundler(variant, bundleHash, entry);
       },
     });
   }
@@ -416,7 +423,7 @@ class WorkerProcess {
                   entry.content = content;
                   entry.contentHash = contentHash;
                   promises.push(
-                    this._contentCache.put(v, sourceContentHash, entry),
+                    this._contentCache.putHandler(v, sourceContentHash, entry),
                   );
                 }
               }
@@ -474,7 +481,11 @@ class WorkerProcess {
       return;
     }
 
-    const delegate = bundler.delegateFactory(bundleName, msg.variant);
+    const delegate = bundler.delegateFactory(
+      bundleName,
+      msg.data.hash,
+      msg.variant,
+    );
 
     const bundlerOptions = { ...bundler.options[msg.variant] };
     bundlerOptions.bundler = {

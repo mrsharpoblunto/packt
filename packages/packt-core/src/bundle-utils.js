@@ -77,6 +77,7 @@ export function serializeBundle({
         m.contentHash ? contentMap(m.module) : '',
       ),
     ),
+    hash: bundle.hash,
     paths: bundle.paths,
     hasDependencies:
       bundle.type === 'dynamic' ||

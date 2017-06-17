@@ -3,6 +3,7 @@
  * @format
  */
 import path from 'path';
+import fs from 'fs';
 import rimraf from 'rimraf';
 import mkdirp from 'mkdirp';
 import type { MessageType } from './message-types';
@@ -36,6 +37,7 @@ import { getOrCreate } from './helpers';
 import events from 'events';
 import { type ChangeDetails } from './change-watcher';
 import ChangeWatcher from './change-watcher';
+import ContentCache from './content-cache';
 
 type BuildState = {|
   contentMap: ContentMap,
@@ -580,6 +582,8 @@ export default class Packt extends events.EventEmitter {
     timer.accumulate('build', { 'bundle-sort': Date.now() - start });
 
     start = Date.now();
+    const cacheWrites: Array<Promise<any>> = [];
+    const contentCache = new ContentCache(config);
     return state.assetMap.update(state.dependencyGraph, bundleSets).then(
       () =>
         new Promise((resolve, reject) => {
@@ -609,10 +613,16 @@ export default class Packt extends events.EventEmitter {
                 resolve(null);
               }
             } else {
-              resolve({
-                bundleStats,
-                bundlerTimer,
-              });
+              Promise.all(cacheWrites)
+                .then(() => {
+                  resolve({
+                    bundleStats,
+                    bundlerTimer,
+                  });
+                })
+                .catch(err => {
+                  reject(err);
+                });
             }
           };
 
@@ -653,27 +663,52 @@ export default class Packt extends events.EventEmitter {
           for (let variant in bundleSets) {
             const generatedVariant = bundleSets[variant];
             const bundleLookupVariant = bundleLookups[variant];
+
             const contentMap = state.contentMap.readOnlyVariant(variant);
             const bundles = generatedVariant.getBundles();
             for (let bundleName in bundles) {
               const bundle = bundles[bundleName];
+
               // certain bundles, especially dynamic bundles may be
               // indepdendently generated via different static parents -
               // but since the output is the same, theres no point
               // generating these over and over
               if (!duplicateBundles.has(bundle.paths.outputPath)) {
-                duplicateBundles.add(bundle.paths.outputPath);
-                utils.pool.processBundle(
-                  bundleName,
-                  variant,
-                  serializeBundle({
+                const cached = contentCache.getBundler(variant, bundle.hash);
+                if (cached) {
+                  timer.accumulate('build', { 'cache-hit': 1 });
+                  cacheWrites.push(
+                    new Promise((reject, resolve) => {
+                      fs.writeFile(
+                        bundle.paths.outputPath,
+                        cached.content,
+                        err => {
+                          if (!err) {
+                            resolve();
+                          } else {
+                            reject(err);
+                          }
+                        },
+                      );
+                    }),
+                  );
+                } else {
+                  timer.accumulate('build', { 'cache-miss': 1 });
+                  utils.pool.processBundle(
                     bundleName,
-                    bundle,
-                    bundleLookups: bundleLookupVariant,
-                    contentMap,
-                    config,
-                  }),
-                );
+                    variant,
+                    serializeBundle({
+                      bundleName,
+                      bundle,
+                      bundleLookups: bundleLookupVariant,
+                      contentMap,
+                      config,
+                    }),
+                  );
+                }
+              } else {
+                timer.accumulate('build', { 'cache-hit': 1 });
+                duplicateBundles.add(bundle.paths.outputPath);
               }
             }
           }

@@ -73,20 +73,10 @@ export default class JsBundler implements Bundler {
         }
       }
 
-      const wstream = fs.createWriteStream(data.paths.outputPath);
-      wstream.on('finish', () => {
-        perfStats.diskIO = Date.now() - start;
-        callback(null, {
-          perfStats: perfStats,
-        });
-      });
-      wstream.on('error', err => {
-        callback(err);
-      });
-
+      let output = '';
       const write = (content: string) => {
         perfStats.postSize += content.length;
-        wstream.write(content);
+        output += content;
       };
 
       const uglifyWarning = uglify.AST_Node.warn_function;
@@ -146,8 +136,19 @@ export default class JsBundler implements Bundler {
       }
 
       perfStats.transform = Date.now() - start;
+
       start = Date.now();
-      wstream.end();
+      fs.writeFile(data.paths.outputPath, output, err => {
+        if (err) {
+          callback(err);
+        } else {
+          perfStats.diskIO = Date.now() - start;
+          delegate.cachePut({ content: output });
+          callback(null, {
+            perfStats: perfStats,
+          });
+        }
+      });
     });
   }
 
