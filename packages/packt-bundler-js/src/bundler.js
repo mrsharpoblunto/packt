@@ -20,6 +20,18 @@ const DEFAULT_UGLIFY_OPTIONS = {
   },
   compress: {
     toplevel: true,
+    dead_code: true,
+    unused: true,
+    conditionals: true,
+    comparisons: true,
+    booleans: true,
+    loops: true,
+    if_return: true,
+    join_vars: true,
+    cascade: true,
+    collapse_vars: true,
+    reduce_vars: true,
+    warnings: true,
   },
 };
 
@@ -104,7 +116,7 @@ export default class JsBundler implements Bundler {
           for (let module of jsModules) {
             perfStats.preSize += module.content.length;
             if (options.bundler.minify) {
-              jsContent += this._stripSymbolsAndRuntime(
+              jsContent += this._treeShakeAndStripRuntime(
                 bundleName,
                 data,
                 module,
@@ -116,12 +128,15 @@ export default class JsBundler implements Bundler {
             }
           }
           if (jsContent.length) {
-            write(
-              uglify.minify(jsContent, {
-                ...(options.bundler.uglifyOptions || DEFAULT_UGLIFY_OPTIONS),
-                fromString: true,
-              }).code,
-            );
+            const uglifyResult = uglify.minify(jsContent, {
+              ...(options.bundler.uglifyOptions || DEFAULT_UGLIFY_OPTIONS),
+            });
+            if (uglifyResult.error) {
+              uglify.AST_Node.warn_function = uglifyWarning;
+              callback(uglifyResult.error);
+              return;
+            }
+            write(uglifyResult.code);
           }
         }
 
@@ -182,7 +197,7 @@ export default class JsBundler implements Bundler {
     return result;
   }
 
-  _stripSymbolsAndRuntime(
+  _treeShakeAndStripRuntime(
     bundleName: string,
     data: BundlerData,
     module: SerializedModule,

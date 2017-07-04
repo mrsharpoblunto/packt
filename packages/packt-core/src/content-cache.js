@@ -49,7 +49,7 @@ export default class ContentCache {
     }
   }
 
-  _put(
+  _put<T>(
     pathKey: string,
     variant: string,
     hash: string,

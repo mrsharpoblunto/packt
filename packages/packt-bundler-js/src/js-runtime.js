@@ -17,7 +17,11 @@ export function impl(minify: boolean): string {
       'utf8',
     );
     if (minify) {
-      cached = uglify.minify(cached, { fromString: true }).code;
+      const uglifyResult = uglify.minify(cached);
+      if (uglifyResult.error) {
+        throw uglifyResult.error;
+      }
+      cached = uglifyResult.code;
     }
     cache[minify.toString()] = cached;
   }

@@ -183,13 +183,17 @@ class ConsoleReporter implements Reporter {
       console.log(chalk.bold('Timing information:'));
 
       const cacheTotal =
-        timers.global.get('build', 'cache-hit') +
-        timers.global.get('build', 'cache-miss');
-      console.log(
-        `  Cache hits: ${(timers.global.get('build', 'cache-hit') /
-          cacheTotal *
-          100).toFixed(2)}%`,
-      );
+        (timers.global.get('build', 'cache-hit') || 0) +
+        (timers.global.get('build', 'cache-miss') || 0);
+      if (!cacheTotal) {
+        console.log('  Cache hits: 100%');
+      } else {
+        console.log(
+          `  Cache hits: ${((timers.global.get('build', 'cache-hit') || 0) /
+            cacheTotal *
+            100).toFixed(2)}%`,
+        );
+      }
       console.log(
         `  Bundle Sort: ${(timers.global.get('build', 'bundle-sort') /
           1000).toFixed(2)}s`,

@@ -19,7 +19,7 @@
   "license": "MIT",
   "dependencies": {
     "mkdirp": "^0.5.1",
-    "uglify-js": "^2.8.12"
+    "uglify-js": "^3.0.22"
   },
   "devDependencies": {
     "packt-types": "^1.0.0"

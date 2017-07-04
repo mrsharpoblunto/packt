@@ -13,7 +13,20 @@ function sortBundle(modules: Set<DependencyNode>): Array<DependencyNode> {
   const sorted = [];
   const visited: Set<DependencyNode> = new Set();
   const tmp: Set<DependencyNode> = new Set();
-  for (let m of modules) {
+
+  // in order to ensure that topological bundle sorting is deterministic, the
+  // input modules array must be sorted by some deterministic criterion, in
+  // this case the module name.
+  const deterministicModules = Array.from(modules).sort((a, b) => {
+    if (a.module > b.module) {
+      return 1;
+    } else if (a.module < b.module) {
+      return -1;
+    } else {
+      return 0;
+    }
+  });
+  for (let m of deterministicModules) {
     if (!visit(m, modules, visited, tmp, false, sorted)) {
       throw new Error('cycle detected!');
     }
@@ -39,8 +52,11 @@ function visit(
   }
   if (!visited.has(node)) {
     tempVisited.add(node);
-    for (let i in node.imports) {
-      const imported = node.imports[i];
+    // in order for this topological sort to be deterministic,
+    // the iteration order of children must be deterministic. in
+    // this case we guarentee this by sorting the imports by name
+    const sortedImports = node.getSortedImports();
+    for (let imported of sortedImports) {
       if (!staticOnly || imported.type === 'static') {
         visit(
           imported.node,

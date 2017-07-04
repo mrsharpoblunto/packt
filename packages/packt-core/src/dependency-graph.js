@@ -24,6 +24,7 @@ export class DependencyNode {
 
   _symbolCache: { [key: string]: Set<string> };
   _importCache: { [key: string]: 'static' | 'dynamic' };
+  _sortedImportsCache: ?Array<DependencyNodeImport>;
 
   constructor(module: string) {
     this.module = module;
@@ -109,6 +110,7 @@ export class DependencyNode {
     }
     this._symbolCache = {};
     this._importCache = {};
+    this._sortedImportsCache = null;
   }
 
   exportsSymbols(exported: ExportDeclaration) {
@@ -145,6 +147,15 @@ export class DependencyNode {
     cached = possiblyDynamic ? 'dynamic' : 'static';
     this._importCache[bundleName] = cached;
     return cached;
+  }
+
+  getSortedImports(): Array<DependencyNodeImport> {
+    if (!this._sortedImportsCache) {
+      this._sortedImportsCache = Object.keys(this.imports)
+        .sort()
+        .map(i => this.imports[i]);
+    }
+    return this._sortedImportsCache;
   }
 
   getUsedSymbolsForBundle(bundleName: string): Set<string> {

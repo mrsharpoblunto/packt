@@ -222,30 +222,47 @@ export default class Packt extends events.EventEmitter {
       state,
       bail,
     };
+    let br;
     return this._buildModules(params)
       .then(buildResult => {
         if (!buildResult) {
           return Promise.resolve();
         } else {
-          const br = buildResult;
-          return this._bundleModules(params).then(bundleResult => {
-            if (bundleResult) {
-              this._reporter.onFinishBuild(
-                {
-                  global: params.timer,
-                  handlers: br.handlerTimer,
-                  bundlers: bundleResult.bundlerTimer,
-                },
-                br.buildStats,
-                bundleResult.bundleStats,
-              );
-              this.emit('buildFinish');
-            }
-            return Promise.resolve();
-          });
+          br = buildResult;
+          return this._bundleModules(params);
         }
       })
+      .then(bundleResult => {
+        if (bundleResult) {
+          this._reporter.onFinishBuild(
+            {
+              global: params.timer,
+              handlers: br.handlerTimer,
+              bundlers: bundleResult.bundlerTimer,
+            },
+            br.buildStats,
+            bundleResult.bundleStats,
+          );
+          this.emit('buildFinish');
+        }
+        // TODO pass through working set so we can filter out old modules from the mappings list
+        return this._updateModuleScopes();
+      })
       .then(() => this);
+  }
+
+  _updateModuleScopes(): Promise<any> {
+    const scopeGeneratorPath: string =
+      this._options.moduleScopes ||
+      path.join(
+        (this._config && this._config.invariantOptions.cachePath) || '',
+        'module-scopes.json',
+      );
+    // TODO need to apply a filter from the working set to remove old modules
+    //console.log(scopeGeneratorPath);
+    return this._state
+      ? this._state.scopeGenerator.save(scopeGeneratorPath, () => true)
+      : Promise.resolve();
   }
 
   _fatalError(err: Error): Promise<Packt> {
@@ -290,25 +307,48 @@ export default class Packt extends events.EventEmitter {
   }
 
   _loadBuildState(utils: BuildUtils): Promise<BuildState> {
-    let scopeGenerator;
-    try {
-      scopeGenerator = new ScopeIdGenerator(this._options.moduleScopes);
-    } catch (ex) {
-      return Promise.reject(
-        new errors.PacktError(
-          'Failed to load module scopes map at ' + this._options.moduleScopes,
-          ex,
-        ),
+    const scopeGeneratorPath: string =
+      this._options.moduleScopes ||
+      path.join(
+        (this._config && this._config.invariantOptions.cachePath) || '',
+        'module-scopes.json',
       );
-    }
 
-    return Promise.resolve({
-      scopeGenerator,
-      assetMap: new AssetMap(utils.pathHelpers),
-      contentMap: new ContentMap(),
-      dependencyGraph: new DependencyGraph(),
-      bundleSets: null,
-      bundleLookups: null,
+    return new Promise((resolve, reject) => {
+      fs.stat(scopeGeneratorPath, (err, stat) => {
+        if (err && this._options.moduleScopes) {
+          return reject(
+            new errors.PacktError(
+              'Failed to load module scopes map at ' +
+                this._options.moduleScopes,
+              err,
+            ),
+          );
+        }
+
+        let scopeGenerator;
+        try {
+          scopeGenerator = new ScopeIdGenerator(
+            err ? null : scopeGeneratorPath,
+          );
+        } catch (ex) {
+          return reject(
+            new errors.PacktError(
+              'Failed to load module scopes map at ' + scopeGeneratorPath,
+              ex,
+            ),
+          );
+        }
+
+        return resolve({
+          scopeGenerator,
+          assetMap: new AssetMap(utils.pathHelpers),
+          contentMap: new ContentMap(),
+          dependencyGraph: new DependencyGraph(),
+          bundleSets: null,
+          bundleLookups: null,
+        });
+      });
     });
   }
 
@@ -340,8 +380,14 @@ export default class Packt extends events.EventEmitter {
       const start = Date.now();
       const buildStats: { [variant: string]: PerfStatsDict } = {};
       const handlerTimer = new Timer();
+      let cleanedUp = false;
 
       const cleanup = (forceBail: boolean, err: ?Error) => {
+        if (cleanedUp) {
+          return;
+        }
+        cleanedUp = true;
+
         timer.accumulate('build', { modules: Date.now() - start });
         clearInterval(updateReporter);
         utils.pool.removeAllListeners();
@@ -582,16 +628,15 @@ export default class Packt extends events.EventEmitter {
     timer.accumulate('build', { 'bundle-sort': Date.now() - start });
 
     start = Date.now();
-    const cacheWrites: Array<Promise<any>> = [];
-    const contentCache = new ContentCache(config);
     return state.assetMap.update(state.dependencyGraph, bundleSets).then(
       () =>
         new Promise((resolve, reject) => {
           timer.accumulate('build', { 'asset-map': Date.now() - start });
 
-          start = Date.now();
+          const contentCache = new ContentCache(config);
           const bundleStats: { [variant: string]: PerfStatsDict } = {};
           const bundlerTimer = new Timer();
+          let cleanedUp = false;
 
           const updateReporter = setInterval(() => {
             this._reporter.onUpdateBuildStatus(
@@ -602,6 +647,11 @@ export default class Packt extends events.EventEmitter {
           }, 100);
 
           const cleanup = (forceBail: boolean, err: ?Error) => {
+            if (cleanedUp) {
+              return;
+            }
+            cleanedUp = true;
+
             timer.accumulate('build', { bundles: Date.now() - start });
             clearInterval(updateReporter);
             utils.pool.removeAllListeners();
@@ -613,16 +663,10 @@ export default class Packt extends events.EventEmitter {
                 resolve(null);
               }
             } else {
-              Promise.all(cacheWrites)
-                .then(() => {
-                  resolve({
-                    bundleStats,
-                    bundlerTimer,
-                  });
-                })
-                .catch(err => {
-                  reject(err);
-                });
+              resolve({
+                bundleStats,
+                bundlerTimer,
+              });
             }
           };
 
@@ -659,6 +703,7 @@ export default class Packt extends events.EventEmitter {
             }
           });
 
+          start = Date.now();
           const duplicateBundles: Set<string> = new Set();
           for (let variant in bundleSets) {
             const generatedVariant = bundleSets[variant];
@@ -677,21 +722,12 @@ export default class Packt extends events.EventEmitter {
                 const cached = contentCache.getBundler(variant, bundle.hash);
                 if (cached) {
                   timer.accumulate('build', { 'cache-hit': 1 });
-                  cacheWrites.push(
-                    new Promise((reject, resolve) => {
-                      fs.writeFile(
-                        bundle.paths.outputPath,
-                        cached.content,
-                        err => {
-                          if (!err) {
-                            resolve();
-                          } else {
-                            reject(err);
-                          }
-                        },
-                      );
-                    }),
-                  );
+                  try {
+                    mkdirp.sync(path.dirname(bundle.paths.outputPath));
+                    fs.writeFileSync(bundle.paths.outputPath, cached.content);
+                  } catch (ex) {
+                    return cleanup(false, ex);
+                  }
                 } else {
                   timer.accumulate('build', { 'cache-miss': 1 });
                   utils.pool.processBundle(
